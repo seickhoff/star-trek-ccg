@@ -1,0 +1,74 @@
+body.st {
+	
+	background-image: url("../images/star-space-tile.jpg");
+	
+	background-repeat: repeat-y repeat-x;
+	background-color: black;
+	font-family: arial;
+}
+td {
+	vertical-align: top;
+	text-align: center;
+	padding: 6px;
+	font-size: 9pt;
+	font-family: arial;
+}
+
+button {
+	font-size: 9pt;
+}
+
+.full {
+	width: 357px;
+	height: 497px;
+}
+.thumb {
+	/* med */
+	/*
+	width: 180px; 
+	height: 250px;				
+	*/
+	/* small */
+	
+	width: 120px;
+	height: 168px;	
+	
+	/* tiny */
+	/*
+	width: 30px;
+	height: 42px;	
+	*/
+	text-align: top;
+}
+/* rotate 180 */
+td.oppenent, td.thumb {
+	filter:progid:DXImageTransform.Microsoft.BasicImage(rotation=2); 
+}
+/* rotate another 180 */
+.oppenent .full {
+	width: 357px;
+	height: 497px;
+	filter:progid:DXImageTransform.Microsoft.BasicImage(rotation=2);
+}
+.mission {
+	background-image: url("../images/red_trans.png");
+	background-repeat: repeat-y repeat-x;
+}
+.personnel {
+	background-image: url("../images/blue_trans.png");
+	background-repeat: repeat-y repeat-x;
+}		
+.summary {
+	background-color: #400000;
+	color: ffffff;
+}
+.turn {
+	background-color: #3828bf;
+	color: ffffff;
+}
+.hand {
+	/*
+	background-image: url("green_trans.png");
+	background-repeat: repeat-y repeat-x;
+	*/
+}	
