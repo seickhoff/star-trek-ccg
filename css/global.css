@@ -19,7 +19,7 @@ td {
 	background-repeat: no-repeat;
 	width: 565px;
 	min-height: 500px;
-	border: 6px solid #9999ff; 
+	border: 6px solid #9999ff; /* light purple */
 	background-color: black; 
 	color: white;
 	padding: 40px 10px 10px 140px; 
@@ -32,7 +32,7 @@ td {
 	background-repeat: no-repeat;
 	width: 565px;
 	min-height: 500px;
-	border: 6px solid #9999ff; 
+	border: 4px solid #cc6566; /* pink */
 	background-color: black; 
 	color: white;
 	padding: 40px 10px 10px 140px; 
@@ -44,14 +44,30 @@ td {
 	/*background-image: url("../images/orders.jpg");
 	background-repeat: no-repeat;*/
 	width: 357px;
-	min-height: 497px;
-	border: 6px solid #9999ff; 
+	height: 495px;
+	border: 4px solid #d198cf; /* light purple-pink */
 	background-color: black; 
 	color: black;
 	padding: 0px 0px 0px 0px; 
 	display: none;	
 	position: absolute;
-	top: 20px;
+	top: 10px;
+	left: 10px;
+}
+
+.groupViewer {
+	/*background-image: url("../images/orders.jpg");
+	background-repeat: no-repeat;*/
+	padding: 6px 6px 6px 6px;
+	/*width: 357px;*/
+	min-height: 100px;
+	border: 4px solid #fe9900; /* orange */
+	background-color: black; 
+	color: white;
+	display: none;	
+	font-size: 12px;
+	position: absolute;
+	top: 100px;
 	left: 20px;
 }
 
@@ -72,6 +88,7 @@ span.list {
 span.listOrange {
 	color: #ff9900;
 	font-weight: bold;
+	font-size: 12pt;
 }
 span.listPink {
 	color: #ca98cb;
@@ -117,27 +134,46 @@ button {
 }
 
 .thumb {
-	/* med */
-	/*
-	width: 180px; 
-	height: 250px;				
-	*/
-	/* small */
-	/*
-	width: 120px;
-	height: 168px;	
-	*/
 	/* smaller */
 	width: 60px;
 	height: 82px;		
-	
-	/* tiny */
-	/*
-	width: 30px;
-	height: 42px;	
-	*/
 	text-align: top;
 }
+
+.outer {
+	position: relative;
+	margin: 0px auto;
+	width: 100px;
+	height: 110px;
+}
+
+.innerCard {
+	position: absolute;
+	top: 9px;
+	left: 20px;
+	border: none;
+}
+
+.innerCross {
+	position: absolute;
+	top: 36px;
+	left: 8px;
+	border: none;
+}
+.innerDilemma {
+	position: absolute;
+	top: 20px;
+	left: 31px;
+	border: none;
+}
+
+.innerShipPersonnel {
+	position: absolute;
+	top: 20px;
+	left: 32px;
+	border: none;
+}
+
 /* rotate 180 */
 td.oppenent, td.thumb {
 	filter:progid:DXImageTransform.Microsoft.BasicImage(rotation=2); 
@@ -164,7 +200,7 @@ td.oppenent, td.thumb {
 .turn {
 	background-color: #3828bf;
 	color: #ffffff;
-	font-size: 16pt;
+	font-size: 13pt;
 	vertical-align: middle;
 }
 .hand {

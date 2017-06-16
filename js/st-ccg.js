@@ -43,7 +43,11 @@ function placePlayerMissions() {
 				intPlayerHeadquarters = index;	
 									
 			// add mission to div
-			$("div.mission.c" + index).append("<img id='" + strCard + "' class='thumb' src='" + objPlayerFullDeck_U[strCard].jpg + "'>");		
+			//$("div.mission.c" + index).append("<img id='" + strCard + "' class='thumb' src='" + objPlayerFullDeck_U[strCard].jpg + "'>");		
+			$("div.mission.c" + index + " " + "div.outer div.innerCard").html(
+				"<img id='" + strCard + "' class='thumb' src='" + objPlayerFullDeck_U[strCard].jpg + "'>"
+			);	
+			
 		}
 	});	
 	
@@ -92,6 +96,7 @@ function newTurn() {
 	resetStopped();
 	updateTurnSummary();
 	updateGroupContainer();
+	groupViewerRefresh();
 	showHand();
 }
 
@@ -189,7 +194,7 @@ function updateTurnSummary() {
 	
 	// Start New Turn
 	if (intPlayerRound == 2 && intPlayerCounter == 0 && arrHand.length <= 7) {
-		$("td.turn.summary.2").append("<button class='bigButton' onclick=\"newTurn()\">Start New Turn</button>");
+		$("td.turn.summary.2").append("<button class='bigButton' onclick=\"newTurn()\">New Turn</button>");
 	}	
 	
 }
@@ -509,6 +514,7 @@ function listDilemma() {
 		$("#dialog2").append("<br/><span class='listPink' style='font-size: 9pt;'>" + groupStats(intMission, intGroup, true) + "</span>");		
 		
 		updateGroupContainer();
+		groupViewerRefresh();
 	}
 	// no dilemmas
 	else {
@@ -614,6 +620,7 @@ function scoreCompletedMission () {
 	}
 	updateMissionContainer();
 	updateGroupContainer();
+	groupViewerRefresh();
 }
 
 
@@ -795,6 +802,8 @@ function listOrders() {
 	$("#dialog").append("<center><button onclick='closeOrders();'>Close Orders</button></center>");	
 
 	//$("#dialog").center();
+	
+	$('#dialog').zindex('up'); //pushes to top of stack
 	$('#dialog').show();
 	spanClickToggle();
 
@@ -852,6 +861,7 @@ function moveShip(intSourceMission, intGroup, intDestinationMission) {
 	arrPlayed[intSourceMission].splice(intGroup, 1);
 	
 	updateGroupContainer();
+	groupViewerRefresh();
 	listOrders();	
 }
 
@@ -927,6 +937,7 @@ function beamCard(intMission, intOldGroup, intCard, intNewGroup) {
 	arrPlayed[intMission][intNewGroup] = arrnew;
 	
 	updateGroupContainer();	
+	groupViewerRefresh();
 	listOrders();
 	
 }
@@ -976,6 +987,7 @@ function deploy(strCard, intColumn) {
 		
 		// show each group of cards in a div; each grouping: Chars, Ship1, Ship[n...]
 		updateGroupContainer();
+		groupViewerRefresh();
 		removeFromHand(strCard);
 		showHand();
 		updateTurnSummary();		
@@ -988,11 +1000,15 @@ function deploy(strCard, intColumn) {
 */
 function updateGroupContainer() {
 
+	var boolPersonnelAtMission = false;
+
 	// for all missions
 	for (intColumn = 0; intColumn < 5; intColumn++) {
 
 		// clear personnel div content
 		$("div.personnel.c" + intColumn).html("");
+		
+		boolPersonnelAtMission = false;
 		
 		// for each grouping at this mission
 		$.each(arrPlayed[intColumn], function(index, arrCards) {
@@ -1008,32 +1024,105 @@ function updateGroupContainer() {
 				}
 				else
 					arrCards.sort(compareNames); 
-				
-				// inner div concontainer for a grouping
-				$("div.personnel.c" + intColumn).append(
-					"<div class=\"player personnel c" + intColumn + index + "\" style=\"border: solid 1px blue; padding: 10px;\"></div>"
-				);
-				
-				// show each card
-				$.each(arrCards, function(i, c) {
 					
-					//stopped
-					if (objPlayerFullDeck_U[c].type == "Personnel" && objPlayerFullDeck_U[c].status == "Stopped")
-						$("div.personnel.c" + intColumn + index).append("<img id='" + c + "' class='thumb red' src='" + objPlayerFullDeck_U[c].jpg + "'/>&nbsp;"); 	
-					//unstopped
-					else
-						$("div.personnel.c" + intColumn + index).append("<img id='" + c + "' class='thumb' src='" + objPlayerFullDeck_U[c].jpg + "'/>&nbsp;"); 	
-				});
+				// personnel at mission - place crossed card over mission?
+				if (objPlayerFullDeck_U[arrCards[0]].type != "Ship")
+					boolPersonnelAtMission = true;
+				else {			
 				
-				strStats = groupStats(intColumn, index, false);
-				$("div.personnel.c" + intColumn + index).append("<br/><span style=\"color: white;\">" + strStats + "</span>");				
+					// inner div concontainer for a grouping			
+					$("div.personnel.c" + intColumn).append(
+						"<div class=\"player personnel c" + intColumn + index + "\" style=\"border: solid 1px blue; padding: 10px;\">" +
+							"<div class='outer'>" +
+								"<div class='innerShipPersonnel'></div>" +
+								"<div class='innerCard'></div>" +
+							"</div>" +
+						"</div>"
+					);
+					
+					// ship
+					$("div.personnel.c" + intColumn + index + " " + "div.outer div.innerCard").html(
+						"<img id='" + arrCards[0] + "' class='thumb' src='" + objPlayerFullDeck_U[arrCards[0]].jpg + "'>"
+					);	
+					
+					// personnel on ship
+					if (arrCards.length > 1) {
+						$("div.personnel.c" + intColumn + index + " " + "div.outer div.innerShipPersonnel").html(
+							"<img onclick='groupViewer(" + intColumn + ", " + index + ", 1);' class='thumb' src='card-back.jpg'>"
+						);
+					}
+				}			
 			}
 		});
+		
+		// personnel on mission
+		if (boolPersonnelAtMission) {
+			$("div.mission.c" + intColumn + " " + "div.outer div.innerCross").html(
+				"<img onclick='groupViewer(" + intColumn + ", " + 0 + ", 1);' class='thumbCross' src='card-back-cross.jpg'>"
+			);
+		}
+		else
+			$("div.mission.c" + intColumn + " " + "div.outer div.innerCross").html("");	
+		
 	}
 	imgClickToggle();
 }
 
+// calls groupViewer just to refresh
+function groupViewerRefresh() {
+	groupViewer(objGroupViewer.mission, objGroupViewer.group, 0);
+}
 
+// shows the face-down card stacks in a container
+function groupViewer(intMission, intGroup, boolShow) {
+	 
+	//alert(intMission + ", " + intGroup + ", " + boolShow + ": " + arrPlayed[intMission][intGroup]);
+
+	$(".groupViewer").html("<span id='" + arrPlayerMissions[intMission] + "' style='font-weight: bold; font-size: 14pt; color: #CC6666;'>" + 
+		objPlayerFullDeck_U[arrPlayerMissions[intMission]].name + "</span><br/><br/>");
+
+	// hide if the intMission/intGroup doesn't exist or has no members
+	if (! arrPlayed[intMission][intGroup] || arrPlayed[intMission][intGroup].length == 0) {
+		$("#dialog4").hide();
+		return;
+	}
+	
+	var strCard = arrPlayed[intMission][intGroup][0] || null;
+	
+	if (strCard != null && objPlayerFullDeck_U[strCard].type == "Ship")
+		$(".groupViewer").append("<span id='" + arrPlayerMissions[intMission] + "' class='listOrange'>" + objPlayerFullDeck_U[strCard].name + "</span><br/><br/>");		
+	else
+		$(".groupViewer").append("<span class='listOrange'>At mission</span><br/><br/>");	
+		
+	$(".groupViewer").append(groupStats(intMission, intGroup, true) + "<br/><br/>");
+	
+	var arrCards = arrPlayed[intMission][intGroup];
+	
+	$.each(arrCards.sort(compareNames), function(index, card) {
+		if (objPlayerFullDeck_U[card].type != "Ship") {
+		
+			var strClass = "";
+			
+			//stopped
+			if (objPlayerFullDeck_U[card].type == "Personnel" && objPlayerFullDeck_U[card].status == "Stopped")
+				strClass = " red";
+		
+			$(".groupViewer").append("<img id='" + card + "' class='thumb" + strClass + "' src='" + objPlayerFullDeck_U[card].jpg + "'/>&nbsp;"); 
+		}
+	});
+	
+	$(".groupViewer").append("<br/><br/><button onclick=\"$('#dialog4').hide();\">Close</button>");
+	
+	if (boolShow)
+		$("#dialog4").show();
+		
+	imgClickToggle();
+	spanClickToggle();
+	
+	// store in global for easy refreshes
+	objGroupViewer.mission = intMission;
+	objGroupViewer.group = intGroup;	
+}
 
 
 /*
@@ -1046,17 +1135,23 @@ function imgClickToggle() {
 		function() {  
 			if (this.id == "")
 				return;
+	
 			$( "#dialog3" ).html("<img class='full' src='" + objPlayerFullDeck_U[this.id].jpg + "'>");
+			$( "#dialog3" ).zindex('up');
 			$( "#dialog3" ).show();
+			
 		}
 	); 
 }		
 function spanClickToggle() {
+
+
 	$("span").unbind('click.addit').bind('click.addit',  // Event Namespacing (http://www.learningjquery.com/2008/05/working-with-events-part-2)
 		function() {  
 			if (this.id == "")
 				return;
 			$( "#dialog3" ).html("<img class='full' src='" + objPlayerFullDeck_U[this.id].jpg + "'>");
+			$( "#dialog3" ).zindex('up'); 
 			$( "#dialog3" ).show();
 		}
 	);	
@@ -1189,18 +1284,23 @@ function compareNames(a, b) {
 }
 
 Array.prototype.contains = function(v) {
-    for(var i = 0; i < this.length; i++) {
-        if(this[i] === v) return true;
+    for (var i = 0; i < this.length; i++) {
+        if (this[i] === v) return true;
     }
     return false;
 };
 
 Array.prototype.unique = function() {
     var arr = [];
-    for(var i = 0; i < this.length; i++) {
-        if(!arr.contains(this[i])) {
+    for (var i = 0; i < this.length; i++) {
+        if (!arr.contains(this[i])) {
             arr.push(this[i]);
         }
     }
-    return arr; 
+    return arr;
 }
+
+
+
+
+

@@ -76,6 +76,7 @@ function stopPersonnel (personnelId, dilemmaId) {
 	// mark personnel as stopped and update group container
 	objPlayerFullDeck_U[personnelId].status = "Stopped";
 	updateGroupContainer();
+	groupViewerRefresh();
 	
 	var intMission = objDilemma.intMission;
 	
