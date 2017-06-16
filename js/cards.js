@@ -1,5 +1,18 @@
 
+var allSkills = [
+	"Acquisition", "Anthropology", "Archaeology", "Astrometrics", "Biology", "Diplomacy", "Engineer", 
+	"Exobiology", "Geology", "Honor", "Intelligence", "Law", "Leadership", "Medical", "Navigation", "Officer", 
+	"Physics", "Programming", "Science", "Security", "Telepathy", "Transporters", "Treachery"
+];
+
+var arrAllAffiliations = [
+	"Bajoran", "Borg", "Cardassian", "Dominion", "Federation", "Ferengi", "Klingon", "Non-Aligned", "Romulan", "Starfleet"
+];
+
 var objCardDb = {
+
+	// MISSIONS
+	
 	EN03110:
 	{
 		name: "Unicomplex, Root of the Hive Mind",
@@ -7,6 +20,7 @@ var objCardDb = {
 		type: "Mission",
 		missiontype: "Headquarters", 
 		quadrant: "Delta",
+		completed: false,
 		range: 2,
 		play: ["Equipment", "Borg"],
 		jpg: "cards/ST2E-EN03110.jpg"
@@ -17,6 +31,7 @@ var objCardDb = {
 		type: "Mission",
 		missiontype: "Planet", 
 		quadrant: "Delta",
+		completed: false,
 		score: 35,				
 		range: 3,
 		affiliation: ["Borg", "Klingon"],
@@ -34,9 +49,10 @@ var objCardDb = {
 		type: "Mission",
 		missiontype: "Planet", 
 		quadrant: "Alpha",
-		score: 35,				
+		completed: false,
+		score: 35,	
 		range: 2,
-		affiliation: null, //any
+		affiliation: arrAllAffiliations, // all
 		skills: [
 			["Astrometrics", "Engineer", "Medical", "Programming"]
 		],
@@ -50,6 +66,7 @@ var objCardDb = {
 		type: "Mission",
 		missiontype: "Space", 
 		quadrant: "Delta",
+		completed: false,
 		score: 35,				
 		range: 4,
 		affiliation: ["Borg", "Klingon", "Federation"],
@@ -66,9 +83,10 @@ var objCardDb = {
 		type: "Mission",
 		missiontype: "Space", 
 		quadrant: "Delta",
+		completed: false,
 		score: 35,				
 		range: 2,
-		affiliation: null, //any
+		affiliation: arrAllAffiliations, // all
 		skills: [
 			["Exobiology", "Programming", "Security", "Transporters"]
 		],
@@ -76,6 +94,9 @@ var objCardDb = {
 		value: 32,
 		jpg: "cards/ST2E-EN03083.jpg"		
 	},
+	
+	// PERSONNEL
+	
 	EN03118: {
 		name: "Acclimation Drone",
 		unique: false,
@@ -83,6 +104,7 @@ var objCardDb = {
 		affiliation: ["Borg"],
 		deploy: 2, 	// deploy modifier on text
 		species: ["Borg"],
+		status: "Unstopped",
 		other: ["Staff"],				
 		skills: [
 			["Anthropology", "Engineer", "Exobiology", "Medical"]
@@ -99,6 +121,7 @@ var objCardDb = {
 		affiliation: ["Borg"],
 		deploy: 4, 	// deploy modifier on text
 		species: ["Borg"],
+		status: "Unstopped",
 		other: ["Command"],				
 		skills: [
 			["Leadership", "Leadership", "Leadership", "Treachery"]
@@ -115,6 +138,7 @@ var objCardDb = {
 		affiliation: ["Borg"],
 		deploy: 2, 	// deploy modifier on text
 		species: ["Borg"],
+		status: "Unstopped",
 		other: ["Staff"],				
 		skills: [
 			["Archeology", "Biology", "Geology"]
@@ -131,6 +155,7 @@ var objCardDb = {
 		affiliation: ["Borg"],
 		deploy: 1, 	
 		species: ["Borg"],
+		status: "Unstopped",
 		other: ["Staff"],				
 		skills: [
 			["Engineer"]
@@ -147,6 +172,7 @@ var objCardDb = {
 		affiliation: ["Borg"],
 		deploy: 2, 	
 		species: ["Borg"],
+		status: "Unstopped",
 		other: ["Staff"],				
 		skills: [
 			["Navigation", "Programming"]
@@ -163,6 +189,7 @@ var objCardDb = {
 		affiliation: ["Borg"],
 		deploy: 2, 	
 		species: ["Borg"],
+		status: "Unstopped",
 		other: ["Staff"],				
 		skills: [
 			["Exobiology", "Science", "Transporters"]
@@ -179,6 +206,7 @@ var objCardDb = {
 		affiliation: ["Borg"],
 		deploy: 2, 	
 		species: ["Borg"],
+		status: "Unstopped",
 		other: ["Staff"],				
 		skills: [
 			["Programming", "Security", "Transporters"]
@@ -195,6 +223,7 @@ var objCardDb = {
 		affiliation: ["Borg"],
 		deploy: 2, 	
 		species: ["Borg"],
+		status: "Unstopped",
 		other: ["Staff"],				
 		skills: [
 			["Biology", "Security"]
@@ -211,6 +240,7 @@ var objCardDb = {
 		affiliation: ["Borg"],
 		deploy: 1, 	
 		species: ["Borg"],
+		status: "Unstopped",
 		other: ["Staff"],				
 		skills: [
 			["Medical"]
@@ -227,6 +257,7 @@ var objCardDb = {
 		affiliation: ["Borg"],
 		deploy: 3, 	
 		species: ["Borg"],
+		status: "Unstopped",
 		other: ["Staff"],				
 		skills: [
 			["Engineer", "Exobiology", "Physics", "Programming", "Science"]
@@ -243,6 +274,7 @@ var objCardDb = {
 		affiliation: ["Borg"],
 		deploy: 2, 	
 		species: ["Borg"],
+		status: "Unstopped",
 		other: ["Staff"],				
 		skills: [
 			["Astrometrics", "Navigation", "Physics"]
@@ -251,7 +283,10 @@ var objCardDb = {
 		cunning: 5,
 		strength: 5, 
 		jpg: "cards/ST2E-EN03140.jpg"		
-	},		
+	},	
+
+	// SHIP
+	
 	EN03198: { // SHIP
 		name: "Borg Cube",
 		unique: false,
@@ -283,10 +318,233 @@ var objCardDb = {
 		weapons: 10,
 		shields: 9, 
 		jpg: "cards/ST2E-EN03199.jpg"		
+	},
+	
+	// EVENTS
+	
+	EN03036: { 
+		name: "Borg Cutting Beam",
+		unique: false,
+		type: "Event",
+		deploy: 5, 			
+		order: function() {},
+		event: function() {},
+		jpg: "cards/ST2E-EN03036.jpg"		
+	},
+	EN02060: { 
+		name: "Salvaging the Wreckage",
+		unique: false,
+		type: "Event",
+		deploy: 3, 			
+		order: function() {},
+		event: function() {},
+		jpg: "cards/ST2E-EN02060.jpg"		
+	},
+	
+	// INTERRUPTS
+	
+	EN03069: { 
+		name: "Adapt",
+		unique: false,
+		type: "Interrupt",	
+		when: function() {},
+		jpg: "cards/ST2E-EN03069.jpg"		
+	},	
+	EN01136: { 
+		name: "Render Assistance",
+		unique: false,
+		type: "Interrupt",	
+		when: function() {},
+		jpg: "cards/ST2E-EN01136.jpg"		
+	},
+	
+	// DILEMMAS
+	
+	EN03002: { 
+		name: "An Old Debt",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Dual",
+		deploy: 3, 	
+		rule: "UnlessRandomKill",
+		skills: [
+			["Biology", "Physics"],
+			["Intelligence", "Medical", "Medical"]
+		],
+		abilityname: [
+			["Cunning"],
+			["Cunning"]
+		],
+		abilityvalue: [
+			[35],
+			[0]
+		],
+		skillkill: "Leadership",
+		jpg: "cards/ST2E-EN03002.jpg"		
+	},	
+	EN03016: { 
+		name: "Justice or Vengeance",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Dual",
+		deploy: 3, 	
+		rule: "UnlessRandomKill",
+		skills: [
+			["Anthropology", "Security", "Security"],
+			["Exobiology", "Honor"]
+		],
+		abilityname: [
+			["Integrity"],
+			["Integrity"]
+		],
+		abilityvalue: [
+			[0],
+			[32]
+		],
+		skillkill: "Treachery",
+		jpg: "cards/ST2E-EN03016.jpg"		
+	},		
+	EN01034: { 
+		name: "Limited Welcome",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Dual",
+		deploy: 2, 	
+		rule: function() {},
+		jpg: "cards/ST2E-EN01034.jpg"		
+	},		
+	EN01041: { 
+		name: "Ornaran Threat",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Dual",
+		deploy: 4, 	
+		rule: function() {},
+		jpg: "cards/ST2E-EN01041.jpg"		
+	},		
+	EN01043: { 
+		name: "Pinned Down",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Dual",
+		deploy: 2, 	
+		rule: function() {},
+		jpg: "cards/ST2E-EN01043.jpg"		
+	},	
+	EN03030: { 
+		name: "Sokath, His Eyes Uncovered!",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Dual",
+		deploy: 3, 	
+		rule: function() {},
+		jpg: "cards/ST2E-EN03030.jpg"		
+	},	
+	EN01008: { 
+		name: "Authenticate Artifacts",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Planet",
+		deploy: 2, 	
+		rule: "UnlessStopElseStopAll",
+		skills: [
+			["Anthropology", "Anthropology"],
+			["Archaeology", "Archaeology"]
+		],	
+		jpg: "cards/ST2E-EN01008.jpg"		
+	},		
+	EN03010: { 
+		name: "Failure To Communicate",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Planet",
+		deploy: 2, 	
+		rule: "UnlessStopElseStopAll",
+		skills: [
+			["Anthropology", "Anthropology"],
+			["Security", "Security"]
+		],	
+		jpg: "cards/ST2E-EN03010.jpg"		
+	},	
+	EN01033: { 
+		name: "Kolaran Raiders",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Planet",
+		deploy: 1, 	
+		rule: function() {},
+		jpg: "cards/ST2E-EN01033.jpg"		
+	},
+	EN01057: { 
+		name: "Triage",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Planet",
+		deploy: 1, 	
+		rule: function() {},
+		jpg: "cards/ST2E-EN01057.jpg"		
+	},
+	EN01017: { 
+		name: "Command Decisions",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Space",
+		deploy: 1, 	
+		rule: "StopElseKill",
+		skills: ["Leadership", "Officer"],
+		jpg: "cards/ST2E-EN01017.jpg"		
+	},	
+	EN01052: { 
+		name: "Systems Diagnostic",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Space",
+		deploy: 2, 	
+		rule: "StopElseStopAll",
+		skills: ["Engineer", "Programming"],
+		//skills: ["Cleaning", "Cooking"],
+		jpg: "cards/ST2E-EN01052.jpg"		
+	},		
+	EN01060: { 
+		name: "Wavefront",
+		unique: false,
+		overcome: false,
+		faceup: false,
+		type: "Dilemma",
+		where: "Space",
+		deploy: 2, 	
+		rule: "UnlessStopElseStopAll",
+		skills: [
+			["Astrometrics", "Astrometrics"],
+			["Navigation", "Navigation"]
+		],		
+		jpg: "cards/ST2E-EN01060.jpg"		
 	}
 };
 
 // possible other personnel attributes
-// - facing a dilemma: t/f
-// - stopped t/f
-// - aboard a ship t/f
+

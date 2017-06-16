@@ -1,13 +1,15 @@
-<html>
+<!DOCTYPE html>
+
 
 <head>
 
 	<link rel="stylesheet" type="text/css" href="css/global.css" /> 
-	
 	<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
 	<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+	<!--script src="js/json.js"></script-->	
 	<script src="js/cards.js"></script>
 	<script src="js/st-ccg.js"></script>
+	<script src="js/dilemmas.js"></script>
 
 	<script>
 	
@@ -15,27 +17,48 @@
 		
 			$(function() {    
 				$( "#dialog" ).draggable();  
-			});		
+				$( "#dialog2" ).draggable();  
+			});	
+			
 		
 			// player deck (Borg), then shuffle
 			arrPlayerFullDeck = shuffle(
-				["EN03110", "EN03094", "EN03103", "EN03082", "EN03083", // missions
-				"EN03118", "EN03118", "EN03118", "EN03122", "EN03122", "EN03124", "EN03124", // personnel
-				"EN03125", "EN03125", "EN03126", "EN03126", "EN03130", "EN03130", "EN03131", "EN03131", 
-				"EN03134", "EN03134", "EN03137", "EN03137", "EN03139", "EN03140", "EN03140",
-				"EN03198", "EN03199", "EN03199", "EN03199"] //ships
+				[
+					"EN03110", "EN03094", "EN03103", "EN03082", "EN03083", // missions
+					"EN03118", "EN03118", "EN03118", "EN03122", "EN03122", "EN03124", "EN03124", // personnel
+					"EN03125", "EN03125", "EN03126", "EN03126", "EN03130", "EN03130", "EN03131", "EN03131", 
+					"EN03134", "EN03134", "EN03137", "EN03137", "EN03139", "EN03140", "EN03140",
+					//"EN03036", "EN03036", "EN02060", "EN02060", "EN02060", // events
+					//"EN03069", "EN03069", "EN01136", "EN01136", // interupts
+					"EN03198", "EN03199", "EN03199", "EN03199", //ships
+					//"EN03002", "EN03002", "EN03016", "EN03016", "EN01034", "EN01034", // dilemmas
+					//"EN01041", "EN01043", "EN01043", "EN03030", 
+					//"EN01008", "EN03010", "EN03010", "EN01033", "EN01033", 
+					//"EN01057", "EN01017", "EN01017", "EN01052", "EN01060"
+	
+					
+					// space dilemmas (4)
+					"EN01017", "EN01017", "EN01052", "EN01060", 
+					// planet dilemmas (6)
+					"EN01008", "EN03010", "EN03010", 
+					// dual dilemmas (10)
+					"EN03002", "EN03002", "EN03016", "EN03016"
+					
+				]
 			);
 			
+			
 			/*
-				Create a version of the deck so cards have unqiue ids
+				Create a version of the deck so cards have unique ids; duplicate cards can be 'independent' of each other
 			*/
 			arrPlayerFullDeck_U = []; // array of unique card ids
 			objPlayerFullDeck_U = {}; // unique card id objects
 			$.each(arrPlayerFullDeck, function(index, cardId) {
-				objCard = objCardDb[cardId];
 				uniqueCardId = cardId + "-" + index++;
 				arrPlayerFullDeck_U.push(uniqueCardId);
-				objPlayerFullDeck_U[uniqueCardId] = objCard;
+				
+				objPlayerFullDeck_U[uniqueCardId] = jQuery.extend(true, {}, objCardDb[cardId]); // IMPORTANT: copy the objCardDb, don't use a reference
+				//objPlayerFullDeck_U[uniqueCardId] = JSON.parse(JSON.stringify(objCardDb[cardId]))
 			});
 			
 			//alert(arrDeck[0]);
@@ -47,7 +70,7 @@
 			arrPlayerMissions = [];
 			arrPlayerDilemmas = [];
 			arrPlayerDeck = [];
-			
+			arrPlayerDiscard = [];
 
 			
 			// Split player's deck into the missions/dilemmas/reserve card stacks
@@ -64,6 +87,24 @@
 				[ [] ], 
 				[ [] ] 
 			];
+			
+			// dilemmas on missions
+			arrPlayedDilemmas = [ 
+				[], 
+				[], 
+				[], 
+				[], 
+				[] 
+			];
+			
+			objDilemma = { };
+			/*
+			objDilemma.intMission = intMission;
+			objDilemma.intGroup = intGroup;
+			objDilemma.arrSelectedDilemmas = arrSelectedDilemmas;	
+			objDilemma.intDilemma = 0;
+			*/
+			
 
 			// place a ship and personnel at a mission
 			//arrPlayed[3][0][0] = "EN03122";
@@ -81,10 +122,21 @@
 			
 			// count of player's remaining counters
 			intPlayerCounter = 7; 
+
+			// Player turn number
+			intPlayerTurn = 0;
 			
 			// turn round
-			//strPlayerRound = "1. PLAY AND DRAW CARDS";
-			intPlayerTurn = 0;
+			intPlayerRound = 0;
+			
+			// player's score
+			intPlayerScore = 0; 
+			
+			// player's count of planet missions completed
+			intCompletedPlanetMissions = 0; 
+
+			// player's count of space missions completed
+			intCompletedSpaceMissions = 0; 			
 			
 			// player's hand
 			arrHand = [];
@@ -97,15 +149,10 @@
 
 			// render updated turn summary bar 
 			updateTurnSummary();			
-			
-			// render updated player summary bar
-			updatePlayerSummary();
 
 			// click event for img tags
 			imgClickToggle();
 			
-			
- 
 		});	
 
 	</script>
@@ -113,14 +160,22 @@
 
 <body class="st">
 
+<div style='position: fixed; bottom: 0px; width: 100%;'>
+	<table border="0" align="center" width="100%">
+		<tr>
+			<td class="turn summary">
+		</tr>	
+	</table>
+</div>
+
 <table border="0" align="center" width="100%">
-	<tr>
+	<!--tr>
 		<td class="oppenent mission c0">1
 		<td class="oppenent mission c1">2
 		<td class="oppenent mission c2">3
 		<td class="oppenent mission c3">4
 		<td class="oppenent mission c4">5
-	</tr>
+	</tr-->
 	<tr>
 		<td class="player mission c0">1
 		<td class="player mission c1">2
@@ -129,13 +184,6 @@
 		<td class="player mission c4">5
 	</tr>
 	<tr>
-		<td class="player summary c0">1
-		<td class="player summary c1">2
-		<td class="player summary c2">3
-		<td class="player summary c3">4
-		<td class="player summary c4">5
-	</tr>		
-	<tr>
 		<td class="player personnel c0">1
 		<td class="player personnel c1">2
 		<td class="player personnel c2">3
@@ -143,11 +191,7 @@
 		<td class="player personnel c4">5
 	</tr>	
 </table>
-<table border="0" align="center" width="100%">
-	<tr>
-		<td class="turn summary">
-	</tr>	
-</table>
+
 <table align="center">	
 	<tr>
 		<td class="player action c1">
@@ -183,8 +227,14 @@
 	</tr>		
 </table>
 
-<div id="dialog" style="border: 6px solid #003366; background-color: white; padding: 20px; display: none;">Hello</div>  
+<div id="dialog" class="orders"></div>  
+<div id="dialog2" class="dilemmas"></div>  
 
+<!--
+<audio id="beam">
+	<source src="audio/TransporterPad_01.mp3"  type="audio/mpeg">
+</audio>
+-->
 
 </body>
 

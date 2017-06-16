@@ -9,13 +9,40 @@ body.st {
 td {
 	vertical-align: top;
 	text-align: center;
-	padding: 6px;
+	/*padding: 6px;*/
 	font-size: 9pt;
 	font-family: arial;
 }
 
+.orders {
+	background-image: url("../images/orders.jpg");
+	background-repeat: no-repeat;
+	width: 565px;
+	min-height: 500px;
+	border: 6px solid #9999ff; 
+	background-color: black; 
+	color: white;
+	padding: 40px 10px 10px 140px; 
+	display: none;	
+}
+
+.dilemmas {
+	background-image: url("../images/orders.jpg");
+	background-repeat: no-repeat;
+	width: 565px;
+	min-height: 500px;
+	border: 6px solid #9999ff; 
+	background-color: black; 
+	color: white;
+	padding: 40px 10px 10px 140px; 
+	display: none;	
+}
+
 td.list {
-	text-align: left;
+	text-align: right;
+	color: #9999ff;
+	font-weight: bold;
+	width: 50%;
 }
 th.list {
 	text-align: center;
@@ -23,6 +50,15 @@ th.list {
 
 button {
 	font-size: 9pt;
+}
+/* completed mission */
+.padTop {
+	padding-top: 86px;
+}
+
+/* stopped card */
+.red {
+	border: 1px solid red;
 }
 
 .full {
@@ -67,11 +103,11 @@ td.oppenent, td.thumb {
 }		
 .summary {
 	background-color: #400000;
-	color: ffffff;
+	color: #ffffff;
 }
 .turn {
 	background-color: #3828bf;
-	color: ffffff;
+	color: #ffffff;
 }
 .hand {
 	/*
