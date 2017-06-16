@@ -14,16 +14,6 @@ td {
 	font-family: arial;
 }
 
-/* you need to set the size of the ul otherwise it may not detect the dropped item */
-.list { 
-	min-height: 120px;
-} 
-.list li {
-	display: inline-block;
-	list-style-type: none;
-	padding-right: 20px;
-}
-
 button {
 	font-size: 9pt;
 }

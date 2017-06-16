@@ -25,16 +25,15 @@ function placePlayerMissions() {
 	var intCol = 0;
 	$.each(arrPlayerMissions, function(index, cardId) {
 		if (objCardDb[cardId].type == "Mission") { // [array] notation when property is a variable
+			intCol++;
 			// select matching multiple classes
 			$("td.player.mission.c" + intCol).html("<img class='thumb' src='" + objCardDb[cardId].jpg + "'>");
 			
 			// set column of player's Headquarters
 			if (objCardDb[cardId].missiontype == "Headquarters")
 				intPlayerHeadquarters = intCol;	
-			
-			intCol++;
 		}
-	});	
+	});		
 }
 
 /*
@@ -73,7 +72,7 @@ function updateTurnSummary() {
 /*
 	Move deployed card from hand to mission; remove from hand
 */
-function deploy(cardId, intColumn) {
+function deploy(cardId, col) {
 
 	// check if enough counters are available to deploy
 	if (intPlayerCounter - objCardDb[cardId].deploy >= 0) {
@@ -84,18 +83,10 @@ function deploy(cardId, intColumn) {
 		return;		
 	}
 
-	// 0 = characters/equipment; 1 ship; [2...] ships
-	if (objCardDb[cardId].type == "Personnel" || objCardDb[cardId].type == "Ship") { 
-	
-		if (objCardDb[cardId].type == "Personnel") 
-			arrPlayed[intColumn][0].push(cardId);
-			
-		else if (objCardDb[cardId].type == "Ship") 
-			arrPlayed[intColumn].push([cardId]);
+	if (objCardDb[cardId].type == "Personnel" || objCardDb[cardId].type == "Ship") { // [array] notation when property is a variable
+		arrPlayed[col].push(cardId);
+		$("td.player.personnel.c" + col).append("<img class='thumb' src='" + objCardDb[cardId].jpg + "'> "); // select matching multiple classes
 		
-		// show each group of cards in a div; each grouping: Chars, Ship1, Ship[n...]
-		updateGroupContainer(intColumn);
-
 		imgClickToggle();
 		removeFromHand(cardId);
 		showHand();
@@ -104,93 +95,35 @@ function deploy(cardId, intColumn) {
 	}
 }
 
-
-/*
-	for a given Mission (intColumn), show each group of cards its own div; each grouping: Chars/Equip, Ship1, Ship[n...]
-*/
-function updateGroupContainer(intColumn) {
-
-	// clear td content
-	$("td.player.personnel.c" + intColumn).html("");
-	
-	// for each grouping on this mission
-	$.each(arrPlayed[intColumn], function(index, arrCards) {
-	
-		// create a div and add cards only if the grouping has cards
-		if (arrCards.length > 0) {
-	
-			
-			$("td.player.personnel.c" + intColumn).append(
-				"<div class=\"player personnel c" + intColumn + index + "\"style=\"border: solid 1px white; padding: 10px;\">" + 
-				"<ul id=\"sort" + index + "\" class=\"list\">"
-			);
-			// show each card
-			$.each(arrCards, function(i, c) {
-
-				$("div.player.personnel.c" + intColumn + index).append(
-					"<li><img class='thumb draggable' src='" + objCardDb[c].jpg + "'/></li>"
-				); 				
-				
-			});
-			$("td.player.personnel.c" + intColumn).append("</ul>"); 
-			$("td.player.personnel.c" + intColumn).append("</div>"); 
-				
-
-
-			//$( "#sort" + index ).disableSelection();			
-						
-		}
-	});
-	
-			$( ".list" ).sortable({
-				helper:"clone", 
-				opacity:0.5,
-				cursor:"crosshair",
-				connectWith: ".list",
-				receive: function( event, ui ) { }
-			});		
-	
-}
-
-
 /*
 	Summary bar - stats on deployed cards per mission
 */
 function updatePlayerSummary() {
-
-	// each mission
-	$.each(arrPlayed, function(intColumn, arrGroup) {
-
-		var intStrength = 0;
-		var intIntegrity = 0;
-		var intCunning = 0;
-		var intCount = 0;
-		var objSkills = { };
-		var arrUnique = [ ];	
-
-		// each grouping: Chars, Ship1, Ship[n...]
-		$.each(arrGroup, function(index1, arrCards) {		
-
-			// each card
-			$.each(arrCards, function(index2, cardId) {
-
-				//if (cardId == undefined)
-				//	return true; // jQuery continue
+	$.each(arrPlayed, function(index, value) {
+		if (index > 0 && index <= 5) {
+			intStrength = 0;
+			intIntegrity = 0;
+			intCunning = 0;
+			intCount = 0;
+			var objSkills = { };
+			var arrUnique = [ ];
+			
+			$.each(value, function(index, id) {
 			
 				// just track Personnel for strength/cunning/integrity
-				if (objCardDb[cardId].type == "Personnel") {
+				if (objCardDb[id].type == "Personnel") {
 			
-					intStrength += objCardDb[cardId].strength;
-					intIntegrity += objCardDb[cardId].integrity;
-					intCunning += objCardDb[cardId].cunning;
+					intStrength += objCardDb[id].strength;
+					intIntegrity += objCardDb[id].integrity;
+					intCunning += objCardDb[id].cunning;
 					intCount++;
 					
 					// track unique cards
-					if (objCardDb[cardId].unique == true)
-						arrUnique.push(cardId);
+					if (objCardDb[id].unique == true)
+						arrUnique.push(id);
 					
 					// skills
-					$.each(objCardDb[cardId].skills, function(i, v) {
+					$.each(objCardDb[id].skills, function(i, v) {
 						$.each(v, function(i2, v2) {
 							objSkills[v2] = objSkills[v2] + 1 || 1; // Increment counter for each value
 						
@@ -203,16 +136,16 @@ function updatePlayerSummary() {
 			strSkillList = joinSkills(objSkills); // join
 							
 			if (intCount > 0) {
-				$("td.summary.c" + intColumn).html("Personnel:&nbsp;" + intCount);					
-				$("td.summary.c" + intColumn).append(", Integrity:&nbsp;" + intIntegrity);
-				$("td.summary.c" + intColumn).append(", Cunning:&nbsp;" + intCunning);
-				$("td.summary.c" + intColumn).append(", Strength:&nbsp;" + intStrength);
-				$("td.summary.c" + intColumn).append(", " + strSkillList);
+				$("td.summary.c" + index).html("Personnel:&nbsp;" + intCount);					
+				$("td.summary.c" + index).append(", Integrity:&nbsp;" + intIntegrity);
+				$("td.summary.c" + index).append(", Cunning:&nbsp;" + intCunning);
+				$("td.summary.c" + index).append(", Strength:&nbsp;" + intStrength);
+				$("td.summary.c" + index).append(", " + strSkillList);
 			}
 			else {
-				$("td.summary.c" + intColumn).html("Personnel:&nbsp;" + intCount);					
+				$("td.summary.c" + index).html("Personnel:&nbsp;" + intCount);					
 			}
-		});
+		}
 	});			
 }
 
@@ -222,7 +155,6 @@ function updatePlayerSummary() {
 	Call after each adding of IMG tags
 */
 function imgClickToggle() {
-
 	$("img").unbind('click.addit').bind('click.addit',  // Event Namespacing (http://www.learningjquery.com/2008/05/working-with-events-part-2)
 		function() {  
 			if ($(this).is(".thumb")) 
@@ -337,9 +269,7 @@ function joinSkills(skills) {
 /* 
 	Shuffles an array
 */
-function shuffle(arr) {
+function shuffle (arr) {
 	for (var j, x, i = arr.length; i; j = parseInt(Math.random() * i), x = arr[--i], arr[i] = arr[j], arr[j] = x);
 	return arr;
 }
-
-
