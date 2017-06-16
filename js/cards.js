@@ -6,7 +6,7 @@ var objCardDb = {
 		unique: true,
 		type: "Mission",
 		missiontype: "Headquarters", 
-		quadrant: "Alpha",
+		quadrant: "Delta",
 		range: 2,
 		play: ["Equipment", "Borg"],
 		jpg: "cards/ST2E-EN03110.jpg"
@@ -16,7 +16,7 @@ var objCardDb = {
 		unique: true,
 		type: "Mission",
 		missiontype: "Planet", 
-		quadrant: "Alpha",
+		quadrant: "Delta",
 		score: 35,				
 		range: 3,
 		affiliation: ["Borg", "Klingon"],
@@ -173,7 +173,7 @@ var objCardDb = {
 		jpg: "cards/ST2E-EN03130.jpg"		
 	},		
 	EN03131: { // has order
-		name: "Information Drone",
+		name: "Invasive Drone",
 		unique: false,
 		type: "Personnel",
 		affiliation: ["Borg"],
@@ -263,6 +263,7 @@ var objCardDb = {
 			["Staff", "Staff", "Staff", "Staff", "Staff"]
 		],
 		range: 10,
+		rangeRemaining: 10,	// resets per turn
 		weapons: 12,
 		shields: 11, 
 		jpg: "cards/ST2E-EN03198.jpg"
@@ -278,6 +279,7 @@ var objCardDb = {
 			["Staff", "Staff", "Staff", "Staff"]
 		],
 		range: 9,
+		rangeRemaining: 9,	// resets per turn
 		weapons: 10,
 		shields: 9, 
 		jpg: "cards/ST2E-EN03199.jpg"		

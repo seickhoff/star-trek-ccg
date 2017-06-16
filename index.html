@@ -3,14 +3,19 @@
 <head>
 
 	<link rel="stylesheet" type="text/css" href="css/global.css" /> 
-
+	
 	<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+	<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
 	<script src="js/cards.js"></script>
 	<script src="js/st-ccg.js"></script>
 
 	<script>
 	
 		$( document ).ready(function() {		
+		
+			$(function() {    
+				$( "#dialog" ).draggable();  
+			});		
 		
 			// player deck (Borg), then shuffle
 			arrPlayerFullDeck = shuffle(
@@ -19,12 +24,31 @@
 				"EN03125", "EN03125", "EN03126", "EN03126", "EN03130", "EN03130", "EN03131", "EN03131", 
 				"EN03134", "EN03134", "EN03137", "EN03137", "EN03139", "EN03140", "EN03140",
 				"EN03198", "EN03199", "EN03199", "EN03199"] //ships
-			); 
+			);
+			
+			/*
+				Create a version of the deck so cards have unqiue ids
+			*/
+			arrPlayerFullDeck_U = []; // array of unique card ids
+			objPlayerFullDeck_U = {}; // unique card id objects
+			$.each(arrPlayerFullDeck, function(index, cardId) {
+				objCard = objCardDb[cardId];
+				uniqueCardId = cardId + "-" + index++;
+				arrPlayerFullDeck_U.push(uniqueCardId);
+				objPlayerFullDeck_U[uniqueCardId] = objCard;
+			});
+			
+			//alert(arrDeck[0]);
+			//alert(parseUniqueId(arrDeck[0]));
+			//alert(parseCardId(arrDeck[0]));
+			
 			
 			// player's card stacks
 			arrPlayerMissions = [];
 			arrPlayerDilemmas = [];
 			arrPlayerDeck = [];
+			
+
 			
 			// Split player's deck into the missions/dilemmas/reserve card stacks
 			playerDeckSetup();
@@ -33,13 +57,25 @@
 			arrUniquePlayed = [];			
 				
 			// cards on missions
-			arrPlayed = new Array();
-			arrPlayed[1] = [];
-			arrPlayed[2] = [];
-			arrPlayed[3] = [];
-			arrPlayed[4] = [];
-			arrPlayed[5] = [];
+			arrPlayed = [ 
+				[ [] ], 
+				[ [] ], 
+				[ [] ], 
+				[ [] ], 
+				[ [] ] 
+			];
+
+			// place a ship and personnel at a mission
+			//arrPlayed[3][0][0] = "EN03122";
+			//arrPlayed[3].push(["EN03198"]);
 			
+			// 
+			arrTurns = [
+				"1. PLAY AND DRAW CARDS",
+				"2. EXECUTE ORDERS",
+				"3. DISCARD EXCESS"
+			];
+					
 			// column of player's Headquarters
 			intPlayerHeadquarters = 0; 
 			
@@ -47,7 +83,8 @@
 			intPlayerCounter = 7; 
 			
 			// turn round
-			strPlayerRound = "1. PLAY AND DRAW CARDS";
+			//strPlayerRound = "1. PLAY AND DRAW CARDS";
+			intPlayerTurn = 0;
 			
 			// player's hand
 			arrHand = [];
@@ -66,42 +103,44 @@
 
 			// click event for img tags
 			imgClickToggle();
-
+			
+			
+ 
 		});	
 
 	</script>
 </head>
 
-<body>
+<body class="st">
 
 <table border="0" align="center" width="100%">
 	<tr>
-		<td class="oppenent mission c1">1
-		<td class="oppenent mission c2">2
-		<td class="oppenent mission c3">3
-		<td class="oppenent mission c4">4
-		<td class="oppenent mission c5">5
+		<td class="oppenent mission c0">1
+		<td class="oppenent mission c1">2
+		<td class="oppenent mission c2">3
+		<td class="oppenent mission c3">4
+		<td class="oppenent mission c4">5
 	</tr>
 	<tr>
-		<td class="player mission c1">1
-		<td class="player mission c2">2
-		<td class="player mission c3">3
-		<td class="player mission c4">4
-		<td class="player mission c5">5
+		<td class="player mission c0">1
+		<td class="player mission c1">2
+		<td class="player mission c2">3
+		<td class="player mission c3">4
+		<td class="player mission c4">5
 	</tr>
 	<tr>
-		<td class="player summary c1">1
-		<td class="player summary c2">2
-		<td class="player summary c3">3
-		<td class="player summary c4">4
-		<td class="player summary c5">5
+		<td class="player summary c0">1
+		<td class="player summary c1">2
+		<td class="player summary c2">3
+		<td class="player summary c3">4
+		<td class="player summary c4">5
 	</tr>		
 	<tr>
-		<td class="player personnel c1">1
-		<td class="player personnel c2">2
-		<td class="player personnel c3">3
-		<td class="player personnel c4">4
-		<td class="player personnel c5">5
+		<td class="player personnel c0">1
+		<td class="player personnel c1">2
+		<td class="player personnel c2">3
+		<td class="player personnel c3">4
+		<td class="player personnel c4">5
 	</tr>	
 </table>
 <table border="0" align="center" width="100%">
@@ -144,6 +183,7 @@
 	</tr>		
 </table>
 
+<div id="dialog" style="border: 6px solid #003366; background-color: white; padding: 20px; display: none;">Hello</div>  
 
 
 </body>
