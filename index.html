@@ -12,8 +12,12 @@
 	<script src="js/jquery-1.7.1.min.js"></script>
 	<script src="js/jquery-ui.js"></script>	
 	-->
-	<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+	<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
 	<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+	
+	<script src="./js/jquery.zindex.js"></script>
+	<script src="./js/jquery.touch-mouse.js"></script>
+	
 	<!--
 	<script src="js/json.js"></script>	
 	-->
@@ -24,20 +28,36 @@
 	<script>
 	
 		$( document ).ready(function() {		
+	
 		
 			$(function() {    
-				$( "#dialog" ).draggable();  
+			
+				// ipad / touch devices
+				$('#dialog').touchMouse();
+				$('#dialog2').touchMouse();
+				$('#dialog3').touchMouse({delay: 100});
+				$('#dialog4').touchMouse();
+			
+				// orders div
+				$( "#dialog" ).draggable(); 
+				// dilemmas div
 				$( "#dialog2" ).draggable();  
+				// cardViewer div
 				$( "#dialog3" ).draggable({
 					// mark a drag as a non click
 					start: function(event, ui) {
 						$(this).addClass('noclick');
 					}
 				
-				});  
+				});
+				// groupViewer div
+				$( "#dialog4" ).draggable(); 
 			});	
 			
 			$("#dialog3").click(function() {
+			
+				$(this).zindex('up'); //pushes to top of stack
+			
 				// click that follows a drag - ignore
 				if ($(this).hasClass('noclick'))
 					$(this).removeClass('noclick');
@@ -45,6 +65,22 @@
 				else
 					$( "#dialog3" ).hide();
 			});
+			
+			/*
+				bring these divs to top when mouse enters div area
+			*/
+			$("#dialog").mouseenter(function() {			
+				$(this).zindex('up'); 
+			});
+			$("#dialog2").mouseenter(function() {			
+				$(this).zindex('up'); 
+			});			
+			$("#dialog3").mouseenter(function() {			
+				$(this).zindex('up'); 
+			});				
+			$("#dialog4").mouseenter(function() {			
+				$(this).zindex('up'); 
+			});				
 			
 			// player deck (Borg), then shuffle
 			arrPlayerFullDeck = shuffle(
@@ -176,6 +212,12 @@
 			// click event for img tags
 			imgClickToggle();
 			
+			// Indicates what the Group Viewer is showing
+			objGroupViewer = {
+				mission: 0,
+				group: 0
+			}
+			
 		});	
 
 	</script>
@@ -194,24 +236,54 @@
 
 <table border="0" align="center" width="100%">
 	<tr>
-		<td>
-			<div class="mission c0"></div>
+		<td width="20%">
+			<div class="mission c0">
+				<div class="outer">
+					<div class="innerCard"></div>
+					<div class="innerDilemma"></div>
+					<div class="innerCross"></div>
+				</div>			
+			</div>
 			<div class="personnel c0"></div>
 		</td>
-		<td>
-			<div class="mission c1"></div>
+		<td width="20%">
+			<div class="mission c1">
+				<div class="outer">
+					<div class="innerCard"></div>
+					<div class="innerDilemma"></div>
+					<div class="innerCross"></div>
+				</div>				
+			</div>
 			<div class="personnel c1"></div>
 		</td>
-		<td>
-			<div class="mission c2"></div>
+		<td width="20%">
+			<div class="mission c2">
+				<div class="outer">
+					<div class="innerCard"></div>
+					<div class="innerDilemma"></div>
+					<div class="innerCross"></div>
+				</div>				
+			</div>
 			<div class="personnel c2"></div>
 		</td>
-		<td>
-			<div class="mission c3"></div>
+		<td width="20%">
+			<div class="mission c3">
+				<div class="outer">
+					<div class="innerCard"></div>
+					<div class="innerDilemma"></div>
+					<div class="innerCross"></div>
+				</div>	
+			</div>
 			<div class="personnel c3"></div>
-		</td>
+		</td width="20%">
 		<td>
-			<div class="mission c4"></div>
+			<div class="mission c4">
+				<div class="outer">
+					<div class="innerCard"></div>
+					<div class="innerDilemma"></div>
+					<div class="innerCross"></div>
+				</div>	
+			</div>
 			<div class="personnel c4"></div>
 		</td>
 	</tr>	
@@ -225,7 +297,7 @@
 <div id="dialog" class="orders"></div>  
 <div id="dialog2" class="dilemmas"></div>  
 <div id="dialog3" class="cardViewer"></div>  
-
+<div id="dialog4" class="groupViewer"></div>  
 <!--
 <audio id="beam">
 	<source src="audio/TransporterPad_01.mp3"  type="audio/mpeg">
