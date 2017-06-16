@@ -160,20 +160,15 @@ function updateTurnSummary() {
 	if (intPlayerRound == 0 && intPlayerCounter == 0) {
 		intPlayerRound = 1;
 	}
-	
-	$("td.turn.summary.1").html("");
-	$("td.turn.summary.2").html("");
 
-	$("td.turn.summary.1").append(arrTurns[intPlayerRound] + ". Hand: " + arrHand.length + ", Counters Remaining: " + 
-		intPlayerCounter + ", Turn: " + intPlayerTurn + ", Score: " + intPlayerScore +
-		", Completed Planet Missions: " + intCompletedPlanetMissions + ", Completed Space Missions: " + intCompletedSpaceMissions);	
+	$("td.turn.summary").html(arrTurns[intPlayerRound] + ". Hand: " + arrHand.length + ", Counters Remaining: " + intPlayerCounter + ", Turn: " + intPlayerTurn + ", Score: " + intPlayerScore);	
+	$("td.turn.summary").append(", Completed Planet Missions: " + intCompletedPlanetMissions + ", Completed Space Missions: " + intCompletedSpaceMissions);	
 		
 	// check winning condition 
 	if (intPlayerScore >= 100 && intCompletedPlanetMissions >= 1 && intCompletedSpaceMissions >= 1) {
 	
-		$("td.turn.summary.1").append(", Game Over: YOU WON!");	
-		$("td.turn.summary.2").append("");	
-		
+		$("td.turn.summary").append(", Game Over: YOU WON!");	
+	
 		closeOrders();
 		return;
 	}
@@ -183,13 +178,13 @@ function updateTurnSummary() {
 	
 	// Orders
 	if (intPlayerRound == 1) {
-		$("td.turn.summary.2").append("<button class='bigButton' onclick=\"centerListOrders()\">List Orders</button>");
-		$("td.turn.summary.2").append("<button class='bigButton' onclick=\"nextPhase()\">Next Phase</button>");
+		$("td.turn.summary").append("  <button onclick=\"centerListOrders()\">List Orders</button>");
+		$("td.turn.summary").append("  <button onclick=\"nextPhase()\">Next Phase</button>");
 	}	
 	
 	// Start New Turn
 	if (intPlayerRound == 2 && intPlayerCounter == 0 && arrHand.length <= 7) {
-		$("td.turn.summary.2").append("<button class='bigButton' onclick=\"newTurn()\">Start New Turn</button>");
+		$("td.turn.summary").append("  <button onclick=\"newTurn()\">Start New Turn</button>");
 	}	
 	
 }
@@ -1068,41 +1063,51 @@ function spanClickToggle() {
 function showHand() {
 
 	arrHand.sort(compareNames); // sort
-	
-	$("tr.playerCardAction").html("");
-	$("tr.playerCardContainer").html("");
-	
-	for (intCol = 0; intCol < arrHand.length; intCol++) {
+
+	intLastCol = 0;
+	// 		<td class="player hand c14">
+	for (intCol = 0; intCol < 14; intCol++) {
 		strCard = arrHand[intCol];
-		cardId = parseCardId(strCard);
-	
-		// show card
-		$("tr.playerCardContainer").append("<td><img id='" + strCard + "' class='thumb' src='" + objPlayerFullDeck_U[strCard].jpg + "'></td>");
 		
-		// intPlayerCounter is 0 and too many cards
-		if (intPlayerRound == 2 && intPlayerCounter == 0 && arrHand.length > 7)
-			$("tr.playerCardAction").append("<td><button onclick=\"discard('" + strCard + "')\">Discard</button></td>");	
-		// can't be deployed: intPlayerCounter is too low
-		else if (intPlayerCounter == 0 || intPlayerCounter - objPlayerFullDeck_U[strCard].deploy < 0)
-			$("tr.playerCardAction").append("<td></td>");
-		// can't be deployed: unique card is already deployed
-		else if ($.inArray(cardId, arrUniquePlayed) != -1)
-			$("tr.playerCardAction").append("<td></td>");
-		// show deploy button	
-		else
-			$("tr.playerCardAction").append("<td><button onclick=\"deploy('" + strCard + "', " + intPlayerHeadquarters + ")\">Deploy</button></td>");
+		if (strCard != undefined) {
+		
+			cardId = parseCardId(strCard);
+		
+			intLastCol++;
+			// show card
+			$("td.player.hand.c" + (intCol + 1)).html("<img id='" + strCard + "' class='thumb' src='" + objPlayerFullDeck_U[strCard].jpg + "'>");
+			
+			// intPlayerCounter is 0 and too many cards
+			if (intPlayerRound == 2 && intPlayerCounter == 0 && arrHand.length > 7)
+				$("td.player.action.c" + (intCol + 1)).html("<button onclick=\"discard('" + strCard + "')\">Discard</button>");	
+			// can't be deployed: intPlayerCounter is too low
+			else if (intPlayerCounter == 0 || intPlayerCounter - objPlayerFullDeck_U[strCard].deploy < 0)
+				$("td.player.action.c" + (intCol + 1)).html("");
+			// can't be deployed: unique card is already deployed
+			else if ($.inArray(cardId, arrUniquePlayed) != -1)
+				$("td.player.action.c" + (intCol + 1)).html("");
+			// show deploy button	
+			else
+				$("td.player.action.c" + (intCol + 1)).html("<button onclick=\"deploy('" + strCard + "', " + 
+					intPlayerHeadquarters + ")\">Deploy</button>");					
+		}
+		else {
+			// clear card
+			$("td.player.hand.c" + (intCol + 1)).html("");
+			// clear deploy button
+			$("td.player.action.c" + (intCol + 1)).html("");	
+		
+		}
 	}
-	
 	// Draw button
-	if (intPlayerCounter > 0 && arrPlayerDeck.length > 0)
-		$("tr.playerCardAction").append("<td><button onclick=\"drawCard()\">Draw Card</button></td>");	
+	if (intPlayerCounter > 0 && arrPlayerDeck.length > 0) {
+		$("td.player.action.c" + (intLastCol + 1)).html("<button onclick=\"drawCard()\">Draw Card</button>");	
+	}
 	else
-		$("tr.playerCardAction").append("<td></td>");	
+		$("td.player.action.c" + (intLastCol + 1)).html("");	
 	
 	if (arrPlayerDeck.length > 0) 		
-		$("tr.playerCardContainer").append("<td><img src=\"card-back.jpg\" class=\"thumb\"></td>");	
-	else
-		$("tr.playerCardContainer").append("<td></td>");	
+		$("td.player.hand.c" + (intLastCol + 1)).html("<img src=\"card-back.jpg\" class=\"thumb\">");	
 	
 	imgClickToggle();
 }

@@ -368,7 +368,7 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Dual",
 		deploy: 3, 	
-		rule: "UnlessRandomKill",
+		rule: "AnOldDebt",
 		skills: [
 			["Biology", "Physics"],
 			["Intelligence", "Medical", "Medical"]
@@ -392,7 +392,7 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Dual",
 		deploy: 3, 	
-		rule: "UnlessRandomKill",
+		rule: "AnOldDebt",
 		skills: [
 			["Anthropology", "Security", "Security"],
 			["Exobiology", "Honor"]
@@ -416,7 +416,7 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Dual",
 		deploy: 2, 	
-		rule: function() {},
+		rule: "LimitedWelcome",
 		jpg: "cards/ST2E-EN01034.jpg"		
 	},		
 	EN01041: { 
@@ -427,7 +427,11 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Dual",
 		deploy: 4, 	
-		rule: function() {},
+		rule: "OrnaranThreat",
+		skills: [
+			["Diplomacy", "Medical"],
+			["Security", "Security"]
+		],		
 		jpg: "cards/ST2E-EN01041.jpg"		
 	},		
 	EN01043: { 
@@ -438,7 +442,7 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Dual",
 		deploy: 2, 	
-		rule: function() {},
+		rule: "PinnedDown",
 		jpg: "cards/ST2E-EN01043.jpg"		
 	},	
 	EN03030: { 
@@ -449,7 +453,19 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Dual",
 		deploy: 3, 	
-		rule: function() {},
+		rule: "Sokath",
+		skills: [
+			["Diplomacy", "Diplomacy"],
+			[]
+		],
+		abilityname: [
+			["Cunning"],
+			["Cunning"]
+		],
+		abilityvalue: [
+			[0],
+			[35]
+		],		
 		jpg: "cards/ST2E-EN03030.jpg"		
 	},	
 	EN01008: { 
@@ -460,7 +476,7 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Planet",
 		deploy: 2, 	
-		rule: "UnlessStopElseStopAll",
+		rule: "Wavefront",
 		skills: [
 			["Anthropology", "Anthropology"],
 			["Archaeology", "Archaeology"]
@@ -475,7 +491,7 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Planet",
 		deploy: 2, 	
-		rule: "UnlessStopElseStopAll",
+		rule: "Wavefront",
 		skills: [
 			["Anthropology", "Anthropology"],
 			["Security", "Security"]
@@ -490,7 +506,8 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Planet",
 		deploy: 1, 	
-		rule: function() {},
+		rule: "CommandDecisions",
+		skills: ["Leadership", "Security"],
 		jpg: "cards/ST2E-EN01033.jpg"		
 	},
 	EN01057: { 
@@ -501,7 +518,8 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Planet",
 		deploy: 1, 	
-		rule: function() {},
+		rule: "CommandDecisions",
+		skills: ["Biology", "Medical"],
 		jpg: "cards/ST2E-EN01057.jpg"		
 	},
 	EN01017: { 
@@ -512,7 +530,7 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Space",
 		deploy: 1, 	
-		rule: "StopElseKill",
+		rule: "CommandDecisions",
 		skills: ["Leadership", "Officer"],
 		jpg: "cards/ST2E-EN01017.jpg"		
 	},	
@@ -524,7 +542,7 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Space",
 		deploy: 2, 	
-		rule: "StopElseStopAll",
+		rule: "SystemDiagnostics",
 		skills: ["Engineer", "Programming"],
 		//skills: ["Cleaning", "Cooking"],
 		jpg: "cards/ST2E-EN01052.jpg"		
@@ -537,7 +555,7 @@ var objCardDb = {
 		type: "Dilemma",
 		where: "Space",
 		deploy: 2, 	
-		rule: "UnlessStopElseStopAll",
+		rule: "Wavefront",
 		skills: [
 			["Astrometrics", "Astrometrics"],
 			["Navigation", "Navigation"]

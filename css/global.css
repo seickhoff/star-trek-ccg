@@ -24,6 +24,7 @@ td {
 	color: white;
 	padding: 40px 10px 10px 140px; 
 	display: none;	
+	position: absolute;
 }
 
 .dilemmas {
@@ -36,6 +37,47 @@ td {
 	color: white;
 	padding: 40px 10px 10px 140px; 
 	display: none;	
+	position: absolute;
+}
+
+.cardViewer {
+	/*background-image: url("../images/orders.jpg");
+	background-repeat: no-repeat;*/
+	width: 357px;
+	min-height: 497px;
+	border: 6px solid #9999ff; 
+	background-color: black; 
+	color: black;
+	padding: 0px 0px 0px 0px; 
+	display: none;	
+	position: absolute;
+	top: 20px;
+	left: 20px;
+}
+
+div.mission {
+	border: solid 1px #500000; 
+	padding: 10px;
+}
+div.personnel {
+	/*border: solid 1px white; */
+	padding: 10px;
+}
+
+span.list {
+	color: #9999ff;
+	font-weight: bold;
+}
+
+span.listOrange {
+	color: #ff9900;
+	font-weight: bold;
+}
+span.listPink {
+	color: #ca98cb;
+}
+span.listRed {
+	color: red;
 }
 
 td.list {
@@ -44,16 +86,19 @@ td.list {
 	font-weight: bold;
 	width: 50%;
 }
+td.listStopped {
+	text-align: right;
+	color: red;
+	font-weight: bold;
+	width: 50%;
+}
+
 th.list {
 	text-align: center;
 }
 
 button {
 	font-size: 9pt;
-}
-/* completed mission */
-.padTop {
-	padding-top: 86px;
 }
 
 /* stopped card */
@@ -65,6 +110,12 @@ button {
 	width: 357px;
 	height: 497px;
 }
+
+.thumbCross {
+	width: 82px;
+	height: 60px;	
+}
+
 .thumb {
 	/* med */
 	/*
@@ -72,9 +123,13 @@ button {
 	height: 250px;				
 	*/
 	/* small */
-	
+	/*
 	width: 120px;
 	height: 168px;	
+	*/
+	/* smaller */
+	width: 60px;
+	height: 82px;		
 	
 	/* tiny */
 	/*
@@ -104,10 +159,13 @@ td.oppenent, td.thumb {
 .summary {
 	background-color: #400000;
 	color: #ffffff;
+	height: 36px;
 }
 .turn {
 	background-color: #3828bf;
 	color: #ffffff;
+	font-size: 16pt;
+	vertical-align: middle;
 }
 .hand {
 	/*
@@ -115,3 +173,7 @@ td.oppenent, td.thumb {
 	background-repeat: repeat-y repeat-x;
 	*/
 }	
+
+.bigButton {
+	font-size: 16pt;
+}

@@ -32,8 +32,7 @@ function dilemmaSystemDiagnostics(dilemmaCardId, arrCards) {
 						// distinct card
 						if ($.inArray(playerCardId, distinctList) == -1) {
 							intStopPossibilities++;
-							strHtml += "<button onclick=\"stopPersonnel('" + playerCardId + "', '" + dilemmaCardId + "');\">Stop (you choose)</button> " +
-								"<span class='list' id='" + playerCardId + "'>" + objPlayerFullDeck_U[playerCardId].name + "</span><br/>";
+							strHtml += "<button onclick=\"stopPersonnel('" + playerCardId + "', '" + dilemmaCardId + "');\">Stop (you choose)</button>" + objPlayerFullDeck_U[playerCardId].name + "<br/>";
 							distinctList.push(playerCardId);
 						}
 					}
@@ -218,8 +217,7 @@ function dilemmaWavefront(dilemmaCardId, arrCards) {
 							// distinct card
 							if ($.inArray(playerCardId, distinctList) == -1) {
 								intStopPossibilities++;
-								strHtml += "<button onclick=\"stopPersonnel('" + playerCardId + "', '" + dilemmaCardId + "');\">Stop (oppenent chooses)</button> " +
-									"<span class='list' id='" + playerCardId + "'>" + objPlayerFullDeck_U[playerCardId].name + "</span><br/>";
+								strHtml += "<button onclick=\"stopPersonnel('" + playerCardId + "', '" + dilemmaCardId + "');\">Stop (oppenent chooses)</button>" + objPlayerFullDeck_U[playerCardId].name + "<br/>";
 								distinctList.push(playerCardId);
 							}
 						}
@@ -250,9 +248,8 @@ function dilemmaWavefront(dilemmaCardId, arrCards) {
 			arrSkillMessage.push(objSkills[strSkill] + " " + strSkill);
 		});
 
-		strHtml += "<br/><br/>No unstopped personnel with \"" + arrSkillMessage.join(" or ") + 
-			"\" found.\n\nAll your personnel are stopped and this dilemma returns to its owner's dilemma pile.<br/><br/>" +
-			"<button onclick=\"listDilemma();\">Continue...</button><br/>";
+		strHtml += "<br/><br/>No unstopped personnel with \"" + arrSkillMessage.join(" or ") + "\" found.\n\nAll your personnel are stopped and this dilemma returns to its owner's dilemma pile.<br/><br/>";
+		strHtml += "<button onclick=\"listDilemma();\">Continue...</button><br/>";
 		
 		updateMissionContainer();
 	}
@@ -299,8 +296,7 @@ function dilemmaCommandDecisions(dilemmaCardId, arrCards) {
 						// distinct card
 						if ($.inArray(playerCardId, distinctList) == -1) {
 							intStopPossibilities++;
-							strHtml += "<button onclick=\"stopPersonnel('" + playerCardId + "', '" + dilemmaCardId + "');\">Stop (you choose)</button> " +
-								"<span class='list' id='" + playerCardId + "'>" + objPlayerFullDeck_U[playerCardId].name + "</span><br/>";
+							strHtml += "<button onclick=\"stopPersonnel('" + playerCardId + "', '" + dilemmaCardId + "');\">Stop (you choose)</button>" + objPlayerFullDeck_U[playerCardId].name + "<br/>";
 							distinctList.push(playerCardId);
 						}
 					}
@@ -345,8 +341,8 @@ function dilemmaCommandDecisions(dilemmaCardId, arrCards) {
 			arrPlayedDilemmas[intMission].push(dilemmaCardId);		
 			updateMissionContainer();	
 
-			strHtml += "No unstopped personnel with \"" + arrSkills.join(" or ") + "\" found.\n\n<span class='list' id='" + killedCardId + "'>" + 
-				objPlayerFullDeck_U[killedCardId].name + "</span> was randomly killed.<br/><br/>" +
+			strHtml += "No unstopped personnel with \"" + arrSkills.join(" or ") + "\" found.\n\n\"" + 
+				objPlayerFullDeck_U[killedCardId].name + "\" was randomly killed.<br/><br/>" +
 				"<button onclick=\"listDilemma();\">Continue...</button><br/>";
 		}
 	}
@@ -473,9 +469,8 @@ function dilemmaAnOldDebt(dilemmaCardId, arrCards) {
 			});
 			arrPlayed[intMission][intGroup] = arrNew;
 			
-			strHtml += "No unstopped personnel with required skills found.\n\n<span class='list' id='" + killedCardId + "'>" + 
-				objPlayerFullDeck_U[killedCardId].name + "</span> having \"" + strSkillKill + "\" was randomly killed.<br/><br/>" +
-				"<button onclick=\"listDilemma();\">Continue...</button><br/>";
+			strHtml += "No unstopped personnel with required skills found.\n\n\"" + objPlayerFullDeck_U[killedCardId].name + "\" having \"" + strSkillKill + "\" was randomly killed.<br/><br/>";
+			strHtml += "<button onclick=\"listDilemma();\">Continue...</button><br/>";
 		}
 		else {
 			strHtml += "No personnel having \"" + strSkillKill + "\" to kill.  Dilemma overcome.<br/><br/>";
@@ -530,21 +525,21 @@ function dilemmaPinnedDown(dilemmaCardId, arrCards) {
 		var stopCardId = arrUnstopped.shift();
 		objPlayerFullDeck_U[stopCardId].status = "Stopped";	
 		
-		strHtml += "<span class='list' id='" + stopCardId + "'>" + objPlayerFullDeck_U[stopCardId].name + "</span> was randomly stopped.<br/><br/>";	
+		strHtml += "\"" + objPlayerFullDeck_U[stopCardId].name + "\" was randomly stopped.<br/><br/>";	
 	}
 	if (arrUnstopped.length >= 9) {
 		arrUnstopped = shuffle(arrUnstopped);
 		var stopCardId = arrUnstopped.shift();
 		objPlayerFullDeck_U[stopCardId].status = "Stopped";	
 		
-		strHtml += "<span class='list' id='" + stopCardId + "'>" + objPlayerFullDeck_U[stopCardId].name + "</span> was randomly stopped.<br/><br/>";	
+		strHtml += "\"" + objPlayerFullDeck_U[stopCardId].name + "\" was randomly stopped.<br/><br/>";	
 	}
 	if (arrUnstopped.length >= 10) {
 		arrUnstopped = shuffle(arrUnstopped);
 		var stopCardId = arrUnstopped.shift();
 		objPlayerFullDeck_U[stopCardId].status = "Stopped";	
 		
-		strHtml += "<span class='list' id='" + stopCardId + "'>" + objPlayerFullDeck_U[stopCardId].name + "</span> was randomly stopped.<br/><br/>";	
+		strHtml += "\"" + objPlayerFullDeck_U[stopCardId].name + "\" was randomly stopped.<br/><br/>";	
 	}
 
 	strHtml += "<button onclick=\"listDilemma();\">Continue...</button><br/>";	
@@ -596,7 +591,7 @@ function dilemmaLimitedWelcome(dilemmaCardId, arrCards) {
 		$.each(arrUnstopped, function(index, playerCardId) {
 			if (index >= 9) {
 				objPlayerFullDeck_U[playerCardId].status = "Stopped";	
-				strHtml += "<span class='list' id='" + playerCardId + "'>" + objPlayerFullDeck_U[playerCardId].name + "</span> was randomly stopped.<br/><br/>";	
+				strHtml += "\"" + objPlayerFullDeck_U[playerCardId].name + "\" was randomly stopped.<br/><br/>";	
 			}
 		});
 	}
@@ -699,13 +694,12 @@ function dilemmaOrnaranThreat(dilemmaCardId, arrCards) {
 	
 	// pass skill check
 	if (! (intRequirementsMetFails < arrSkillsDilemma.length)) {
-
+	//if (intRequirementsMetFails == 0) {
 		// stop personnel
 		objPlayerFullDeck_U[targetCardId].status = "Stopped";
 		
-		strHtml += "<span class='list' id='" + targetCardId + "'>" + objPlayerFullDeck_U[targetCardId].name + 
-			"</span> was randomly stopped.  Skills were met and this dilemma is overcome.<br/><br/>" +
-			"<button onclick=\"listDilemma();\">Continue...</button><br/>";			
+		strHtml += "\"" + objPlayerFullDeck_U[targetCardId].name + "\" was randomly stopped.  Skills were met and this dilemma is overcome.<br/><br/>";
+		strHtml += "<button onclick=\"listDilemma();\">Continue...</button><br/>";			
 		
 		objPlayerFullDeck_U[dilemmaCardId].overcome = true;
 		// add dilemma to mission area
@@ -739,9 +733,8 @@ function dilemmaOrnaranThreat(dilemmaCardId, arrCards) {
 		// dilemma returns to its owner's dilemma pile
 		arrPlayerDilemmas.push(dilemmaCardId);
 		
-		strHtml += "<span class='list' id='" + targetCardId + "'>" + objPlayerFullDeck_U[targetCardId].name + 
-			"</span> was randomly killed. All other personnel are stopped and this dilemma returns to its owners dilemma pile.<br/><br/>" +
-			"<button onclick=\"listDilemma();\">Continue...</button><br/>";	
+		strHtml += objPlayerFullDeck_U[targetCardId].name + "\" was randomly killed. All other personnel are stopped and this dilemma returns to its owners dilemma pile.<br/><br/>";
+		strHtml += "<button onclick=\"listDilemma();\">Continue...</button><br/>";	
 	}
 	
 	updateMissionContainer();
