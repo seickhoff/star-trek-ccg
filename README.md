@@ -24,10 +24,7 @@ Try it out: https://eskimo.com/~home/star-trek-ccg/
 - One player
 - Equipment, events, and interrupts are not yet implemented
 - Uses a preconfigured Borg deck
-    - missions: 5
-    - personnel: 22
-    - ships: 4
-    - dilemmas: 20 (space: 4, planet: 6, dual: 10)
+    - missions: 5, personnel: 22, ships: 4, dilemmas: 20 (space: 4, planet: 6, dual: 10)
 - To win, complete the missions before the deck runs out
 
 ## Images of gameplay
