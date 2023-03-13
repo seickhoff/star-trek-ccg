@@ -1,15 +1,5 @@
 # star-trek-ccg
 
-This my solitaire version of the Star Trek Collectible Card Game, Second Edition, that plays in a web browser. 
-
-Try it out: https://eskimo.com/~home/star-trek-ccg/
-
-- The game is played using a mouse
-- Click on individual cards to view full size
-- Click buttons as they appear to take relevant game actions (*Deploy*, *Draw Card*, *List Orders*, *Close*, *Next Phase*, *Discard*, *New Turn*, etc)
-- Dialogs that pop-up can be dragged around the board
-- Hover over partially covered Dialogs to bring back into focus (move to top)
-
 > The STAR TREK Customizable Card Game provides two or more players with adventures set in the rich universe of STAR TREK. This allows you to explore strange new worlds, to seek out new life and new civilizations – to boldly go where no one has gone before.™
 >
 > Each player’s cards include a number of personnel, each represented by a different card. Other cards represent the equipment, events, and interrupts that help support them, the ships that will take them out into the galaxy, and the missions they will attempt to complete.
@@ -18,8 +8,19 @@ Try it out: https://eskimo.com/~home/star-trek-ccg/
 >
 > If you reach 100 points, and your personnel have completed missions both on a planet and in space, you are the winner
 
-- More about the game in general: https://www.trekcc.org/2e/
-- Rulebook: https://www.trekcc.org/op/rulebook.pdf
+### This my solitaire version of the Star Trek Collectible Card Game, Second Edition, that plays in a web browser. 
+
+**Try it out here**: https://eskimo.com/~home/star-trek-ccg/
+
+- The game is played using a mouse
+- Click on individual cards to view full size
+- Click buttons as they appear to take relevant game actions (*Deploy*, *Draw Card*, *List Orders*, *Close*, *Next Phase*, *Discard*, *New Turn*, etc)
+- Dialogs that pop-up can be dragged around the board
+- Hover over partially covered Dialogs to bring back into focus (move to top)
+
+More about the game:
+- https://www.trekcc.org/op/rulebook.pdf
+- https://www.trekcc.org/2e/
 
 ## Notable differences from the actual CCG
 
