@@ -1,6 +1,8 @@
 # star-trek-ccg
 
-This is solitaire version of the Star Trek Collectible Card Game, Second Edition, that is played in a web browser. 
+This my solitaire version of the Star Trek Collectible Card Game, Second Edition, that is played in a web browser. 
+
+Try it out: https://eskimo.com/~home/star-trek-ccg/
 
 > The STAR TREK Customizable Card Game provides two or more players with adventures set in the rich universe of STAR TREK. This allows you to explore strange new worlds, to seek out new life and new civilizations – to boldly go where no one has gone before.™
 >
