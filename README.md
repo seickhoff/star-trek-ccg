@@ -1,6 +1,6 @@
 # star-trek-ccg
 
-This my solitaire version of the Star Trek Collectible Card Game, Second Edition, that is plays in a web browser. 
+This my solitaire version of the Star Trek Collectible Card Game, Second Edition, that plays in a web browser. 
 
 Try it out: https://eskimo.com/~home/star-trek-ccg/
 
