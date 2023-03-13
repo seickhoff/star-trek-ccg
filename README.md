@@ -17,7 +17,18 @@ This is solitaire version of the Star Trek Collectible Card Game, Second Edition
 
 - One player
 - Equipment, events, and interrupts are not yet implemented
-- Uses a preconfigured Borg deck 
+- Uses a preconfigured Borg deck
+- To win, complete the missions before the deck runs out
+
+### Types of cards used
+
+- missions: 5
+- personnel: 22
+- ships: 4
+- dilemmas: 20
+    - space: 4
+    - planet: 6
+    - dual: 10
 
 ## Images of gameplay
 
