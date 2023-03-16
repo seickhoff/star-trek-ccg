@@ -1,11 +1,12 @@
 body.st {
-	
+
 	background-image: url("../images/star-space-tile.jpg");
-	
+
 	background-repeat: repeat-y repeat-x;
 	background-color: black;
 	font-family: arial;
 }
+
 td {
 	vertical-align: top;
 	text-align: center;
@@ -19,11 +20,12 @@ td {
 	background-repeat: no-repeat;
 	width: 565px;
 	min-height: 500px;
-	border: 6px solid #9999ff; /* light purple */
-	background-color: black; 
+	border: 6px solid #9999ff;
+	/* light purple */
+	background-color: black;
 	color: white;
-	padding: 40px 10px 10px 140px; 
-	display: none;	
+	padding: 40px 10px 10px 140px;
+	display: none;
 	position: absolute;
 }
 
@@ -32,11 +34,12 @@ td {
 	background-repeat: no-repeat;
 	width: 565px;
 	min-height: 500px;
-	border: 4px solid #cc6566; /* pink */
-	background-color: black; 
+	border: 4px solid #cc6566;
+	/* pink */
+	background-color: black;
 	color: white;
-	padding: 40px 10px 10px 140px; 
-	display: none;	
+	padding: 40px 10px 10px 140px;
+	display: none;
 	position: absolute;
 }
 
@@ -45,26 +48,52 @@ td {
 	background-repeat: no-repeat;*/
 	width: 357px;
 	height: 495px;
-	border: 4px solid #d198cf; /* light purple-pink */
-	background-color: black; 
+	border: 4px solid #d198cf;
+	/* light purple-pink */
+	background-color: black;
 	color: black;
-	padding: 0px 0px 0px 0px; 
-	display: none;	
+	padding: 0px 0px 0px 0px;
+	display: none;
 	position: absolute;
 	top: 10px;
 	left: 10px;
+	border-radius: 12pt;
+}
+
+.full {
+	width: 357px;
+	height: 497px;
+	border-radius: 12pt;
+}
+
+#handContainer {
+	position: absolute;
+	bottom: 24px;
+}
+
+
+#mainContainer {
+	padding-top: 36px;
+
+	width: 98vw;
+	/*Making the container a flexbox*/
+	display: flex;
+	/*Making equal spaced divs*/
+	justify-content: space-between;
+}
+
+.mainBox {
+	width: 20%;
 }
 
 .groupViewer {
-	/*background-image: url("../images/orders.jpg");
-	background-repeat: no-repeat;*/
 	padding: 6px 6px 6px 6px;
-	/*width: 357px;*/
+	max-width: 500px;
 	min-height: 100px;
-	border: 4px solid #fe9900; /* orange */
-	background-color: black; 
+	border: 4px solid #fe9900;
+	background-color: black;
 	color: white;
-	display: none;	
+	display: none;
 	font-size: 12px;
 	position: absolute;
 	top: 100px;
@@ -72,13 +101,25 @@ td {
 }
 
 div.mission {
-	border: solid 1px #500000; 
+	border: solid 1px #500000;
 	padding: 10px;
 }
+
+.mission {
+	background-image: url("../images/red_trans.png");
+	background-repeat: repeat-y repeat-x;
+}
+
 div.personnel {
-	/*border: solid 1px white; */
 	padding: 10px;
+	min-height: 136px;
 }
+
+.personnel {
+	background-image: url("../images/blue_trans.png");
+	background-repeat: repeat-y repeat-x;
+}
+
 
 span.list {
 	color: #9999ff;
@@ -90,9 +131,11 @@ span.listOrange {
 	font-weight: bold;
 	font-size: 12pt;
 }
+
 span.listPink {
 	color: #ca98cb;
 }
+
 span.listRed {
 	color: red;
 }
@@ -103,6 +146,7 @@ td.list {
 	font-weight: bold;
 	width: 50%;
 }
+
 td.listStopped {
 	text-align: right;
 	color: red;
@@ -123,20 +167,15 @@ button {
 	border: 1px solid red;
 }
 
-.full {
-	width: 357px;
-	height: 497px;
-}
-
 .thumbCross {
 	width: 82px;
-	height: 60px;	
+	height: 60px;
 }
 
 .thumb {
 	/* smaller */
 	width: 60px;
-	height: 82px;		
+	height: 82px;
 	text-align: top;
 }
 
@@ -160,6 +199,7 @@ button {
 	left: 8px;
 	border: none;
 }
+
 .innerDilemma {
 	position: absolute;
 	top: 20px;
@@ -175,40 +215,37 @@ button {
 }
 
 /* rotate 180 */
-td.oppenent, td.thumb {
-	filter:progid:DXImageTransform.Microsoft.BasicImage(rotation=2); 
+td.oppenent,
+td.thumb {
+	filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=2);
 }
+
 /* rotate another 180 */
 .oppenent .full {
 	width: 357px;
 	height: 497px;
-	filter:progid:DXImageTransform.Microsoft.BasicImage(rotation=2);
+	filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=2);
 }
-.mission {
-	background-image: url("../images/red_trans.png");
-	background-repeat: repeat-y repeat-x;
-}
-.personnel {
-	background-image: url("../images/blue_trans.png");
-	background-repeat: repeat-y repeat-x;
-}		
+
 .summary {
 	background-color: #400000;
 	color: #ffffff;
 	height: 36px;
 }
+
 .turn {
 	background-color: #3828bf;
 	color: #ffffff;
 	font-size: 13pt;
 	vertical-align: middle;
 }
+
 .hand {
 	/*
 	background-image: url("green_trans.png");
 	background-repeat: repeat-y repeat-x;
 	*/
-}	
+}
 
 .bigButton {
 	font-size: 16pt;
