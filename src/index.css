@@ -1,0 +1,84 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    sans-serif;
+  background: #1a1a2e url("/images/star-space-tile.jpg") repeat;
+  color: #e0e0e0;
+  min-height: 100vh;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1rem 2rem;
+  text-align: center;
+  border-bottom: 2px solid #9999ff;
+}
+
+.header h1 {
+  color: #ff9900;
+  font-size: 2rem;
+  margin-bottom: 0.25rem;
+}
+
+.header p {
+  color: #9999ff;
+  font-size: 0.9rem;
+}
+
+.main {
+  flex: 1;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.info-panel {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #9999ff;
+  border-radius: 8px;
+  padding: 1.5rem 2rem;
+  max-width: 400px;
+}
+
+.info-panel h2 {
+  color: #ff9900;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.info-panel p {
+  margin-bottom: 0.5rem;
+}
+
+.info-panel ul {
+  margin-top: 0.5rem;
+  padding-left: 1.5rem;
+}
+
+.info-panel li {
+  margin-bottom: 0.25rem;
+  color: #b0b0b0;
+}
+
+.status {
+  background: rgba(0, 100, 0, 0.3);
+  border: 1px solid #4caf50;
+  padding: 1rem 1.5rem;
+  border-radius: 4px;
+  color: #4caf50;
+}
