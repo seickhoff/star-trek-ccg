@@ -406,9 +406,14 @@ describe("gameStore", () => {
     });
 
     it("moves card from hand to discard pile", () => {
+      // Draw extra cards to exceed hand limit
+      useGameStore.setState({ counters: 3 });
+      useGameStore.getState().draw(3);
       useGameStore.setState({ phase: "DiscardExcess" });
 
       const state = useGameStore.getState();
+      expect(state.hand.length).toBeGreaterThan(GAME_CONSTANTS.MAX_HAND_SIZE);
+
       const card = state.hand[0];
 
       if (!card?.uniqueId) throw new Error("No card in hand");
@@ -436,6 +441,23 @@ describe("gameStore", () => {
       state.discardCard(card.uniqueId);
 
       expect(useGameStore.getState().hand.length).toBe(initialHandSize);
+    });
+
+    it("does not allow discarding below hand limit of 7", () => {
+      useGameStore.setState({ phase: "DiscardExcess" });
+
+      const state = useGameStore.getState();
+      expect(state.hand.length).toBe(GAME_CONSTANTS.MAX_HAND_SIZE);
+
+      const card = state.hand[0];
+      if (!card?.uniqueId) throw new Error("No card in hand");
+
+      state.discardCard(card.uniqueId);
+
+      // Hand should still be 7 since we can't discard below the limit
+      expect(useGameStore.getState().hand.length).toBe(
+        GAME_CONSTANTS.MAX_HAND_SIZE
+      );
     });
   });
 

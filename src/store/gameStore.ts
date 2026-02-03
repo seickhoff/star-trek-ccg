@@ -444,10 +444,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * Discard a card from hand
    */
   discardCard: (cardUniqueId: string) => {
-    const { discard, phase } = get();
+    const { discard, phase, hand } = get();
 
-    // Can only discard during DiscardExcess phase (or if hand > 7)
+    // Can only discard during DiscardExcess phase when hand > 7
     if (phase !== "DiscardExcess") return;
+    if (hand.length <= GAME_CONSTANTS.MAX_HAND_SIZE) return;
 
     const card = get()._findCardInHand(cardUniqueId);
     if (!card) return;

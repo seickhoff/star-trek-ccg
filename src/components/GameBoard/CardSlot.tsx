@@ -72,13 +72,19 @@ export function CardSlot({
   return (
     <div
       className={classNames}
-      onClick={() => onClick?.(card)}
+      onClick={(e) => {
+        if (onClick) {
+          e.stopPropagation();
+          onClick(card);
+        }
+      }}
       title={altText}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={(e) => {
         if (onClick && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
+          e.stopPropagation();
           onClick(card);
         }
       }}

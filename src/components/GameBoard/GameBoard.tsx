@@ -33,6 +33,7 @@ export function GameBoard() {
     gameOver,
     victory,
     headquartersIndex,
+    uniquesInPlay,
     setupGame,
     draw,
     deploy,
@@ -289,6 +290,7 @@ export function GameBoard() {
         cards={hand}
         counters={counters}
         phase={phase}
+        uniquesInPlay={uniquesInPlay}
         onDeploy={handleDeploy}
         onView={handleViewCard}
       />

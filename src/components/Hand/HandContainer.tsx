@@ -7,6 +7,7 @@ interface HandContainerProps {
   cards: Card[];
   counters: number;
   phase: string;
+  uniquesInPlay: Set<string>;
   onDeploy?: (card: Card) => void;
   onView?: (card: Card) => void;
 }
@@ -19,6 +20,7 @@ export function HandContainer({
   cards,
   counters,
   phase,
+  uniquesInPlay,
   onDeploy,
   onView,
 }: HandContainerProps) {
@@ -28,6 +30,9 @@ export function HandContainer({
 
     // Can only deploy personnel and ships
     if (!isPersonnel(card) && !isShip(card)) return false;
+
+    // Check if unique card is already in play
+    if (card.unique && uniquesInPlay.has(card.id)) return false;
 
     // Check cost
     const deployCost = (card as { deploy: number }).deploy;
