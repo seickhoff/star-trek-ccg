@@ -1,0 +1,172 @@
+/* CardSlot - Base card display component */
+
+.card-slot {
+  position: relative;
+  display: inline-block;
+  background: transparent;
+  border-radius: 4px;
+  overflow: hidden;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.card-slot__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Sizes */
+.card-slot--thumb {
+  width: 60px;
+  height: 82px;
+}
+
+.card-slot--thumb.card-slot--landscape {
+  width: 82px;
+  height: 60px;
+}
+
+.card-slot--small {
+  width: 80px;
+  height: 110px;
+}
+
+.card-slot--small.card-slot--landscape {
+  width: 110px;
+  height: 80px;
+}
+
+.card-slot--medium {
+  width: 120px;
+  height: 165px;
+}
+
+.card-slot--medium.card-slot--landscape {
+  width: 165px;
+  height: 120px;
+}
+
+.card-slot--full {
+  width: 357px;
+  height: 497px;
+}
+
+.card-slot--full.card-slot--landscape {
+  width: 497px;
+  height: 357px;
+}
+
+/* Interactive states */
+.card-slot--clickable {
+  cursor: pointer;
+}
+
+.card-slot--clickable:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(153, 153, 255, 0.4);
+  z-index: 10;
+}
+
+.card-slot--clickable:focus {
+  outline: 2px solid #9999ff;
+  outline-offset: 2px;
+}
+
+.card-slot--clickable:active {
+  transform: scale(1.02);
+}
+
+/* Selected state */
+.card-slot--selected {
+  box-shadow:
+    0 0 0 3px #ff9900,
+    0 4px 12px rgba(255, 153, 0, 0.5);
+}
+
+.card-slot__selected-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 3px solid #ff9900;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Dimmed state */
+.card-slot--dimmed {
+  opacity: 0.5;
+}
+
+/* Personnel status */
+.card-slot--stopped {
+  box-shadow: 0 0 0 2px red;
+}
+
+.card-slot--stopped .card-slot__image {
+  filter: grayscale(50%);
+}
+
+.card-slot--killed {
+  box-shadow: 0 0 0 2px #800000;
+  opacity: 0.6;
+}
+
+.card-slot--killed .card-slot__image {
+  filter: grayscale(100%);
+}
+
+.card-slot__status {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.card-slot__status--stopped {
+  background: red;
+  box-shadow: 0 0 4px red;
+}
+
+.card-slot__status--killed {
+  background: #800000;
+  box-shadow: 0 0 4px #800000;
+}
+
+.card-slot__status--unstopped {
+  /* No indicator for unstopped */
+  display: none;
+}
+
+/* Ship range indicator */
+.card-slot__range {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #ff9900;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+/* Mission cards (landscape) */
+.card-slot--mission {
+  /* Missions are typically shown landscape */
+}
+
+/* Dilemma cards */
+.card-slot--dilemma {
+  /* Dilemmas have a slightly different border color */
+}
+
+.card-slot--dilemma.card-slot--clickable:hover {
+  box-shadow: 0 4px 12px rgba(204, 101, 102, 0.4);
+}

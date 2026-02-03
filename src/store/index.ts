@@ -21,4 +21,6 @@ export {
   selectCardsInGroup,
   selectHeadquarters,
   selectTurnSummary,
+  selectDilemmaEncounter,
+  selectDilemmaResult,
 } from "./gameStore";

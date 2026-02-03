@@ -1,0 +1,250 @@
+/* OrdersModal - Ship movement and beaming */
+
+.orders-modal {
+  position: fixed;
+  z-index: 1000;
+  width: 565px;
+  min-height: 400px;
+  background-image: url("/images/orders.jpg");
+  background-repeat: no-repeat;
+  background-color: black;
+  border: 6px solid #9999ff;
+  color: #e0e0e0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.orders-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: grab;
+  background: rgba(0, 0, 0, 0.5);
+  border-bottom: 1px solid #9999ff;
+}
+
+.orders-modal__header:active {
+  cursor: grabbing;
+}
+
+.orders-modal__title {
+  color: #ff9900;
+  font-size: 16px;
+  margin: 0;
+}
+
+.orders-modal__close {
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.orders-modal__close:hover {
+  color: #ff6666;
+}
+
+.orders-modal__content {
+  padding: 12px;
+  padding-left: 140px; /* Account for background image */
+}
+
+.orders-modal__current {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #9999ff;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.orders-modal__section-title {
+  color: #ff9900;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.orders-modal__cards {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+/* Stats summary */
+.orders-modal__stats {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.orders-modal__stats-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.orders-modal__stats-row:last-child {
+  margin-bottom: 0;
+}
+
+.orders-modal__stat-label {
+  color: #9999ff;
+  font-size: 11px;
+}
+
+.orders-modal__stat-value {
+  color: #fff;
+  font-size: 11px;
+}
+
+.orders-modal__stat {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.orders-modal__stat--integrity {
+  color: #66ccff;
+}
+
+.orders-modal__stat--cunning {
+  color: #ffcc66;
+}
+
+.orders-modal__stat--strength {
+  color: #ff6666;
+}
+
+/* Skills */
+.orders-modal__skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.orders-modal__skill {
+  background: rgba(153, 153, 255, 0.2);
+  border: 1px solid #9999ff;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  color: #e0e0e0;
+}
+
+.orders-modal__skill-count {
+  color: #ff9900;
+  margin-left: 3px;
+}
+
+.orders-modal__ship-status {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+}
+
+.orders-modal__ship-status .staffed {
+  color: #4caf50;
+}
+
+.orders-modal__ship-status .not-staffed {
+  color: #ff6666;
+}
+
+/* Sections */
+.orders-modal__section {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+/* Destinations */
+.orders-modal__destinations {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.orders-modal__dest-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(153, 153, 255, 0.2);
+  border: 1px solid #9999ff;
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.orders-modal__dest-btn:hover {
+  background: rgba(153, 153, 255, 0.4);
+}
+
+.orders-modal__dest-name {
+  font-weight: bold;
+}
+
+.orders-modal__dest-cost {
+  font-size: 11px;
+  color: #ff9900;
+}
+
+/* Beam personnel */
+.orders-modal__beam-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(153, 153, 255, 0.2);
+}
+
+.orders-modal__beam-row:last-child {
+  border-bottom: none;
+}
+
+.orders-modal__beam-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 150px;
+}
+
+.orders-modal__person-name {
+  font-size: 11px;
+  color: #b0b0b0;
+}
+
+.orders-modal__beam-targets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.orders-modal__beam-btn {
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid #4caf50;
+  border-radius: 4px;
+  padding: 4px 12px;
+  color: #4caf50;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.orders-modal__beam-btn:hover {
+  background: rgba(76, 175, 80, 0.4);
+}
+
+/* No options message */
+.orders-modal__no-options {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  padding: 12px;
+}

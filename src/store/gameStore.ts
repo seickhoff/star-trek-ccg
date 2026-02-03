@@ -19,6 +19,12 @@ import {
 import { cardDatabase } from "../data/cardDatabase";
 import { shuffle } from "../utils/shuffle";
 import { resetShipRange } from "../logic/shipMovement";
+import {
+  resolveDilemma,
+  resolveSelectionStop,
+  type DilemmaResult,
+} from "../logic/dilemmaResolver";
+import { checkMission } from "../logic/missionChecker";
 
 /**
  * Deep clone a card to avoid mutation issues
@@ -65,6 +71,8 @@ interface GameStoreState {
 
   // Dilemma encounter
   dilemmaEncounter: DilemmaEncounter | null;
+  // Current dilemma resolution result (for UI state)
+  dilemmaResult: DilemmaResult | null;
 
   // Game result
   gameOver: boolean;
@@ -91,7 +99,12 @@ interface GameStoreActions {
   deploy: (cardUniqueId: string, missionIndex?: number) => boolean;
   discardCard: (cardUniqueId: string) => void;
 
-  // Movement (basic - full implementation in Phase 4)
+  // Movement
+  moveShip: (
+    sourceMission: number,
+    groupIndex: number,
+    destMission: number
+  ) => void;
   beamToShip: (
     personnelId: string,
     missionIndex: number,
@@ -104,11 +117,20 @@ interface GameStoreActions {
     fromGroup: number
   ) => void;
 
+  // Mission attempt and dilemmas
+  attemptMission: (missionIndex: number, groupIndex: number) => void;
+  selectPersonnelForDilemma: (personnelId: string) => void;
+  advanceDilemma: () => void;
+  clearDilemmaEncounter: () => void;
+
   // Internal helpers
   _findCardInHand: (uniqueId: string) => Card | undefined;
   _removeFromHand: (uniqueId: string) => void;
   _checkWinCondition: () => void;
   _checkLoseCondition: () => void;
+  _applyDilemmaResult: (result: DilemmaResult) => void;
+  _scoreMission: (missionIndex: number) => void;
+  _failMissionAttempt: () => void;
 }
 
 type GameStore = GameStoreState & GameStoreActions;
@@ -130,6 +152,7 @@ const createInitialState = (): GameStoreState => ({
   completedPlanetMissions: 0,
   completedSpaceMissions: 0,
   dilemmaEncounter: null,
+  dilemmaResult: null,
   gameOver: false,
   victory: false,
   headquartersIndex: -1,
@@ -187,16 +210,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const shuffledDeck = shuffle(playableCards);
     const shuffledDilemmas = shuffle(dilemmaCards) as DilemmaCard[];
 
+    // Draw initial hand (free - doesn't cost counters)
+    const initialHand = shuffledDeck.slice(0, GAME_CONSTANTS.MAX_HAND_SIZE);
+    const remainingDeck = shuffledDeck.slice(GAME_CONSTANTS.MAX_HAND_SIZE);
+
     set({
       ...createInitialState(),
-      deck: shuffledDeck,
+      deck: remainingDeck,
+      hand: initialHand,
       dilemmaPool: shuffledDilemmas,
       missions,
       headquartersIndex,
     });
-
-    // Draw initial hand (7 cards)
-    get().draw(GAME_CONSTANTS.MAX_HAND_SIZE);
   },
 
   /**
@@ -328,13 +353,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (isPersonnel(card)) {
       // Personnel go to group 0 (planet-side)
       const updatedMissions = [...missions];
+      const targetDeployment = updatedMissions[targetMission]!;
+      const group0 = targetDeployment.groups[0]!;
+
       updatedMissions[targetMission] = {
-        ...updatedMissions[targetMission],
+        ...targetDeployment,
         groups: [
           {
-            cards: [...updatedMissions[targetMission].groups[0].cards, card],
+            cards: [...group0.cards, card],
           },
-          ...updatedMissions[targetMission].groups.slice(1),
+          ...targetDeployment.groups.slice(1),
         ],
       };
 
@@ -360,9 +388,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (isShip(card)) {
       // Ships create a new group
       const updatedMissions = [...missions];
+      const targetDeployment = updatedMissions[targetMission]!;
+
       updatedMissions[targetMission] = {
-        ...updatedMissions[targetMission],
-        groups: [...updatedMissions[targetMission].groups, { cards: [card] }],
+        ...targetDeployment,
+        groups: [...targetDeployment.groups, { cards: [card] }],
       };
 
       get()._removeFromHand(cardUniqueId);
@@ -407,6 +437,73 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   /**
+   * Move a ship (and all personnel aboard) to a different mission
+   */
+  moveShip: (
+    sourceMission: number,
+    groupIndex: number,
+    destMission: number
+  ) => {
+    const { missions, phase } = get();
+
+    if (phase !== "ExecuteOrders") return;
+    if (sourceMission < 0 || sourceMission >= missions.length) return;
+    if (destMission < 0 || destMission >= missions.length) return;
+    if (sourceMission === destMission) return;
+
+    const sourceDeployment = missions[sourceMission]!;
+    if (groupIndex < 0 || groupIndex >= sourceDeployment.groups.length) return;
+
+    const group = sourceDeployment.groups[groupIndex]!;
+    const ship = group.cards.find(isShip);
+    if (!ship) return;
+
+    // Calculate range cost
+    const sourceMissionCard = sourceDeployment.mission;
+    const destMissionCard = missions[destMission]!.mission;
+    const rangeCost =
+      sourceMissionCard.range +
+      destMissionCard.range +
+      (sourceMissionCard.quadrant !== destMissionCard.quadrant ? 2 : 0);
+
+    // Check if ship has enough range
+    if ((ship as ShipCard).rangeRemaining < rangeCost) return;
+
+    // Update ship's remaining range
+    const updatedShip: ShipCard = {
+      ...(ship as ShipCard),
+      rangeRemaining: (ship as ShipCard).rangeRemaining - rangeCost,
+    };
+
+    // Update the group with the new ship
+    const updatedGroupCards = group.cards.map((c) =>
+      c.uniqueId === ship.uniqueId ? updatedShip : c
+    );
+
+    // Remove group from source mission
+    const updatedSourceDeployment = {
+      ...sourceDeployment,
+      groups: sourceDeployment.groups.filter((_, idx) => idx !== groupIndex),
+    };
+
+    // Add group to destination mission
+    const destDeployment = missions[destMission]!;
+    const updatedDestDeployment = {
+      ...destDeployment,
+      groups: [...destDeployment.groups, { cards: updatedGroupCards }],
+    };
+
+    // Update missions array
+    const updatedMissions = missions.map((m, idx) => {
+      if (idx === sourceMission) return updatedSourceDeployment;
+      if (idx === destMission) return updatedDestDeployment;
+      return m;
+    });
+
+    set({ missions: updatedMissions });
+  },
+
+  /**
    * Beam personnel from one group to a ship (another group)
    */
   beamToShip: (
@@ -420,23 +517,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (phase !== "ExecuteOrders") return;
     if (missionIndex < 0 || missionIndex >= missions.length) return;
 
-    const deployment = missions[missionIndex];
+    const deployment = missions[missionIndex]!;
     if (fromGroup < 0 || fromGroup >= deployment.groups.length) return;
     if (toGroup < 0 || toGroup >= deployment.groups.length) return;
     if (fromGroup === toGroup) return;
 
     // Find personnel in source group
-    const sourceGroup = deployment.groups[fromGroup];
+    const sourceGroup = deployment.groups[fromGroup]!;
     const personnelIndex = sourceGroup.cards.findIndex(
       (c) => c.uniqueId === personnelId && isPersonnel(c)
     );
 
     if (personnelIndex === -1) return;
 
-    const personnel = sourceGroup.cards[personnelIndex];
+    const personnel = sourceGroup.cards[personnelIndex]!;
 
     // Target group must have a ship (for beaming to ship)
-    const targetGroup = deployment.groups[toGroup];
+    const targetGroup = deployment.groups[toGroup]!;
     if (toGroup > 0 && !targetGroup.cards.some(isShip)) return;
 
     // Move personnel
@@ -469,6 +566,176 @@ export const useGameStore = create<GameStore>((set, get) => ({
     fromGroup: number
   ) => {
     get().beamToShip(personnelId, missionIndex, fromGroup, 0);
+  },
+
+  /**
+   * Start a mission attempt
+   * Draws dilemmas and initiates encounter
+   */
+  attemptMission: (missionIndex: number, groupIndex: number) => {
+    const { missions, dilemmaPool, phase, headquartersIndex } = get();
+
+    // Can only attempt during ExecuteOrders
+    if (phase !== "ExecuteOrders") return;
+    if (missionIndex < 0 || missionIndex >= missions.length) return;
+
+    // Cannot attempt headquarters mission
+    if (missionIndex === headquartersIndex) return;
+
+    const deployment = missions[missionIndex]!;
+    const mission = deployment.mission;
+
+    // Mission already completed
+    if (mission.completed) return;
+
+    // Get the attempting group
+    const group = deployment.groups[groupIndex];
+    if (!group || group.cards.length === 0) return;
+
+    // Count unstopped personnel
+    const unstoppedPersonnel = group.cards.filter(
+      (c) => isPersonnel(c) && (c as PersonnelCard).status === "Unstopped"
+    );
+
+    if (unstoppedPersonnel.length === 0) return;
+
+    // Filter applicable dilemmas
+    const missionType = mission.missionType;
+    const applicableDilemmas = dilemmaPool.filter((d) => {
+      // Check location match
+      if (d.where === "Dual") return true;
+      if (d.where === "Planet" && missionType === "Planet") return true;
+      if (d.where === "Space" && missionType === "Space") return true;
+      return false;
+    });
+
+    // Draw dilemmas equal to personnel count (capped by available)
+    const drawCount = Math.min(
+      unstoppedPersonnel.length,
+      applicableDilemmas.length
+    );
+    const selectedDilemmas = shuffle(applicableDilemmas).slice(
+      0,
+      drawCount
+    ) as DilemmaCard[];
+
+    // Remove selected dilemmas from pool
+    const remainingPool = dilemmaPool.filter(
+      (d) => !selectedDilemmas.some((s) => s.uniqueId === d.uniqueId)
+    );
+
+    // Create encounter state
+    const encounter: DilemmaEncounter = {
+      missionIndex,
+      groupIndex,
+      selectedDilemmas,
+      currentDilemmaIndex: 0,
+    };
+
+    set({
+      dilemmaEncounter: encounter,
+      dilemmaPool: remainingPool,
+    });
+
+    // If no dilemmas, go straight to scoring
+    if (selectedDilemmas.length === 0) {
+      get()._scoreMission(missionIndex);
+      return;
+    }
+
+    // Resolve first dilemma
+    const cards = group.cards;
+    const firstDilemma = selectedDilemmas[0]!;
+    const result = resolveDilemma(firstDilemma, cards);
+
+    set({ dilemmaResult: result });
+
+    // Apply automatic results
+    if (!result.requiresSelection) {
+      get()._applyDilemmaResult(result);
+    }
+  },
+
+  /**
+   * Handle player selecting personnel for dilemma
+   */
+  selectPersonnelForDilemma: (personnelId: string) => {
+    const { dilemmaEncounter, dilemmaResult } = get();
+
+    if (!dilemmaEncounter || !dilemmaResult) return;
+    if (!dilemmaResult.requiresSelection) return;
+    if (!dilemmaResult.selectablePersonnel.includes(personnelId)) return;
+
+    const currentDilemma =
+      dilemmaEncounter.selectedDilemmas[dilemmaEncounter.currentDilemmaIndex];
+    if (!currentDilemma) return;
+
+    // Resolve the selection
+    const result = resolveSelectionStop(currentDilemma, personnelId);
+    get()._applyDilemmaResult(result);
+  },
+
+  /**
+   * Advance to next dilemma or complete encounter
+   */
+  advanceDilemma: () => {
+    const { dilemmaEncounter, missions } = get();
+
+    if (!dilemmaEncounter) return;
+
+    const { missionIndex, groupIndex, selectedDilemmas, currentDilemmaIndex } =
+      dilemmaEncounter;
+
+    // Check if all personnel are stopped
+    const deployment = missions[missionIndex]!;
+    const group = deployment.groups[groupIndex]!;
+    const unstopped = group.cards.filter(
+      (c) => isPersonnel(c) && (c as PersonnelCard).status === "Unstopped"
+    );
+
+    // If all stopped, remaining dilemmas are overcome
+    if (unstopped.length === 0) {
+      get()._failMissionAttempt();
+      return;
+    }
+
+    // Move to next dilemma
+    const nextIndex = currentDilemmaIndex + 1;
+
+    if (nextIndex >= selectedDilemmas.length) {
+      // All dilemmas resolved - try to score mission
+      get()._scoreMission(missionIndex);
+      return;
+    }
+
+    // Update encounter to next dilemma
+    set({
+      dilemmaEncounter: {
+        ...dilemmaEncounter,
+        currentDilemmaIndex: nextIndex,
+      },
+    });
+
+    // Resolve next dilemma
+    const nextDilemma = selectedDilemmas[nextIndex]!;
+    const result = resolveDilemma(nextDilemma, group.cards);
+
+    set({ dilemmaResult: result });
+
+    // Apply automatic results
+    if (!result.requiresSelection) {
+      get()._applyDilemmaResult(result);
+    }
+  },
+
+  /**
+   * Clear dilemma encounter state
+   */
+  clearDilemmaEncounter: () => {
+    set({
+      dilemmaEncounter: null,
+      dilemmaResult: null,
+    });
   },
 
   /**
@@ -519,6 +786,185 @@ export const useGameStore = create<GameStore>((set, get) => ({
         set({ gameOver: true, victory: false });
       }
     }
+  },
+
+  /**
+   * Apply dilemma result to game state
+   */
+  _applyDilemmaResult: (result: DilemmaResult) => {
+    const { dilemmaEncounter, missions, discard, dilemmaPool } = get();
+
+    if (!dilemmaEncounter) return;
+
+    const { missionIndex, groupIndex, selectedDilemmas, currentDilemmaIndex } =
+      dilemmaEncounter;
+
+    const currentDilemma = selectedDilemmas[currentDilemmaIndex];
+    if (!currentDilemma) return;
+
+    const updatedMissions = [...missions];
+    const deployment = { ...updatedMissions[missionIndex]! };
+    const newDiscard = [...discard];
+    let newDilemmaPool = [...dilemmaPool];
+
+    // Update groups with stopped/killed personnel
+    deployment.groups = deployment.groups.map((group, idx) => {
+      if (idx !== groupIndex) return group;
+
+      const updatedCards = group.cards
+        .map((card) => {
+          if (!isPersonnel(card)) return card;
+
+          const personnel = card as PersonnelCard;
+          if (!personnel.uniqueId) return card;
+
+          // Check if killed
+          if (result.killedPersonnel.includes(personnel.uniqueId)) {
+            // Add to discard with killed status
+            newDiscard.push({ ...personnel, status: "Killed" });
+            return null; // Mark for removal
+          }
+
+          // Check if stopped
+          if (result.stoppedPersonnel.includes(personnel.uniqueId)) {
+            return { ...personnel, status: "Stopped" as const };
+          }
+
+          return card;
+        })
+        .filter((c): c is Card => c !== null);
+
+      return { cards: updatedCards };
+    });
+
+    // Update dilemma state
+    const updatedDilemma = {
+      ...currentDilemma,
+      overcome: result.overcome,
+      faceup: true,
+    };
+
+    // Add dilemma to mission if overcome (or staying on mission like Limited Welcome)
+    if (result.overcome || !result.returnsToPile) {
+      deployment.dilemmas = [...deployment.dilemmas, updatedDilemma];
+    }
+
+    // Return dilemma to pool if specified
+    if (result.returnsToPile) {
+      newDilemmaPool = [...newDilemmaPool, updatedDilemma];
+    }
+
+    // Update selected dilemmas in encounter
+    const updatedSelectedDilemmas = selectedDilemmas.map((d, i) =>
+      i === currentDilemmaIndex ? updatedDilemma : d
+    );
+
+    updatedMissions[missionIndex] = deployment;
+
+    set({
+      missions: updatedMissions,
+      discard: newDiscard,
+      dilemmaPool: newDilemmaPool,
+      dilemmaEncounter: {
+        ...dilemmaEncounter,
+        selectedDilemmas: updatedSelectedDilemmas,
+      },
+      dilemmaResult: result,
+    });
+  },
+
+  /**
+   * Score a mission after passing all dilemmas
+   */
+  _scoreMission: (missionIndex: number) => {
+    const {
+      missions,
+      dilemmaEncounter,
+      score,
+      completedPlanetMissions,
+      completedSpaceMissions,
+    } = get();
+
+    if (!dilemmaEncounter) return;
+
+    const deployment = missions[missionIndex]!;
+    const mission = deployment.mission;
+    const group = deployment.groups[dilemmaEncounter.groupIndex]!;
+
+    // Check if mission requirements are still met
+    const requirementsMet = checkMission(group.cards, mission);
+
+    if (!requirementsMet) {
+      // Failed - stop all remaining personnel
+      get()._failMissionAttempt();
+      return;
+    }
+
+    // Score the mission
+    const missionScore = mission.score ?? 0;
+    const newScore = score + missionScore;
+
+    // Update mission as completed
+    const updatedMissions = [...missions];
+    updatedMissions[missionIndex] = {
+      ...deployment,
+      mission: { ...mission, completed: true },
+    };
+
+    // Track planet/space completion
+    const isPlanet = mission.missionType === "Planet";
+    const isSpace = mission.missionType === "Space";
+
+    set({
+      missions: updatedMissions,
+      score: newScore,
+      completedPlanetMissions: completedPlanetMissions + (isPlanet ? 1 : 0),
+      completedSpaceMissions: completedSpaceMissions + (isSpace ? 1 : 0),
+      dilemmaEncounter: null,
+      dilemmaResult: null,
+    });
+
+    // Check win condition
+    get()._checkWinCondition();
+  },
+
+  /**
+   * Fail mission attempt - stop all remaining personnel
+   */
+  _failMissionAttempt: () => {
+    const { missions, dilemmaEncounter } = get();
+
+    if (!dilemmaEncounter) return;
+
+    const { missionIndex, groupIndex } = dilemmaEncounter;
+
+    const updatedMissions = [...missions];
+    const deployment = { ...updatedMissions[missionIndex]! };
+
+    // Stop all unstopped personnel in the group
+    deployment.groups = deployment.groups.map((group, idx) => {
+      if (idx !== groupIndex) return group;
+
+      const updatedCards = group.cards.map((card) => {
+        if (
+          isPersonnel(card) &&
+          (card as PersonnelCard).status === "Unstopped"
+        ) {
+          return { ...card, status: "Stopped" as const };
+        }
+        return card;
+      });
+
+      return { cards: updatedCards };
+    });
+
+    updatedMissions[missionIndex] = deployment;
+
+    set({
+      missions: updatedMissions,
+      dilemmaEncounter: null,
+      dilemmaResult: null,
+    });
   },
 }));
 
@@ -662,8 +1108,10 @@ export const selectShipsAtMission =
 export const selectCardsInGroup =
   (missionIndex: number, groupIndex: number) => (state: GameStore) => {
     const mission = state.missions[missionIndex];
-    if (!mission || groupIndex >= mission.groups.length) return [];
-    return mission.groups[groupIndex].cards;
+    if (!mission) return [];
+    const group = mission.groups[groupIndex];
+    if (!group) return [];
+    return group.cards;
   };
 
 /**
@@ -689,3 +1137,14 @@ export const selectTurnSummary = (state: GameStore) => ({
   completedPlanetMissions: state.completedPlanetMissions,
   completedSpaceMissions: state.completedSpaceMissions,
 });
+
+/**
+ * Get current dilemma encounter
+ */
+export const selectDilemmaEncounter = (state: GameStore) =>
+  state.dilemmaEncounter;
+
+/**
+ * Get current dilemma result
+ */
+export const selectDilemmaResult = (state: GameStore) => state.dilemmaResult;

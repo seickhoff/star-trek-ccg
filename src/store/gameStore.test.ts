@@ -25,10 +25,11 @@ describe("gameStore", () => {
       // Should have dilemmas in pool
       expect(state.dilemmaPool.length).toBeGreaterThan(0);
 
-      // Should be on turn 1, auto-advanced to ExecuteOrders (spent 7 counters drawing)
+      // Should be on turn 1, PlayAndDraw phase with full counters
+      // (initial hand draw is free, like the original game)
       expect(state.turn).toBe(1);
-      expect(state.phase).toBe("ExecuteOrders"); // Auto-advances when counters hit 0
-      expect(state.counters).toBe(0); // Spent 7 counters drawing
+      expect(state.phase).toBe("PlayAndDraw");
+      expect(state.counters).toBe(GAME_CONSTANTS.STARTING_COUNTERS);
 
       // Deck should be reduced by 7
       expect(state.deck.length).toBeGreaterThan(0);
@@ -40,7 +41,7 @@ describe("gameStore", () => {
 
       const state = useGameStore.getState();
       expect(state.headquartersIndex).toBe(0); // Unicomplex is first mission
-      expect(state.missions[0].mission.missionType).toBe("Headquarters");
+      expect(state.missions[0]!.mission.missionType).toBe("Headquarters");
     });
 
     it("creates unique IDs for each card instance", () => {
@@ -139,7 +140,7 @@ describe("gameStore", () => {
 
       // Card should be at headquarters (group 0)
       const hqCards =
-        newState.missions[newState.headquartersIndex].groups[0].cards;
+        newState.missions[newState.headquartersIndex]!.groups[0]!.cards;
       expect(
         hqCards.find((c) => c.uniqueId === personnel.uniqueId)
       ).toBeDefined();
@@ -166,18 +167,18 @@ describe("gameStore", () => {
       if (!shipCard?.uniqueId) return;
 
       const initialGroupCount =
-        stateWithShip.missions[stateWithShip.headquartersIndex].groups.length;
+        stateWithShip.missions[stateWithShip.headquartersIndex]!.groups.length;
 
       stateWithShip.deploy(shipCard.uniqueId);
 
       const newState = useGameStore.getState();
-      const hqGroups = newState.missions[newState.headquartersIndex].groups;
+      const hqGroups = newState.missions[newState.headquartersIndex]!.groups;
 
       // Should have added a new group
       expect(hqGroups.length).toBe(initialGroupCount + 1);
 
       // Ship should be in the new group
-      const lastGroup = hqGroups[hqGroups.length - 1];
+      const lastGroup = hqGroups[hqGroups.length - 1]!;
       expect(
         lastGroup.cards.find((c) => c.uniqueId === shipCard.uniqueId)
       ).toBeDefined();
@@ -468,10 +469,10 @@ describe("gameStore", () => {
     it("moves personnel from planet to ship", () => {
       const state = useGameStore.getState();
       const hqIndex = state.headquartersIndex;
-      const hq = state.missions[hqIndex];
+      const hq = state.missions[hqIndex]!;
 
       // Personnel should be in group 0
-      const personnel = hq.groups[0].cards.find((c) => c.type === "Personnel");
+      const personnel = hq.groups[0]!.cards.find((c) => c.type === "Personnel");
       if (!personnel?.uniqueId) {
         console.log("No personnel in group 0, skipping test");
         return;
@@ -486,16 +487,16 @@ describe("gameStore", () => {
       state.beamToShip(personnel.uniqueId, hqIndex, 0, 1);
 
       const newState = useGameStore.getState();
-      const newHq = newState.missions[hqIndex];
+      const newHq = newState.missions[hqIndex]!;
 
       // Personnel should no longer be in group 0
       expect(
-        newHq.groups[0].cards.find((c) => c.uniqueId === personnel.uniqueId)
+        newHq.groups[0]!.cards.find((c) => c.uniqueId === personnel.uniqueId)
       ).toBeUndefined();
 
       // Personnel should be in group 1
       expect(
-        newHq.groups[1].cards.find((c) => c.uniqueId === personnel.uniqueId)
+        newHq.groups[1]!.cards.find((c) => c.uniqueId === personnel.uniqueId)
       ).toBeDefined();
     });
 
@@ -504,17 +505,17 @@ describe("gameStore", () => {
 
       const state = useGameStore.getState();
       const hqIndex = state.headquartersIndex;
-      const hq = state.missions[hqIndex];
-      const personnel = hq.groups[0].cards.find((c) => c.type === "Personnel");
+      const hq = state.missions[hqIndex]!;
+      const personnel = hq.groups[0]!.cards.find((c) => c.type === "Personnel");
 
       if (!personnel?.uniqueId) return;
 
-      const initialGroup0Count = hq.groups[0].cards.length;
+      const initialGroup0Count = hq.groups[0]!.cards.length;
 
       state.beamToShip(personnel.uniqueId, hqIndex, 0, 1);
 
       expect(
-        useGameStore.getState().missions[hqIndex].groups[0].cards.length
+        useGameStore.getState().missions[hqIndex]!.groups[0]!.cards.length
       ).toBe(initialGroup0Count);
     });
   });

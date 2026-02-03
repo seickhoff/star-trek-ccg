@@ -1,0 +1,130 @@
+/* GroupViewer - Group stats modal */
+
+.group-viewer {
+  color: #e0e0e0;
+}
+
+/* Stats summary */
+.group-viewer__stats {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #ff9900;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.group-viewer__stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 153, 0, 0.2);
+}
+
+.group-viewer__stat-row:last-child {
+  border-bottom: none;
+}
+
+.group-viewer__stat-label {
+  color: #9999ff;
+  font-weight: bold;
+}
+
+.group-viewer__stat-value {
+  color: #fff;
+}
+
+/* Skills */
+.group-viewer__skills {
+  margin-bottom: 16px;
+}
+
+.group-viewer__skills-title {
+  color: #ff9900;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.group-viewer__skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.group-viewer__skill {
+  background: rgba(153, 153, 255, 0.2);
+  border: 1px solid #9999ff;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.group-viewer__skill-count {
+  color: #ff9900;
+  margin-left: 4px;
+}
+
+.group-viewer__no-skills {
+  color: #666;
+  font-style: italic;
+}
+
+/* Cards */
+.group-viewer__cards-title {
+  color: #ff9900;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.group-viewer__cards-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.group-viewer__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.group-viewer__card-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.group-viewer__card-name {
+  font-size: 10px;
+  color: #b0b0b0;
+  max-width: 70px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.group-viewer__card-status {
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.group-viewer__card-status--unstopped {
+  color: #4caf50;
+}
+
+.group-viewer__card-status--stopped {
+  color: #fff;
+  background: red;
+}
+
+.group-viewer__card-status--killed {
+  color: #fff;
+  background: #800000;
+}
+
+.group-viewer__card-type {
+  font-size: 9px;
+  color: #ff9900;
+}

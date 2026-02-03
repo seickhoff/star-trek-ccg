@@ -1,0 +1,159 @@
+/* DilemmaModal - Dilemma encounter UI */
+
+.dilemma-modal {
+  color: #e0e0e0;
+  padding-left: 120px; /* Account for background image */
+}
+
+/* Progress */
+.dilemma-modal__progress {
+  text-align: center;
+  color: #cc6566;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+/* Current dilemma card */
+.dilemma-modal__card {
+  display: flex;
+  gap: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid #cc6566;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.dilemma-modal__card-info {
+  flex: 1;
+}
+
+.dilemma-modal__card-name {
+  color: #ff9900;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.dilemma-modal__card-type {
+  color: #cc6566;
+  font-size: 11px;
+  margin-bottom: 12px;
+}
+
+.dilemma-modal__requirements {
+  margin-top: 8px;
+}
+
+.dilemma-modal__req-label {
+  color: #9999ff;
+  font-size: 11px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.dilemma-modal__req-skills {
+  color: #e0e0e0;
+  font-size: 12px;
+}
+
+/* Result message */
+.dilemma-modal__message {
+  background: rgba(204, 101, 102, 0.2);
+  border: 1px solid #cc6566;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #e0e0e0;
+}
+
+/* Sections */
+.dilemma-modal__section {
+  margin-bottom: 16px;
+}
+
+.dilemma-modal__section-title {
+  color: #ff9900;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.dilemma-modal__section-title--stopped {
+  color: #ff6666;
+}
+
+/* Personnel grid */
+.dilemma-modal__personnel {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dilemma-modal__personnel--stopped {
+  opacity: 0.7;
+}
+
+.dilemma-modal__person-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(153, 153, 255, 0.1);
+  border: 1px solid #9999ff;
+  border-radius: 4px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dilemma-modal__person-btn:hover {
+  background: rgba(153, 153, 255, 0.3);
+  border-color: #ff9900;
+}
+
+.dilemma-modal__stopped-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+}
+
+.dilemma-modal__person-name {
+  font-size: 9px;
+  color: #b0b0b0;
+  max-width: 60px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Actions */
+.dilemma-modal__actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+  border-top: 1px solid rgba(204, 101, 102, 0.3);
+}
+
+.dilemma-modal__continue-btn {
+  background: #cc6566;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dilemma-modal__continue-btn:hover {
+  background: #dd7677;
+}
+
+.dilemma-modal__continue-btn:active {
+  background: #bb5556;
+}

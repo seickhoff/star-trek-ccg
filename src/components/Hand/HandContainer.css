@@ -1,0 +1,71 @@
+/* HandContainer - Player's hand area */
+
+.hand-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  border-top: 2px solid #9999ff;
+  padding: 8px 16px 12px;
+  z-index: 100;
+}
+
+.hand-container__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 0 8px;
+}
+
+.hand-container__title {
+  color: #ff9900;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.hand-container__count {
+  color: #9999ff;
+  font-size: 12px;
+}
+
+.hand-container__cards {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.hand-container__empty {
+  color: #666;
+  font-size: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+/* Scrollbar styling */
+.hand-container__cards::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.hand-container__cards::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+.hand-container__cards::-webkit-scrollbar-thumb {
+  background: #9999ff;
+  border-radius: 3px;
+}
+
+.hand-container__cards::-webkit-scrollbar-thumb:hover {
+  background: #aaaaf0;
+}

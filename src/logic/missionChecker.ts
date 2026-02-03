@@ -114,10 +114,11 @@ export function checkMission(cards: Card[], mission: MissionCard): boolean {
 
     // Check each required skill in this group
     for (const skill of skillRequirement) {
-      if (!(skill in availableStats) || availableStats[skill] <= 0) {
+      const skillCount = availableStats[skill] ?? 0;
+      if (skillCount <= 0) {
         fails++;
       } else {
-        availableStats[skill]--;
+        availableStats[skill] = skillCount - 1;
       }
     }
 
