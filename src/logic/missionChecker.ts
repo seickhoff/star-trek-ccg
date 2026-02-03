@@ -6,6 +6,7 @@ import type {
   AttributeName,
 } from "../types/card";
 import { isPersonnel } from "../types/card";
+import { getEffectiveStats } from "./abilities";
 
 /**
  * Skill counts for a group of personnel
@@ -28,6 +29,7 @@ export interface GroupStats {
 /**
  * Calculate combined stats for a group of cards
  * Only counts unstopped personnel
+ * Uses effective stats (applying passive ability modifiers)
  */
 export function calculateGroupStats(cards: Card[]): GroupStats {
   const stats: GroupStats = {
@@ -41,9 +43,12 @@ export function calculateGroupStats(cards: Card[]): GroupStats {
   for (const card of cards) {
     if (isPersonnel(card) && card.status === "Unstopped") {
       stats.unstoppedPersonnel++;
-      stats.integrity += card.integrity;
-      stats.cunning += card.cunning;
-      stats.strength += card.strength;
+
+      // Use effective stats (with passive ability modifiers applied)
+      const effective = getEffectiveStats(card, cards);
+      stats.integrity += effective.integrity;
+      stats.cunning += effective.cunning;
+      stats.strength += effective.strength;
 
       // Count skills (nested arrays: [[Skill1], [Skill2, Skill3]])
       for (const skillGroup of card.skills) {

@@ -1,3 +1,5 @@
+import type { Ability } from "./ability";
+
 // Card type discriminants
 export type CardType =
   | "Mission"
@@ -108,6 +110,7 @@ export interface PersonnelCard extends BaseCard {
   integrity: number;
   cunning: number;
   strength: number;
+  abilities?: Ability[];
 }
 
 // Ship card

@@ -1,4 +1,5 @@
 import type {
+  Ability,
   Affiliation,
   CardDatabase,
   DilemmaCard,
@@ -269,6 +270,24 @@ const personnel: Record<string, PersonnelCard> = {
     cunning: 5,
     strength: 6,
     jpg: "cards/ST2E-EN03134.jpg",
+    abilities: [
+      {
+        id: "opposition-drone-strength-boost",
+        trigger: "passive",
+        target: {
+          scope: "present",
+          species: ["Borg"],
+          excludeSelf: true,
+        },
+        effects: [
+          {
+            type: "statModifier",
+            stat: "strength",
+            value: 1,
+          },
+        ],
+      } satisfies Ability,
+    ],
   },
   EN03137: {
     id: "EN03137",
