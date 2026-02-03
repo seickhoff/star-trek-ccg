@@ -9,8 +9,10 @@
   background-repeat: no-repeat;
   background-color: black;
   border: 6px solid #9999ff;
+  border-radius: 12px;
   color: #e0e0e0;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
 }
 
 .orders-modal__header {

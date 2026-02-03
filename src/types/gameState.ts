@@ -43,6 +43,14 @@ export interface DilemmaEncounter {
   groupIndex: number;
   selectedDilemmas: DilemmaCard[];
   currentDilemmaIndex: number;
+  // Rule 6.2: Dilemma cost budget
+  // "That number is also the total cost in dilemmas your opponent can spend on dilemmas."
+  costBudget: number; // Total cost available (personnel count - overcome dilemmas)
+  costSpent: number; // Cost spent so far on faced dilemmas
+  // Rule 6.5: Duplicate dilemma detection
+  // "If your opponent reveals more than one copy of the same dilemma in a mission attempt,
+  // your personnel do not face that dilemma and it is overcome."
+  facedDilemmaIds: string[]; // Track base IDs (not uniqueIds) of faced dilemmas
 }
 
 // Player's complete game state

@@ -25,7 +25,7 @@ export function MissionColumn({
   missionIndex,
   isHeadquarters,
   onCardClick,
-  onMissionClick,
+  onMissionClick: _onMissionClick,
   onGroupClick,
   onAttemptMission,
   canAttempt = false,

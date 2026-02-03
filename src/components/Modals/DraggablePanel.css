@@ -9,11 +9,13 @@
     rgba(20, 20, 40, 0.98) 100%
   );
   border: 2px solid #9999ff;
+  border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   color: #e0e0e0;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .draggable-panel__header {

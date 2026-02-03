@@ -323,6 +323,7 @@ export function GameBoard() {
         onClose={handleCloseDilemma}
         onSelectPersonnel={handleSelectPersonnelForDilemma}
         onContinue={handleAdvanceDilemma}
+        onCardClick={handleViewCard}
       />
     </div>
   );

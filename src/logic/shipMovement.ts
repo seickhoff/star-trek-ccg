@@ -53,10 +53,12 @@ function getPersonnelStaffing(personnel: PersonnelCard[]): StaffingCounts {
 /**
  * Check if a ship is properly staffed for movement
  *
- * A ship is staffed if:
- * 1. All Command requirements are met by Command personnel
- * 2. Any excess Command personnel can count as Staff
- * 3. All Staff requirements are met (by Staff or excess Command)
+ * Per rulebook (p.10), a ship is staffed when BOTH conditions are met:
+ * 1. All the icons in the ship's staffing requirements can be found among
+ *    your unstopped personnel aboard that ship.
+ * 2. You have your unstopped personnel of the ship's affiliation aboard that ship.
+ *
+ * Additionally, Command icons can substitute for Staff icons.
  *
  * @param cards - Array of cards on the ship (first should be the ship, rest personnel)
  * @returns true if the ship is properly staffed
@@ -66,15 +68,21 @@ export function checkStaffed(cards: Card[]): boolean {
   const ship = cards[0];
   if (!ship || !isShip(ship)) return false;
 
-  // Get staffing requirements from ship
-  const requirements = getStaffingRequirements(ship);
-
   // Get unstopped personnel
   const personnel = cards
     .slice(1)
     .filter(
       (c): c is PersonnelCard => isPersonnel(c) && c.status === "Unstopped"
     );
+
+  // Rule requirement 2: At least one unstopped personnel must match ship's affiliation
+  const hasMatchingAffiliation = personnel.some((p) =>
+    p.affiliation.some((a) => ship.affiliation.includes(a))
+  );
+  if (!hasMatchingAffiliation) return false;
+
+  // Rule requirement 1: Check staffing icon requirements
+  const requirements = getStaffingRequirements(ship);
 
   // Get staffing provided by personnel
   const provided = getPersonnelStaffing(personnel);

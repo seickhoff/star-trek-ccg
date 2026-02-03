@@ -18,7 +18,7 @@ import {
 } from "../types";
 import { cardDatabase } from "../data/cardDatabase";
 import { shuffle } from "../utils/shuffle";
-import { resetShipRange } from "../logic/shipMovement";
+import { resetShipRange, checkStaffed } from "../logic/shipMovement";
 import {
   resolveDilemma,
   resolveSelectionStop,
@@ -276,12 +276,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * PlayAndDraw -> ExecuteOrders -> DiscardExcess -> (newTurn)
    */
   nextPhase: () => {
-    const { phase, counters, hand, gameOver } = get();
+    const { phase, counters, hand, deck, gameOver } = get();
 
     if (gameOver) return;
 
     if (phase === "PlayAndDraw") {
-      // Can only advance if counters are spent or choosing to stop early
+      // Rule 6.6: Must spend all seven counters each turn.
+      // If your deck is empty, you do not have to spend all seven counters.
+      if (counters > 0 && deck.length > 0) return;
       set({ phase: "ExecuteOrders" });
     } else if (phase === "ExecuteOrders") {
       set({ phase: "DiscardExcess" });
@@ -348,6 +350,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Default to headquarters if no mission specified
     const targetMission = missionIndex ?? headquartersIndex;
     if (targetMission < 0 || targetMission >= missions.length) return false;
+
+    // Rule 6.7: Deployment Affiliation Validation
+    // "Personnel, Ships, and Equipment are played at a headquarters mission if that
+    // mission's game text allows those cards to be played there."
+    const targetDeployment = missions[targetMission];
+    if (targetDeployment?.mission.missionType === "Headquarters") {
+      const playAllowed = targetDeployment.mission.play;
+      if (playAllowed) {
+        let canPlay = false;
+
+        if (isPersonnel(card) || isShip(card)) {
+          // Check if any card affiliation matches allowed affiliations
+          const cardAffiliations = card.affiliation;
+          canPlay = cardAffiliations.some((aff) => playAllowed.includes(aff));
+        }
+        // Note: Equipment would check playAllowed.includes('Equipment')
+        // but Equipment deployment is not yet implemented
+
+        if (!canPlay) return false;
+      }
+    }
 
     // Deploy based on card type
     if (isPersonnel(card)) {
@@ -457,6 +480,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const group = sourceDeployment.groups[groupIndex]!;
     const ship = group.cards.find(isShip);
     if (!ship) return;
+
+    // Rule 6.3: Ship must be staffed to move
+    // Requires matching affiliation personnel + staffing icons
+    if (!checkStaffed(group.cards)) return;
 
     // Calculate range cost
     const sourceMissionCard = sourceDeployment.mission;
@@ -599,6 +626,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     if (unstoppedPersonnel.length === 0) return;
 
+    // Rule 6.4: Mission Attempt Affiliation Check
+    // "To attempt a mission, the affiliation icon on at least one of the personnel
+    // attempting must match one of the icons on that mission."
+    const missionAffiliations = mission.affiliation ?? [];
+    if (missionAffiliations.length > 0) {
+      const hasMatchingAffiliation = unstoppedPersonnel.some((card) => {
+        const personnel = card as PersonnelCard;
+        return personnel.affiliation.some((a) =>
+          missionAffiliations.includes(a)
+        );
+      });
+      if (!hasMatchingAffiliation) return;
+    }
+
     // Filter applicable dilemmas
     const missionType = mission.missionType;
     const applicableDilemmas = dilemmaPool.filter((d) => {
@@ -609,15 +650,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return false;
     });
 
-    // Draw dilemmas equal to personnel count (capped by available)
-    const drawCount = Math.min(
-      unstoppedPersonnel.length,
-      applicableDilemmas.length
-    );
-    const selectedDilemmas = shuffle(applicableDilemmas).slice(
+    // Rule 6.1: Subtract overcome dilemmas from draw count
+    // "If you attempt a mission where there are overcome dilemmas underneath it,
+    // the number of those dilemmas is subtracted from that total first."
+    const overcomeCount = deployment.dilemmas.length;
+    const baseDrawCount = Math.max(
       0,
-      drawCount
-    ) as DilemmaCard[];
+      unstoppedPersonnel.length - overcomeCount
+    );
+
+    // Rule 6.2: Cost budget equals the draw count (personnel - overcome)
+    // "That number is also the total cost in dilemmas your opponent can spend."
+    const costBudget = baseDrawCount;
+
+    // For solitaire: select dilemmas by cost (highest first within budget)
+    // Shuffle first, then sort by cost descending and select within budget
+    const shuffledDilemmas = shuffle(applicableDilemmas) as DilemmaCard[];
+    shuffledDilemmas.sort((a, b) => b.deploy - a.deploy);
+
+    // Select dilemmas that fit within the cost budget
+    const selectedDilemmas: DilemmaCard[] = [];
+    let totalCost = 0;
+    for (const dilemma of shuffledDilemmas) {
+      if (totalCost + dilemma.deploy <= costBudget) {
+        selectedDilemmas.push(dilemma);
+        totalCost += dilemma.deploy;
+      }
+    }
 
     // Remove selected dilemmas from pool
     const remainingPool = dilemmaPool.filter(
@@ -630,6 +689,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       groupIndex,
       selectedDilemmas,
       currentDilemmaIndex: 0,
+      costBudget,
+      costSpent: 0,
+      facedDilemmaIds: [], // Rule 6.5: Track faced dilemma base IDs
     };
 
     set({
@@ -646,6 +708,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Resolve first dilemma
     const cards = group.cards;
     const firstDilemma = selectedDilemmas[0]!;
+
+    // Rule 6.5: Track this dilemma's base ID as faced
+    // (First dilemma can't be a duplicate since facedDilemmaIds starts empty)
+    set({
+      dilemmaEncounter: {
+        ...encounter,
+        facedDilemmaIds: [firstDilemma.id],
+      },
+    });
+
     const result = resolveDilemma(firstDilemma, cards);
 
     set({ dilemmaResult: result });
@@ -708,16 +780,72 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    // Update encounter to next dilemma
+    // Get the next dilemma
+    const nextDilemma = selectedDilemmas[nextIndex]!;
+
+    // Rule 6.5: Check for duplicate dilemma
+    // "If your opponent reveals more than one copy of the same dilemma in a mission attempt,
+    // your personnel do not face that dilemma and it is overcome."
+    const isDuplicate = dilemmaEncounter.facedDilemmaIds.includes(
+      nextDilemma.id
+    );
+
+    if (isDuplicate) {
+      // Auto-overcome the duplicate dilemma
+      const updatedDilemma = {
+        ...nextDilemma,
+        overcome: true,
+        faceup: true,
+      };
+
+      // Add to mission's overcome dilemmas
+      const updatedMissions = [...missions];
+      const missionDeployment = { ...updatedMissions[missionIndex]! };
+      missionDeployment.dilemmas = [
+        ...missionDeployment.dilemmas,
+        updatedDilemma,
+      ];
+      updatedMissions[missionIndex] = missionDeployment;
+
+      // Update selected dilemmas with overcome status
+      const updatedSelectedDilemmas = selectedDilemmas.map((d, i) =>
+        i === nextIndex ? updatedDilemma : d
+      );
+
+      // Update encounter to next dilemma (keeping same facedDilemmaIds since duplicate wasn't faced)
+      set({
+        missions: updatedMissions,
+        dilemmaEncounter: {
+          ...dilemmaEncounter,
+          currentDilemmaIndex: nextIndex,
+          selectedDilemmas: updatedSelectedDilemmas,
+        },
+        dilemmaResult: {
+          overcome: true,
+          stoppedPersonnel: [],
+          killedPersonnel: [],
+          requiresSelection: false,
+          selectablePersonnel: [],
+          returnsToPile: false,
+          message: `Duplicate dilemma "${nextDilemma.name}" auto-overcome (Rule 6.5)`,
+        },
+      });
+
+      // Recursively advance to check the next dilemma
+      get().advanceDilemma();
+      return;
+    }
+
+    // Not a duplicate - add to faced IDs and resolve normally
     set({
       dilemmaEncounter: {
         ...dilemmaEncounter,
         currentDilemmaIndex: nextIndex,
+        facedDilemmaIds: [...dilemmaEncounter.facedDilemmaIds, nextDilemma.id],
       },
     });
 
     // Resolve next dilemma
-    const nextDilemma = selectedDilemmas[nextIndex]!;
     const result = resolveDilemma(nextDilemma, group.cards);
 
     set({ dilemmaResult: result });
@@ -861,6 +989,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     updatedMissions[missionIndex] = deployment;
 
+    // Update cost spent with the current dilemma's cost
+    const newCostSpent = dilemmaEncounter.costSpent + currentDilemma.deploy;
+
     set({
       missions: updatedMissions,
       discard: newDiscard,
@@ -868,6 +999,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       dilemmaEncounter: {
         ...dilemmaEncounter,
         selectedDilemmas: updatedSelectedDilemmas,
+        costSpent: newCostSpent,
       },
       dilemmaResult: result,
     });
@@ -1061,10 +1193,12 @@ export const selectCanDraw = (state: GameStore) =>
  * Check if can advance phase
  */
 export const selectCanAdvancePhase = (state: GameStore) => {
-  const { phase, counters, hand } = state;
+  const { phase, counters, hand, deck } = state;
 
   if (phase === "PlayAndDraw") {
-    // Can always advance from PlayAndDraw (choosing to stop spending counters)
+    // Rule 6.6: Must spend all seven counters each turn.
+    // If your deck is empty, you do not have to spend all seven counters.
+    if (counters > 0 && deck.length > 0) return false;
     return true;
   }
 

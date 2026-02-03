@@ -69,70 +69,137 @@ describe("checkStaffed", () => {
     expect(checkStaffed([personnel])).toBe(false);
   });
 
-  it("returns true for ship with no staffing requirements", () => {
+  it("returns false for ship with no crew (no matching affiliation)", () => {
     const ship = createShip({ staffing: [[]] });
-    expect(checkStaffed([ship])).toBe(true);
-  });
-
-  it("returns false when Staff requirements not met", () => {
-    const ship = createShip({ staffing: [["Staff"]] });
-    // No crew
+    // Rule 6.3: Must have personnel of ship's affiliation aboard
     expect(checkStaffed([ship])).toBe(false);
   });
 
+  it("returns true for ship with no staffing requirements but matching affiliation crew", () => {
+    const ship = createShip({ staffing: [[]], affiliation: ["Borg"] });
+    const crew = createPersonnel({ affiliation: ["Borg"] });
+    expect(checkStaffed([ship, crew])).toBe(true);
+  });
+
+  it("returns false when no personnel match ship affiliation", () => {
+    const ship = createShip({ staffing: [[]], affiliation: ["Borg"] });
+    const crew = createPersonnel({ affiliation: ["Federation"] });
+    expect(checkStaffed([ship, crew])).toBe(false);
+  });
+
+  it("returns true when at least one personnel matches ship affiliation", () => {
+    const ship = createShip({ staffing: [[]], affiliation: ["Borg"] });
+    const borgCrew = createPersonnel({ affiliation: ["Borg"] });
+    const fedCrew = createPersonnel({ affiliation: ["Federation"] });
+    expect(checkStaffed([ship, borgCrew, fedCrew])).toBe(true);
+  });
+
+  it("returns true for dual-affiliation personnel matching ship", () => {
+    const ship = createShip({ staffing: [[]], affiliation: ["Borg"] });
+    const dualCrew = createPersonnel({ affiliation: ["Federation", "Borg"] });
+    expect(checkStaffed([ship, dualCrew])).toBe(true);
+  });
+
+  it("returns true for dual-affiliation ship with matching personnel", () => {
+    const ship = createShip({
+      staffing: [[]],
+      affiliation: ["Borg", "Federation"],
+    });
+    const fedCrew = createPersonnel({ affiliation: ["Federation"] });
+    expect(checkStaffed([ship, fedCrew])).toBe(true);
+  });
+
+  it("returns false when Staff requirements not met", () => {
+    const ship = createShip({ staffing: [["Staff"]], affiliation: ["Borg"] });
+    // Crew matches affiliation but doesn't have Staff icon
+    const crew = createPersonnel({ affiliation: ["Borg"], other: [] });
+    expect(checkStaffed([ship, crew])).toBe(false);
+  });
+
   it("returns true when Staff requirements met", () => {
-    const ship = createShip({ staffing: [["Staff"]] });
-    const staff = createPersonnel({ other: ["Staff"] });
+    const ship = createShip({ staffing: [["Staff"]], affiliation: ["Borg"] });
+    const staff = createPersonnel({ other: ["Staff"], affiliation: ["Borg"] });
     expect(checkStaffed([ship, staff])).toBe(true);
   });
 
   it("returns false when Command requirements not met", () => {
-    const ship = createShip({ staffing: [["Command"]] });
-    const staff = createPersonnel({ other: ["Staff"] });
+    const ship = createShip({ staffing: [["Command"]], affiliation: ["Borg"] });
+    const staff = createPersonnel({ other: ["Staff"], affiliation: ["Borg"] });
     expect(checkStaffed([ship, staff])).toBe(false);
   });
 
   it("returns true when Command requirements met", () => {
-    const ship = createShip({ staffing: [["Command"]] });
-    const command = createPersonnel({ other: ["Command"] });
+    const ship = createShip({ staffing: [["Command"]], affiliation: ["Borg"] });
+    const command = createPersonnel({
+      other: ["Command"],
+      affiliation: ["Borg"],
+    });
     expect(checkStaffed([ship, command])).toBe(true);
   });
 
   it("allows Command to count as Staff", () => {
-    const ship = createShip({ staffing: [["Staff", "Staff"]] });
-    const command = createPersonnel({ other: ["Command"] });
-    const staff = createPersonnel({ other: ["Staff"] });
+    const ship = createShip({
+      staffing: [["Staff", "Staff"]],
+      affiliation: ["Borg"],
+    });
+    const command = createPersonnel({
+      other: ["Command"],
+      affiliation: ["Borg"],
+    });
+    const staff = createPersonnel({ other: ["Staff"], affiliation: ["Borg"] });
     expect(checkStaffed([ship, command, staff])).toBe(true);
   });
 
   it("requires all Command slots filled before overflow to Staff", () => {
-    const ship = createShip({ staffing: [["Command", "Staff"]] });
-    const command = createPersonnel({ other: ["Command"] });
-    const staff = createPersonnel({ other: ["Staff"] });
+    const ship = createShip({
+      staffing: [["Command", "Staff"]],
+      affiliation: ["Borg"],
+    });
+    const command = createPersonnel({
+      other: ["Command"],
+      affiliation: ["Borg"],
+    });
+    const staff = createPersonnel({ other: ["Staff"], affiliation: ["Borg"] });
     expect(checkStaffed([ship, command, staff])).toBe(true);
   });
 
   it("fails when Command not met even if Staff is met", () => {
-    const ship = createShip({ staffing: [["Command", "Staff"]] });
-    const staff1 = createPersonnel({ other: ["Staff"] });
-    const staff2 = createPersonnel({ other: ["Staff"] });
+    const ship = createShip({
+      staffing: [["Command", "Staff"]],
+      affiliation: ["Borg"],
+    });
+    const staff1 = createPersonnel({ other: ["Staff"], affiliation: ["Borg"] });
+    const staff2 = createPersonnel({ other: ["Staff"], affiliation: ["Borg"] });
     expect(checkStaffed([ship, staff1, staff2])).toBe(false);
   });
 
-  it("ignores stopped personnel", () => {
-    const ship = createShip({ staffing: [["Staff"]] });
+  it("ignores stopped personnel for staffing icons", () => {
+    const ship = createShip({ staffing: [["Staff"]], affiliation: ["Borg"] });
     const stoppedStaff = createPersonnel({
       other: ["Staff"],
       status: "Stopped",
+      affiliation: ["Borg"],
     });
     expect(checkStaffed([ship, stoppedStaff])).toBe(false);
   });
 
+  it("ignores stopped personnel for affiliation check", () => {
+    const ship = createShip({ staffing: [[]], affiliation: ["Borg"] });
+    const stoppedCrew = createPersonnel({
+      status: "Stopped",
+      affiliation: ["Borg"],
+    });
+    expect(checkStaffed([ship, stoppedCrew])).toBe(false);
+  });
+
   it("handles multiple staffing requirements", () => {
-    const ship = createShip({ staffing: [["Command", "Command", "Staff"]] });
-    const cmd1 = createPersonnel({ other: ["Command"] });
-    const cmd2 = createPersonnel({ other: ["Command"] });
-    const staff = createPersonnel({ other: ["Staff"] });
+    const ship = createShip({
+      staffing: [["Command", "Command", "Staff"]],
+      affiliation: ["Borg"],
+    });
+    const cmd1 = createPersonnel({ other: ["Command"], affiliation: ["Borg"] });
+    const cmd2 = createPersonnel({ other: ["Command"], affiliation: ["Borg"] });
+    const staff = createPersonnel({ other: ["Staff"], affiliation: ["Borg"] });
     expect(checkStaffed([ship, cmd1, cmd2, staff])).toBe(true);
   });
 });
@@ -181,31 +248,52 @@ describe("checkRange", () => {
 });
 
 describe("getValidDestinations", () => {
-  it("returns empty for unstaffed ship", () => {
-    const ship = createShip({ staffing: [["Staff"]] });
+  it("returns empty for unstaffed ship (no crew)", () => {
+    const ship = createShip({ staffing: [["Staff"]], affiliation: ["Borg"] });
     const current = createMission({ id: "M1" });
     const missions = [current, createMission({ id: "M2", range: 2 })];
 
     expect(getValidDestinations([ship], current, missions)).toEqual([]);
   });
 
-  it("excludes current mission", () => {
-    const ship = createShip({ staffing: [[]], rangeRemaining: 100 });
+  it("returns empty for ship with wrong affiliation crew", () => {
+    const ship = createShip({ staffing: [[]], affiliation: ["Borg"] });
+    const fedCrew = createPersonnel({ affiliation: ["Federation"] });
     const current = createMission({ id: "M1" });
     const missions = [current, createMission({ id: "M2", range: 2 })];
 
-    const result = getValidDestinations([ship], current, missions);
+    expect(getValidDestinations([ship, fedCrew], current, missions)).toEqual(
+      []
+    );
+  });
+
+  it("excludes current mission", () => {
+    const ship = createShip({
+      staffing: [[]],
+      rangeRemaining: 100,
+      affiliation: ["Borg"],
+    });
+    const crew = createPersonnel({ affiliation: ["Borg"] });
+    const current = createMission({ id: "M1" });
+    const missions = [current, createMission({ id: "M2", range: 2 })];
+
+    const result = getValidDestinations([ship, crew], current, missions);
     expect(result.map((m) => m.id)).not.toContain("M1");
     expect(result.map((m) => m.id)).toContain("M2");
   });
 
   it("excludes missions out of range", () => {
-    const ship = createShip({ staffing: [[]], rangeRemaining: 5 });
+    const ship = createShip({
+      staffing: [[]],
+      rangeRemaining: 5,
+      affiliation: ["Borg"],
+    });
+    const crew = createPersonnel({ affiliation: ["Borg"] });
     const current = createMission({ id: "M1", range: 2 });
     const nearMission = createMission({ id: "M2", range: 2 });
     const farMission = createMission({ id: "M3", range: 10 });
 
-    const result = getValidDestinations([ship], current, [
+    const result = getValidDestinations([ship, crew], current, [
       current,
       nearMission,
       farMission,
