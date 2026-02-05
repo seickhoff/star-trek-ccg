@@ -15,7 +15,7 @@
     rgba(50, 0, 0, 0.8) 100%
   );
   border: 1px solid #500000;
-  border-radius: 4px 4px 0 0;
+  border-radius: 8px 8px 0 0;
   padding: 8px;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -102,7 +102,7 @@
   height: 55px;
   background: linear-gradient(135deg, #cc6566 0%, #993333 100%);
   border: 1px solid #cc6566;
-  border-radius: 3px;
+  border-radius: 6px;
 }
 
 /* Personnel deployment area (blue background like original) */
@@ -115,7 +115,7 @@
   );
   border: 1px solid #000050;
   border-top: none;
-  border-radius: 0 0 4px 4px;
+  border-radius: 0 0 8px 8px;
   padding: 8px;
   min-height: 150px;
 }
@@ -123,7 +123,7 @@
 /* Card group */
 .mission-column__group {
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 6px;
   margin-bottom: 8px;
   cursor: pointer;
@@ -198,7 +198,7 @@
   margin-top: 6px;
   padding: 4px 6px;
   background: rgba(0, 0, 0, 0.4);
-  border-radius: 3px;
+  border-radius: 6px;
   font-size: 9px;
 }
 
@@ -241,7 +241,7 @@
   background: #ca98cb;
   color: #000;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 10px;
   font-weight: bold;
   cursor: pointer;

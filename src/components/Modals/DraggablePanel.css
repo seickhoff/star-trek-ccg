@@ -2,14 +2,14 @@
 
 .draggable-panel {
   position: fixed;
-  z-index: 1000;
+  /* z-index managed dynamically via getNextZIndex() */
   background: linear-gradient(
     135deg,
     rgba(30, 30, 60, 0.95) 0%,
     rgba(20, 20, 40, 0.98) 100%
   );
   border: 2px solid #9999ff;
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   color: #e0e0e0;
   max-height: 80vh;

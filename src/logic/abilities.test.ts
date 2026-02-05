@@ -4,9 +4,20 @@ import {
   getEffectiveStats,
   collectApplicableAbilities,
   getGroupEffectiveStats,
+  matchesOwnershipCondition,
+  countMatchingCardsForCost,
+  getEffectiveDeployCost,
+  matchesGrantedSkillTarget,
+  getGrantedSkillsForPersonnel,
+  getDilemmaGrantedSkills,
 } from "./abilities";
 import type { PersonnelCard, ShipCard } from "../types/card";
-import type { Ability, TargetFilter } from "../types/ability";
+import type {
+  Ability,
+  CostModifierEffect,
+  TargetFilter,
+} from "../types/ability";
+import type { GrantedSkill } from "../types/gameState";
 
 // Test fixtures
 const createPersonnel = (
@@ -348,8 +359,8 @@ describe("collectApplicableAbilities", () => {
     const applicable = collectApplicableAbilities(target, [source, target]);
 
     expect(applicable).toHaveLength(1);
-    expect(applicable[0].ability.id).toBe("opposition-drone-strength-boost");
-    expect(applicable[0].sourceCard).toBe(source);
+    expect(applicable[0]!.ability.id).toBe("opposition-drone-strength-boost");
+    expect(applicable[0]!.sourceCard).toBe(source);
   });
 
   it("excludes abilities that don't match target", () => {
@@ -455,5 +466,680 @@ describe("integration with calculateGroupStats", () => {
     // With Opposition Drone: 6 + (5+1) + (5+1) = 18
     const stats = calculateGroupStats([drone, borg1, borg2]);
     expect(stats.strength).toBe(18);
+  });
+});
+
+// Acclimation Drone ability for testing cost modifiers
+const acclimationDroneAbility: Ability = {
+  id: "acclimation-drone-cost-reduction",
+  trigger: "whilePlaying",
+  target: {
+    scope: "self",
+  },
+  effects: [
+    {
+      type: "costModifier",
+      value: -1,
+      perMatchingCard: {
+        cardTypes: ["Personnel"],
+        ownership: "commandedNotOwned",
+      },
+    },
+  ],
+};
+
+describe("matchesOwnershipCondition", () => {
+  it("returns true for commanded when card is in play", () => {
+    const card = createPersonnel();
+    expect(matchesOwnershipCondition(card, "commanded", "player1")).toBe(true);
+  });
+
+  it("returns true for owned when ownerId matches player", () => {
+    const card = createPersonnel({ ownerId: "player1" });
+    expect(matchesOwnershipCondition(card, "owned", "player1")).toBe(true);
+  });
+
+  it("returns true for owned when ownerId is undefined (solitaire default)", () => {
+    const card = createPersonnel({ ownerId: undefined });
+    expect(matchesOwnershipCondition(card, "owned", "player1")).toBe(true);
+  });
+
+  it("returns false for owned when ownerId differs", () => {
+    const card = createPersonnel({ ownerId: "player2" });
+    expect(matchesOwnershipCondition(card, "owned", "player1")).toBe(false);
+  });
+
+  it("returns false for commandedNotOwned in solitaire (player owns all)", () => {
+    const card = createPersonnel({ ownerId: undefined });
+    expect(
+      matchesOwnershipCondition(card, "commandedNotOwned", "player1")
+    ).toBe(false);
+  });
+
+  it("returns true for commandedNotOwned when card is from opponent", () => {
+    const card = createPersonnel({ ownerId: "player2" });
+    expect(
+      matchesOwnershipCondition(card, "commandedNotOwned", "player1")
+    ).toBe(true);
+  });
+});
+
+describe("countMatchingCardsForCost", () => {
+  it("returns 1 when no perMatchingCard filter", () => {
+    const effect: CostModifierEffect = {
+      type: "costModifier",
+      value: -2,
+    };
+    const count = countMatchingCardsForCost([], effect, "player1");
+    expect(count).toBe(1);
+  });
+
+  it("counts personnel matching commandedNotOwned", () => {
+    const opponentCard1 = createPersonnel({
+      uniqueId: "opp-1",
+      ownerId: "player2",
+    });
+    const opponentCard2 = createPersonnel({
+      uniqueId: "opp-2",
+      ownerId: "player2",
+    });
+    const ownCard = createPersonnel({ uniqueId: "own-1", ownerId: "player1" });
+
+    const effect: CostModifierEffect = {
+      type: "costModifier",
+      value: -1,
+      perMatchingCard: {
+        cardTypes: ["Personnel"],
+        ownership: "commandedNotOwned",
+      },
+    };
+
+    const count = countMatchingCardsForCost(
+      [opponentCard1, opponentCard2, ownCard],
+      effect,
+      "player1"
+    );
+    expect(count).toBe(2); // Only opponent cards count
+  });
+
+  it("filters by card type", () => {
+    const personnel = createPersonnel({ ownerId: "player2" });
+    const ship = createShip({ ownerId: "player2" });
+
+    const effect: CostModifierEffect = {
+      type: "costModifier",
+      value: -1,
+      perMatchingCard: {
+        cardTypes: ["Personnel"],
+        ownership: "commandedNotOwned",
+      },
+    };
+
+    const count = countMatchingCardsForCost(
+      [personnel, ship],
+      effect,
+      "player1"
+    );
+    expect(count).toBe(1); // Only personnel counts
+  });
+
+  it("returns 0 when no matching cards in solitaire", () => {
+    // In solitaire, all cards are owned by player1
+    const card1 = createPersonnel({ ownerId: undefined });
+    const card2 = createPersonnel({ ownerId: "player1" });
+
+    const effect: CostModifierEffect = {
+      type: "costModifier",
+      value: -1,
+      perMatchingCard: {
+        cardTypes: ["Personnel"],
+        ownership: "commandedNotOwned",
+      },
+    };
+
+    const count = countMatchingCardsForCost([card1, card2], effect, "player1");
+    expect(count).toBe(0); // No opponent cards in solitaire
+  });
+});
+
+describe("getEffectiveDeployCost", () => {
+  it("returns base cost when no abilities", () => {
+    const personnel = createPersonnel({ deploy: 3 });
+    const cost = getEffectiveDeployCost(personnel, [], "player1");
+    expect(cost).toBe(3);
+  });
+
+  it("returns base cost when no whilePlaying abilities", () => {
+    const personnel = createPersonnel({
+      deploy: 3,
+      abilities: [oppositionDroneAbility], // passive, not whilePlaying
+    });
+    const cost = getEffectiveDeployCost(personnel, [], "player1");
+    expect(cost).toBe(3);
+  });
+
+  it("reduces cost based on commandedNotOwned personnel", () => {
+    const acclimationDrone = createPersonnel({
+      uniqueId: "accl-1",
+      deploy: 2,
+      abilities: [acclimationDroneAbility],
+    });
+
+    // Two opponent personnel in play
+    const opponentCard1 = createPersonnel({
+      uniqueId: "opp-1",
+      ownerId: "player2",
+    });
+    const opponentCard2 = createPersonnel({
+      uniqueId: "opp-2",
+      ownerId: "player2",
+    });
+
+    const cost = getEffectiveDeployCost(
+      acclimationDrone,
+      [opponentCard1, opponentCard2],
+      "player1"
+    );
+    expect(cost).toBe(0); // 2 - 1 - 1 = 0
+  });
+
+  it("cost cannot go below 0", () => {
+    const acclimationDrone = createPersonnel({
+      uniqueId: "accl-1",
+      deploy: 2,
+      abilities: [acclimationDroneAbility],
+    });
+
+    // Five opponent personnel - would make cost -3, but clamped to 0
+    const opponentCards = Array.from({ length: 5 }, (_, i) =>
+      createPersonnel({ uniqueId: `opp-${i}`, ownerId: "player2" })
+    );
+
+    const cost = getEffectiveDeployCost(
+      acclimationDrone,
+      opponentCards,
+      "player1"
+    );
+    expect(cost).toBe(0); // Clamped to 0
+  });
+
+  it("does not reduce cost in solitaire (no commandedNotOwned cards)", () => {
+    const acclimationDrone = createPersonnel({
+      uniqueId: "accl-1",
+      deploy: 2,
+      abilities: [acclimationDroneAbility],
+    });
+
+    // All cards owned by player1 (solitaire)
+    const ownCards = [
+      createPersonnel({ uniqueId: "own-1", ownerId: "player1" }),
+      createPersonnel({ uniqueId: "own-2", ownerId: undefined }),
+    ];
+
+    const cost = getEffectiveDeployCost(acclimationDrone, ownCards, "player1");
+    expect(cost).toBe(2); // No reduction in solitaire
+  });
+
+  it("handles ships with cost modifiers", () => {
+    const ship = createShip({ deploy: 4 });
+    // Ships don't have abilities currently, but should still return base cost
+    const cost = getEffectiveDeployCost(ship, [], "player1");
+    expect(cost).toBe(4);
+  });
+});
+
+describe("matchesGrantedSkillTarget", () => {
+  it("matches when no filters specified", () => {
+    const personnel = createPersonnel();
+    const filter: TargetFilter = { scope: "allInPlay" };
+
+    expect(matchesGrantedSkillTarget(personnel, filter)).toBe(true);
+  });
+
+  it("matches species filter", () => {
+    const borgPersonnel = createPersonnel({ species: ["Borg"] });
+    const humanPersonnel = createPersonnel({ species: ["Human"] });
+    const filter: TargetFilter = { scope: "allInPlay", species: ["Borg"] };
+
+    expect(matchesGrantedSkillTarget(borgPersonnel, filter)).toBe(true);
+    expect(matchesGrantedSkillTarget(humanPersonnel, filter)).toBe(false);
+  });
+
+  it("matches affiliation filter", () => {
+    const borgPersonnel = createPersonnel({ affiliation: ["Borg"] });
+    const fedPersonnel = createPersonnel({ affiliation: ["Federation"] });
+    const filter: TargetFilter = { scope: "allInPlay", affiliations: ["Borg"] };
+
+    expect(matchesGrantedSkillTarget(borgPersonnel, filter)).toBe(true);
+    expect(matchesGrantedSkillTarget(fedPersonnel, filter)).toBe(false);
+  });
+
+  it("matches card type filter", () => {
+    const personnel = createPersonnel();
+    const filter: TargetFilter = {
+      scope: "allInPlay",
+      cardTypes: ["Personnel"],
+    };
+
+    expect(matchesGrantedSkillTarget(personnel, filter)).toBe(true);
+  });
+
+  it("combines multiple filters with AND logic", () => {
+    const personnel = createPersonnel({
+      species: ["Borg"],
+      affiliation: ["Borg"],
+    });
+    const filter: TargetFilter = {
+      scope: "allInPlay",
+      species: ["Borg"],
+      affiliations: ["Borg"],
+    };
+
+    expect(matchesGrantedSkillTarget(personnel, filter)).toBe(true);
+  });
+});
+
+describe("getGrantedSkillsForPersonnel", () => {
+  it("returns empty array when no granted skills", () => {
+    const personnel = createPersonnel({ species: ["Borg"] });
+    const skills = getGrantedSkillsForPersonnel(personnel, []);
+    expect(skills).toEqual([]);
+  });
+
+  it("returns granted skill when personnel matches target", () => {
+    const personnel = createPersonnel({ species: ["Borg"] });
+    const grantedSkill: GrantedSkill = {
+      skill: "Navigation",
+      target: { scope: "allInPlay", species: ["Borg"] },
+      duration: "untilEndOfTurn",
+      sourceCardId: "source-1",
+      sourceAbilityId: "ability-1",
+    };
+
+    const skills = getGrantedSkillsForPersonnel(personnel, [grantedSkill]);
+    expect(skills).toEqual(["Navigation"]);
+  });
+
+  it("does not return granted skill when personnel does not match target", () => {
+    const humanPersonnel = createPersonnel({ species: ["Human"] });
+    const grantedSkill: GrantedSkill = {
+      skill: "Navigation",
+      target: { scope: "allInPlay", species: ["Borg"] },
+      duration: "untilEndOfTurn",
+      sourceCardId: "source-1",
+      sourceAbilityId: "ability-1",
+    };
+
+    const skills = getGrantedSkillsForPersonnel(humanPersonnel, [grantedSkill]);
+    expect(skills).toEqual([]);
+  });
+
+  it("returns multiple granted skills from different sources", () => {
+    const personnel = createPersonnel({ species: ["Borg"] });
+    const grant1: GrantedSkill = {
+      skill: "Navigation",
+      target: { scope: "allInPlay", species: ["Borg"] },
+      duration: "untilEndOfTurn",
+      sourceCardId: "source-1",
+      sourceAbilityId: "ability-1",
+    };
+    const grant2: GrantedSkill = {
+      skill: "Engineer",
+      target: { scope: "allInPlay", species: ["Borg"] },
+      duration: "untilEndOfTurn",
+      sourceCardId: "source-2",
+      sourceAbilityId: "ability-2",
+    };
+
+    const skills = getGrantedSkillsForPersonnel(personnel, [grant1, grant2]);
+    expect(skills).toContain("Navigation");
+    expect(skills).toContain("Engineer");
+    expect(skills).toHaveLength(2);
+  });
+
+  it("ignores grants with non-allInPlay scope", () => {
+    const personnel = createPersonnel({ species: ["Borg"] });
+    const grantedSkill: GrantedSkill = {
+      skill: "Navigation",
+      target: { scope: "present", species: ["Borg"] }, // Not allInPlay
+      duration: "untilEndOfTurn",
+      sourceCardId: "source-1",
+      sourceAbilityId: "ability-1",
+    };
+
+    // Currently, only allInPlay scope is supported for granted skills
+    const skills = getGrantedSkillsForPersonnel(personnel, [grantedSkill]);
+    expect(skills).toEqual([]);
+  });
+});
+
+describe("calculateGroupStats with granted skills", () => {
+  it("includes granted skills in skill counts", async () => {
+    const { calculateGroupStats } = await import("./missionChecker");
+
+    const borg1 = createPersonnel({
+      uniqueId: "borg-1",
+      species: ["Borg"],
+      skills: [["Engineer"]],
+    });
+
+    const borg2 = createPersonnel({
+      uniqueId: "borg-2",
+      species: ["Borg"],
+      skills: [["Science"]],
+    });
+
+    const grantedSkill: GrantedSkill = {
+      skill: "Navigation",
+      target: { scope: "allInPlay", species: ["Borg"] },
+      duration: "untilEndOfTurn",
+      sourceCardId: "queen-1",
+      sourceAbilityId: "borg-queen-skill-grant",
+    };
+
+    const stats = calculateGroupStats([borg1, borg2], [grantedSkill]);
+
+    // Each Borg should have their base skill + Navigation
+    expect(stats.skills["Engineer"]).toBe(1);
+    expect(stats.skills["Science"]).toBe(1);
+    expect(stats.skills["Navigation"]).toBe(2); // Both Borg get Navigation
+  });
+
+  it("does not grant skills to non-matching personnel", async () => {
+    const { calculateGroupStats } = await import("./missionChecker");
+
+    const borg = createPersonnel({
+      uniqueId: "borg-1",
+      species: ["Borg"],
+      skills: [],
+    });
+
+    const human = createPersonnel({
+      uniqueId: "human-1",
+      species: ["Human"],
+      skills: [],
+    });
+
+    const grantedSkill: GrantedSkill = {
+      skill: "Navigation",
+      target: { scope: "allInPlay", species: ["Borg"] },
+      duration: "untilEndOfTurn",
+      sourceCardId: "queen-1",
+      sourceAbilityId: "borg-queen-skill-grant",
+    };
+
+    const stats = calculateGroupStats([borg, human], [grantedSkill]);
+
+    // Only Borg gets Navigation
+    expect(stats.skills["Navigation"]).toBe(1);
+  });
+
+  it("stacks granted skill with base skill", async () => {
+    const { calculateGroupStats } = await import("./missionChecker");
+
+    const borg = createPersonnel({
+      uniqueId: "borg-1",
+      species: ["Borg"],
+      skills: [["Navigation"]], // Already has Navigation
+    });
+
+    const grantedSkill: GrantedSkill = {
+      skill: "Navigation",
+      target: { scope: "allInPlay", species: ["Borg"] },
+      duration: "untilEndOfTurn",
+      sourceCardId: "queen-1",
+      sourceAbilityId: "borg-queen-skill-grant",
+    };
+
+    const stats = calculateGroupStats([borg], [grantedSkill]);
+
+    // Borg has Navigation from base + Navigation from grant = 2
+    expect(stats.skills["Navigation"]).toBe(2);
+  });
+});
+
+// Seven of Nine ability for testing whileFacingDilemma
+const sevenOfNineAbility: Ability = {
+  id: "seven-of-nine-dilemma-boost",
+  trigger: "whileFacingDilemma",
+  target: { scope: "self" },
+  effects: [
+    {
+      type: "statModifier",
+      stat: "strength",
+      value: 2,
+    },
+    {
+      type: "skillGrant",
+      skill: "Security",
+    },
+  ],
+};
+
+describe("whileFacingDilemma abilities", () => {
+  it("does not apply strength bonus outside dilemma context", () => {
+    const sevenOfNine = createPersonnel({
+      uniqueId: "seven-1",
+      name: "Seven of Nine",
+      species: ["Borg"],
+      strength: 6,
+      abilities: [sevenOfNineAbility],
+    });
+
+    // Without dilemma context
+    const stats = getEffectiveStats(sevenOfNine, [sevenOfNine]);
+    expect(stats.strength).toBe(6); // unchanged
+  });
+
+  it("applies strength bonus during dilemma context", () => {
+    const sevenOfNine = createPersonnel({
+      uniqueId: "seven-1",
+      name: "Seven of Nine",
+      species: ["Borg"],
+      strength: 6,
+      abilities: [sevenOfNineAbility],
+    });
+
+    // With dilemma context
+    const stats = getEffectiveStats(sevenOfNine, [sevenOfNine], {
+      isFacingDilemma: true,
+    });
+    expect(stats.strength).toBe(8); // 6 + 2
+  });
+
+  it("does not apply to other personnel (scope: self)", () => {
+    const sevenOfNine = createPersonnel({
+      uniqueId: "seven-1",
+      name: "Seven of Nine",
+      species: ["Borg"],
+      strength: 6,
+      abilities: [sevenOfNineAbility],
+    });
+
+    const otherBorg = createPersonnel({
+      uniqueId: "other-1",
+      name: "Other Borg",
+      species: ["Borg"],
+      strength: 5,
+    });
+
+    // Other personnel should NOT get the bonus
+    const otherStats = getEffectiveStats(otherBorg, [sevenOfNine, otherBorg], {
+      isFacingDilemma: true,
+    });
+    expect(otherStats.strength).toBe(5); // unchanged
+  });
+
+  it("collectApplicableAbilities includes whileFacingDilemma abilities in dilemma context", () => {
+    const sevenOfNine = createPersonnel({
+      uniqueId: "seven-1",
+      name: "Seven of Nine",
+      species: ["Borg"],
+      abilities: [sevenOfNineAbility],
+    });
+
+    // Without context
+    const abilitiesNoContext = collectApplicableAbilities(sevenOfNine, [
+      sevenOfNine,
+    ]);
+    expect(abilitiesNoContext).toHaveLength(0);
+
+    // With dilemma context
+    const abilitiesWithContext = collectApplicableAbilities(
+      sevenOfNine,
+      [sevenOfNine],
+      { isFacingDilemma: true }
+    );
+    expect(abilitiesWithContext).toHaveLength(1);
+    expect(abilitiesWithContext[0]!.ability.id).toBe(
+      "seven-of-nine-dilemma-boost"
+    );
+  });
+});
+
+describe("getDilemmaGrantedSkills", () => {
+  it("returns empty array when no whileFacingDilemma abilities", () => {
+    const personnel = createPersonnel({ species: ["Borg"] });
+    const skills = getDilemmaGrantedSkills(personnel, [personnel]);
+    expect(skills).toEqual([]);
+  });
+
+  it("returns granted skill from whileFacingDilemma ability targeting self", () => {
+    const sevenOfNine = createPersonnel({
+      uniqueId: "seven-1",
+      name: "Seven of Nine",
+      species: ["Borg"],
+      abilities: [sevenOfNineAbility],
+    });
+
+    const skills = getDilemmaGrantedSkills(sevenOfNine, [sevenOfNine]);
+    expect(skills).toContain("Security");
+  });
+
+  it("does not grant skill to non-self targets for self-scoped ability", () => {
+    const sevenOfNine = createPersonnel({
+      uniqueId: "seven-1",
+      name: "Seven of Nine",
+      species: ["Borg"],
+      abilities: [sevenOfNineAbility],
+    });
+
+    const otherBorg = createPersonnel({
+      uniqueId: "other-1",
+      name: "Other Borg",
+      species: ["Borg"],
+    });
+
+    // Other Borg should NOT get Security from Seven's ability
+    const skills = getDilemmaGrantedSkills(otherBorg, [sevenOfNine, otherBorg]);
+    expect(skills).not.toContain("Security");
+  });
+
+  it("returns skills from present-scoped whileFacingDilemma abilities", () => {
+    const groupAbility: Ability = {
+      id: "group-dilemma-skill",
+      trigger: "whileFacingDilemma",
+      target: { scope: "present", species: ["Borg"] },
+      effects: [{ type: "skillGrant", skill: "Diplomacy" }],
+    };
+
+    const source = createPersonnel({
+      uniqueId: "source-1",
+      species: ["Borg"],
+      abilities: [groupAbility],
+    });
+
+    const target = createPersonnel({
+      uniqueId: "target-1",
+      species: ["Borg"],
+    });
+
+    const skills = getDilemmaGrantedSkills(target, [source, target]);
+    expect(skills).toContain("Diplomacy");
+  });
+});
+
+describe("calculateGroupStats with dilemma context", () => {
+  it("includes whileFacingDilemma stat bonuses in dilemma context", async () => {
+    const { calculateGroupStats } = await import("./missionChecker");
+
+    const sevenOfNine = createPersonnel({
+      uniqueId: "seven-1",
+      name: "Seven of Nine",
+      species: ["Borg"],
+      strength: 6,
+      skills: [["Engineer"]],
+      abilities: [sevenOfNineAbility],
+    });
+
+    const otherBorg = createPersonnel({
+      uniqueId: "other-1",
+      species: ["Borg"],
+      strength: 5,
+      skills: [["Science"]],
+    });
+
+    // Without dilemma context: 6 + 5 = 11
+    const statsNoContext = calculateGroupStats([sevenOfNine, otherBorg]);
+    expect(statsNoContext.strength).toBe(11);
+
+    // With dilemma context: (6 + 2) + 5 = 13
+    const statsWithContext = calculateGroupStats([sevenOfNine, otherBorg], [], {
+      isFacingDilemma: true,
+    });
+    expect(statsWithContext.strength).toBe(13);
+  });
+
+  it("includes whileFacingDilemma skill grants in dilemma context", async () => {
+    const { calculateGroupStats } = await import("./missionChecker");
+
+    const sevenOfNine = createPersonnel({
+      uniqueId: "seven-1",
+      name: "Seven of Nine",
+      species: ["Borg"],
+      skills: [["Engineer"]],
+      abilities: [sevenOfNineAbility],
+    });
+
+    // Without dilemma context: Engineer only
+    const statsNoContext = calculateGroupStats([sevenOfNine]);
+    expect(statsNoContext.skills["Engineer"]).toBe(1);
+    expect(statsNoContext.skills["Security"]).toBeUndefined();
+
+    // With dilemma context: Engineer + Security
+    const statsWithContext = calculateGroupStats([sevenOfNine], [], {
+      isFacingDilemma: true,
+    });
+    expect(statsWithContext.skills["Engineer"]).toBe(1);
+    expect(statsWithContext.skills["Security"]).toBe(1);
+  });
+
+  it("combines passive and whileFacingDilemma abilities in dilemma context", async () => {
+    const { calculateGroupStats } = await import("./missionChecker");
+
+    const sevenOfNine = createPersonnel({
+      uniqueId: "seven-1",
+      name: "Seven of Nine",
+      species: ["Borg"],
+      strength: 6,
+      abilities: [sevenOfNineAbility],
+    });
+
+    const oppositionDrone = createPersonnel({
+      uniqueId: "opp-1",
+      name: "Opposition Drone",
+      species: ["Borg"],
+      strength: 6,
+      abilities: [oppositionDroneAbility],
+    });
+
+    // In dilemma context:
+    // Seven: 6 base + 2 (dilemma) + 1 (Opposition Drone passive) = 9
+    // Opposition Drone: 6 base (no bonus, self excluded)
+    // Total: 9 + 6 = 15
+    const stats = calculateGroupStats([sevenOfNine, oppositionDrone], [], {
+      isFacingDilemma: true,
+    });
+    expect(stats.strength).toBe(15);
   });
 });

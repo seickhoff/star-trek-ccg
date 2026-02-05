@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { Card, PersonnelCard } from "../../types/card";
+import type { Card, PersonnelCard, Skill } from "../../types/card";
 import { isPersonnel } from "../../types/card";
 import {
   useGameStore,
   selectCanDraw,
   selectCanAdvancePhase,
   selectDilemmaResult,
+  selectPlayableInterrupts,
 } from "../../store";
 import { MissionColumn } from "./MissionColumn";
 import { TopBar } from "../UI/TopBar";
@@ -34,6 +35,8 @@ export function GameBoard() {
     victory,
     headquartersIndex,
     uniquesInPlay,
+    grantedSkills,
+    usedOrderAbilities,
     setupGame,
     draw,
     deploy,
@@ -46,12 +49,16 @@ export function GameBoard() {
     selectPersonnelForDilemma,
     advanceDilemma,
     clearDilemmaEncounter,
+    executeOrderAbility,
+    executeInterlinkAbility,
+    playInterrupt,
   } = useGameStore();
 
   // Derived selectors
   const canDraw = useGameStore(selectCanDraw);
   const canAdvancePhase = useGameStore(selectCanAdvancePhase);
   const dilemmaResult = useGameStore(selectDilemmaResult);
+  const playableInterrupts = useGameStore(selectPlayableInterrupts);
 
   // Audio
   const { play } = useAudio();
@@ -95,6 +102,14 @@ export function GameBoard() {
     prevGameOver.current = gameOver;
   }, [gameOver, victory, play]);
 
+  // Close phase-specific modals when phase changes
+  useEffect(() => {
+    // OrdersModal should only be open during ExecuteOrders phase
+    if (phase !== "ExecuteOrders") {
+      setOrdersModalState((s) => ({ ...s, isOpen: false }));
+    }
+  }, [phase]);
+
   // Modal state
   const [viewingCard, setViewingCard] = useState<Card | null>(null);
   const [groupViewerState, setGroupViewerState] = useState<{
@@ -110,6 +125,11 @@ export function GameBoard() {
 
   // Handlers
   const handleNewGame = useCallback(() => {
+    // Close all modals
+    setViewingCard(null);
+    setGroupViewerState((s) => ({ ...s, isOpen: false }));
+    setOrdersModalState((s) => ({ ...s, isOpen: false }));
+    // Start new game
     setupGame(defaultDeck);
   }, [setupGame]);
 
@@ -228,6 +248,35 @@ export function GameBoard() {
     [moveShip, play]
   );
 
+  const handleExecuteOrderAbility = useCallback(
+    (
+      cardUniqueId: string,
+      abilityId: string,
+      params?: { skill?: import("../../types/card").Skill }
+    ) => {
+      return executeOrderAbility(cardUniqueId, abilityId, params);
+    },
+    [executeOrderAbility]
+  );
+
+  const handleExecuteInterlinkAbility = useCallback(
+    (cardUniqueId: string, abilityId: string, skill?: Skill) => {
+      return executeInterlinkAbility(
+        cardUniqueId,
+        abilityId,
+        skill ? { skill } : undefined
+      );
+    },
+    [executeInterlinkAbility]
+  );
+
+  const handlePlayInterrupt = useCallback(
+    (cardUniqueId: string, abilityId: string) => {
+      return playInterrupt(cardUniqueId, abilityId);
+    },
+    [playInterrupt]
+  );
+
   // Get personnel for dilemma encounter
   const dilemmaPersonnel: PersonnelCard[] = dilemmaEncounter
     ? (missions[dilemmaEncounter.missionIndex]?.groups[
@@ -281,6 +330,7 @@ export function GameBoard() {
             onGroupClick={handleGroupClick}
             onAttemptMission={handleAttemptMission}
             canAttempt={phase === "ExecuteOrders"}
+            grantedSkills={grantedSkills}
           />
         ))}
       </div>
@@ -304,6 +354,7 @@ export function GameBoard() {
         isOpen={groupViewerState.isOpen}
         onClose={() => setGroupViewerState((s) => ({ ...s, isOpen: false }))}
         onCardClick={handleViewCard}
+        grantedSkills={grantedSkills}
       />
 
       <OrdersModal
@@ -316,16 +367,25 @@ export function GameBoard() {
         onMoveShip={handleMoveShip}
         onBeamToShip={handleBeamToShip}
         onBeamToPlanet={handleBeamToPlanet}
+        usedOrderAbilities={usedOrderAbilities}
+        grantedSkills={grantedSkills}
+        deckSize={deck.length}
+        onExecuteOrderAbility={handleExecuteOrderAbility}
       />
 
       <DilemmaModal
         encounter={dilemmaEncounter}
         personnel={dilemmaPersonnel}
         dilemmaResult={dilemmaResult}
+        grantedSkills={grantedSkills}
+        deckCount={deck.length}
+        playableInterrupts={playableInterrupts}
         onClose={handleCloseDilemma}
         onSelectPersonnel={handleSelectPersonnelForDilemma}
         onContinue={handleAdvanceDilemma}
         onCardClick={handleViewCard}
+        onExecuteInterlink={handleExecuteInterlinkAbility}
+        onPlayInterrupt={handlePlayInterrupt}
       />
     </div>
   );

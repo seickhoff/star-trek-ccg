@@ -58,12 +58,12 @@
 
 .hand-container__cards::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 3px;
+  border-radius: 6px;
 }
 
 .hand-container__cards::-webkit-scrollbar-thumb {
   background: #9999ff;
-  border-radius: 3px;
+  border-radius: 6px;
 }
 
 .hand-container__cards::-webkit-scrollbar-thumb:hover {

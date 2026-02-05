@@ -39,6 +39,16 @@ export const defaultDeck: string[] = [
   "EN03199",
   "EN03199",
 
+  // Interrupts (3)
+  "EN03069", // Adapt x3
+  "EN03069",
+  "EN03069",
+
+  // Events (3)
+  "EN02060", // Salvaging the Wreckage x3
+  "EN02060",
+  "EN02060",
+
   // Space Dilemmas (4)
   "EN01017", // Command Decisions x2
   "EN01017",
@@ -71,11 +81,13 @@ export const DECK_STATS = {
   missions: 5,
   personnel: 22,
   ships: 4,
+  interrupts: 3,
+  events: 3,
   dilemmas: {
     space: 4,
     planet: 6,
     dual: 10,
     total: 20,
   },
-  total: 51,
+  total: 57,
 } as const;

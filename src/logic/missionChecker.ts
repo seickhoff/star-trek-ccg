@@ -6,7 +6,13 @@ import type {
   AttributeName,
 } from "../types/card";
 import { isPersonnel } from "../types/card";
-import { getEffectiveStats } from "./abilities";
+import {
+  getEffectiveStats,
+  getGrantedSkillsForPersonnel,
+  getDilemmaGrantedSkills,
+  type AbilityContext,
+} from "./abilities";
+import type { GrantedSkill } from "../types/gameState";
 
 /**
  * Skill counts for a group of personnel
@@ -30,8 +36,16 @@ export interface GroupStats {
  * Calculate combined stats for a group of cards
  * Only counts unstopped personnel
  * Uses effective stats (applying passive ability modifiers)
+ *
+ * @param cards - The cards in the group
+ * @param grantedSkills - Optional array of currently active granted skills
+ * @param context - Optional context for ability resolution (e.g., during dilemma)
  */
-export function calculateGroupStats(cards: Card[]): GroupStats {
+export function calculateGroupStats(
+  cards: Card[],
+  grantedSkills: GrantedSkill[] = [],
+  context: AbilityContext = {}
+): GroupStats {
   const stats: GroupStats = {
     unstoppedPersonnel: 0,
     integrity: 0,
@@ -45,14 +59,29 @@ export function calculateGroupStats(cards: Card[]): GroupStats {
       stats.unstoppedPersonnel++;
 
       // Use effective stats (with passive ability modifiers applied)
-      const effective = getEffectiveStats(card, cards);
+      // Pass context to include whileFacingDilemma abilities when appropriate
+      const effective = getEffectiveStats(card, cards, context);
       stats.integrity += effective.integrity;
       stats.cunning += effective.cunning;
       stats.strength += effective.strength;
 
-      // Count skills (nested arrays: [[Skill1], [Skill2, Skill3]])
+      // Count base skills (nested arrays: [[Skill1], [Skill2, Skill3]])
       for (const skillGroup of card.skills) {
         for (const skill of skillGroup) {
+          stats.skills[skill] = (stats.skills[skill] || 0) + 1;
+        }
+      }
+
+      // Count granted skills from order abilities
+      const granted = getGrantedSkillsForPersonnel(card, grantedSkills);
+      for (const skill of granted) {
+        stats.skills[skill] = (stats.skills[skill] || 0) + 1;
+      }
+
+      // Count skills granted by whileFacingDilemma abilities when in dilemma context
+      if (context.isFacingDilemma) {
+        const dilemmaSkills = getDilemmaGrantedSkills(card, cards);
+        for (const skill of dilemmaSkills) {
           stats.skills[skill] = (stats.skills[skill] || 0) + 1;
         }
       }
@@ -95,14 +124,22 @@ export function formatGroupStats(stats: GroupStats, pretty: boolean): string {
  * - value: number - The threshold value (must be exceeded, not equal)
  *
  * Returns true if ANY of the skill requirement groups can be satisfied
+ *
+ * @param cards - The cards attempting the mission
+ * @param mission - The mission being attempted
+ * @param grantedSkills - Optional array of currently active granted skills
  */
-export function checkMission(cards: Card[], mission: MissionCard): boolean {
+export function checkMission(
+  cards: Card[],
+  mission: MissionCard,
+  grantedSkills: GrantedSkill[] = []
+): boolean {
   // Missions without requirements (headquarters) can't be "completed"
   if (!mission.skills || mission.skills.length === 0) {
     return false;
   }
 
-  const stats = calculateGroupStats(cards);
+  const stats = calculateGroupStats(cards, grantedSkills);
 
   // Add attribute values as pseudo-skills for requirement checking
   const playerStats: SkillCounts = { ...stats.skills };
@@ -176,25 +213,42 @@ export function areAllPersonnelStopped(cards: Card[]): boolean {
 
 /**
  * Find personnel with a specific skill (unstopped only)
+ *
+ * @param cards - The cards to search
+ * @param skill - The skill to find
+ * @param grantedSkills - Optional array of currently active granted skills
  */
 export function findPersonnelWithSkill(
   cards: Card[],
-  skill: Skill
+  skill: Skill,
+  grantedSkills: GrantedSkill[] = []
 ): PersonnelCard[] {
-  return getUnstoppedPersonnel(cards).filter((p) =>
-    p.skills.some((group) => group.includes(skill))
-  );
+  return getUnstoppedPersonnel(cards).filter((p) => {
+    // Check base skills
+    if (p.skills.some((group) => group.includes(skill))) {
+      return true;
+    }
+    // Check granted skills
+    const granted = getGrantedSkillsForPersonnel(p, grantedSkills);
+    return granted.includes(skill);
+  });
 }
 
 /**
  * Check if group has at least N of a specific skill (unstopped only)
+ *
+ * @param cards - The cards to check
+ * @param skill - The skill to count
+ * @param requiredCount - The minimum required count
+ * @param grantedSkills - Optional array of currently active granted skills
  */
 export function hasSkillCount(
   cards: Card[],
   skill: Skill,
-  requiredCount: number
+  requiredCount: number,
+  grantedSkills: GrantedSkill[] = []
 ): boolean {
-  const stats = calculateGroupStats(cards);
+  const stats = calculateGroupStats(cards, grantedSkills);
   return (stats.skills[skill] || 0) >= requiredCount;
 }
 

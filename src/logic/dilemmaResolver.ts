@@ -5,8 +5,10 @@ import type {
   Skill,
   AttributeName,
 } from "../types/card";
+import type { GrantedSkill } from "../types/gameState";
 import { isPersonnel } from "../types/card";
 import { shuffle } from "../utils/shuffle";
+import { calculateGroupStats } from "./missionChecker";
 
 /**
  * Result of resolving a dilemma
@@ -29,48 +31,13 @@ export interface DilemmaResult {
 }
 
 /**
- * Group stats for dilemma resolution
+ * Group stats for dilemma resolution (re-exported from missionChecker)
  */
 interface GroupStats {
   integrity: number;
   cunning: number;
   strength: number;
   skills: Record<string, number>;
-}
-
-/**
- * Calculate stats for a group of cards (only unstopped personnel)
- */
-function calculateGroupStats(cards: Card[]): GroupStats {
-  const stats: GroupStats = {
-    integrity: 0,
-    cunning: 0,
-    strength: 0,
-    skills: {},
-  };
-
-  for (const card of cards) {
-    if (isPersonnel(card) && card.status === "Unstopped") {
-      const personnel = card as PersonnelCard;
-      stats.integrity += personnel.integrity;
-      stats.cunning += personnel.cunning;
-      stats.strength += personnel.strength;
-
-      // Count skills
-      for (const skillGroup of personnel.skills) {
-        for (const skill of skillGroup) {
-          stats.skills[skill] = (stats.skills[skill] ?? 0) + 1;
-        }
-      }
-    }
-  }
-
-  // Add attributes to skills for unified lookup
-  stats.skills["Integrity"] = stats.integrity;
-  stats.skills["Cunning"] = stats.cunning;
-  stats.skills["Strength"] = stats.strength;
-
-  return stats;
 }
 
 /**
@@ -83,11 +50,46 @@ function getUnstoppedPersonnel(cards: Card[]): PersonnelCard[] {
 }
 
 /**
- * Find personnel with any of the given skills
+ * Check if a personnel has a granted skill based on target filter
+ */
+function hasGrantedSkill(
+  personnel: PersonnelCard,
+  skill: Skill,
+  grantedSkills: GrantedSkill[]
+): boolean {
+  for (const grant of grantedSkills) {
+    if (grant.skill !== skill) continue;
+
+    // Check if target matches this personnel
+    const target = grant.target;
+    if (target.scope === "present" || target.scope === "allInPlay") {
+      // Check species filter
+      if (target.species && target.species.length > 0) {
+        if (!personnel.species?.some((s) => target.species!.includes(s))) {
+          continue;
+        }
+      }
+      // Check affiliation filter
+      if (target.affiliations && target.affiliations.length > 0) {
+        if (
+          !personnel.affiliation?.some((a) => target.affiliations!.includes(a))
+        ) {
+          continue;
+        }
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Find personnel with any of the given skills (including granted skills)
  */
 function findPersonnelWithSkills(
   cards: Card[],
-  requiredSkills: Skill[]
+  requiredSkills: Skill[],
+  grantedSkills: GrantedSkill[] = []
 ): PersonnelCard[] {
   const matching: PersonnelCard[] = [];
   const seen = new Set<string>();
@@ -96,6 +98,7 @@ function findPersonnelWithSkills(
     if (isPersonnel(card) && card.status === "Unstopped" && card.uniqueId) {
       if (seen.has(card.uniqueId)) continue;
 
+      // Check native skills
       for (const skillGroup of card.skills) {
         for (const skill of skillGroup) {
           if (requiredSkills.includes(skill as Skill)) {
@@ -106,6 +109,17 @@ function findPersonnelWithSkills(
         }
         if (seen.has(card.uniqueId)) break;
       }
+
+      // Check granted skills if not already matched
+      if (!seen.has(card.uniqueId)) {
+        for (const skill of requiredSkills) {
+          if (hasGrantedSkill(card, skill, grantedSkills)) {
+            matching.push(card);
+            seen.add(card.uniqueId);
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -113,14 +127,25 @@ function findPersonnelWithSkills(
 }
 
 /**
- * Check if a personnel has any of the given skills
+ * Check if a personnel has any of the given skills (including granted skills)
  */
-function personnelHasSkill(personnel: PersonnelCard, skills: Skill[]): boolean {
+function personnelHasSkill(
+  personnel: PersonnelCard,
+  skills: Skill[],
+  grantedSkills: GrantedSkill[] = []
+): boolean {
+  // Check native skills
   for (const skillGroup of personnel.skills) {
     for (const skill of skillGroup) {
       if (skills.includes(skill as Skill)) {
         return true;
       }
+    }
+  }
+  // Check granted skills
+  for (const skill of skills) {
+    if (hasGrantedSkill(personnel, skill, grantedSkills)) {
+      return true;
     }
   }
   return false;
@@ -211,10 +236,15 @@ function checkSkillRequirements(
  */
 export function resolveSystemDiagnostics(
   dilemma: DilemmaCard,
-  cards: Card[]
+  cards: Card[],
+  grantedSkills: GrantedSkill[] = []
 ): DilemmaResult {
   const requiredSkills = normalizeDilemmaSkills(dilemma);
-  const matching = findPersonnelWithSkills(cards, requiredSkills);
+  const matching = findPersonnelWithSkills(
+    cards,
+    requiredSkills,
+    grantedSkills
+  );
 
   if (matching.length === 0) {
     // No matching personnel - stop all and return dilemma
@@ -249,7 +279,8 @@ export function resolveSystemDiagnostics(
  */
 export function resolveWavefront(
   dilemma: DilemmaCard,
-  cards: Card[]
+  cards: Card[],
+  grantedSkills: GrantedSkill[] = []
 ): DilemmaResult {
   const skillGroups = dilemma.skills as Skill[][];
   if (!skillGroups || skillGroups.length === 0) {
@@ -324,7 +355,7 @@ export function resolveWavefront(
 
   // Find personnel with any matching skill
   const allSkills = skillGroups.flat();
-  const matching = findPersonnelWithSkills(cards, allSkills);
+  const matching = findPersonnelWithSkills(cards, allSkills, grantedSkills);
 
   if (matching.length === 0) {
     // No matching personnel - stop all
@@ -358,10 +389,15 @@ export function resolveWavefront(
  */
 export function resolveCommandDecisions(
   dilemma: DilemmaCard,
-  cards: Card[]
+  cards: Card[],
+  grantedSkills: GrantedSkill[] = []
 ): DilemmaResult {
   const requiredSkills = normalizeDilemmaSkills(dilemma);
-  const matching = findPersonnelWithSkills(cards, requiredSkills);
+  const matching = findPersonnelWithSkills(
+    cards,
+    requiredSkills,
+    grantedSkills
+  );
 
   if (matching.length === 0) {
     // No matching personnel - randomly kill one
@@ -410,9 +446,12 @@ export function resolveCommandDecisions(
  */
 export function resolveAnOldDebt(
   dilemma: DilemmaCard,
-  cards: Card[]
+  cards: Card[],
+  grantedSkills: GrantedSkill[] = []
 ): DilemmaResult {
-  const stats = calculateGroupStats(cards);
+  const stats = calculateGroupStats(cards, grantedSkills, {
+    isFacingDilemma: true,
+  });
   const skillGroups = dilemma.skills as Skill[][];
 
   const meetsRequirements = checkSkillRequirements(
@@ -437,7 +476,9 @@ export function resolveAnOldDebt(
   // Failed - kill random personnel with skillkill
   const unstopped = getUnstoppedPersonnel(cards);
   const killCandidates = dilemma.skillkill
-    ? unstopped.filter((p) => personnelHasSkill(p, [dilemma.skillkill!]))
+    ? unstopped.filter((p) =>
+        personnelHasSkill(p, [dilemma.skillkill!], grantedSkills)
+      )
     : [];
 
   if (killCandidates.length === 0) {
@@ -472,7 +513,9 @@ export function resolveAnOldDebt(
  */
 export function resolvePinnedDown(
   _dilemma: DilemmaCard,
-  cards: Card[]
+  cards: Card[],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _grantedSkills: GrantedSkill[] = []
 ): DilemmaResult {
   const unstopped = getUnstoppedPersonnel(cards);
   const stoppedIds: string[] = [];
@@ -520,7 +563,9 @@ export function resolvePinnedDown(
  */
 export function resolveLimitedWelcome(
   _dilemma: DilemmaCard,
-  cards: Card[]
+  cards: Card[],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _grantedSkills: GrantedSkill[] = []
 ): DilemmaResult {
   const unstopped = getUnstoppedPersonnel(cards);
 
@@ -556,7 +601,8 @@ export function resolveLimitedWelcome(
  */
 export function resolveOrnaranThreat(
   dilemma: DilemmaCard,
-  cards: Card[]
+  cards: Card[],
+  grantedSkills: GrantedSkill[] = []
 ): DilemmaResult {
   const unstopped = getUnstoppedPersonnel(cards);
 
@@ -576,7 +622,9 @@ export function resolveOrnaranThreat(
   const target = shuffled[0]!;
 
   // Check skill requirements
-  const stats = calculateGroupStats(cards);
+  const stats = calculateGroupStats(cards, grantedSkills, {
+    isFacingDilemma: true,
+  });
   const skillGroups = dilemma.skills as Skill[][];
   const meetsRequirements = checkSkillRequirements(stats, skillGroups);
 
@@ -615,9 +663,12 @@ export function resolveOrnaranThreat(
  */
 export function resolveSokath(
   dilemma: DilemmaCard,
-  cards: Card[]
+  cards: Card[],
+  grantedSkills: GrantedSkill[] = []
 ): DilemmaResult {
-  const stats = calculateGroupStats(cards);
+  const stats = calculateGroupStats(cards, grantedSkills, {
+    isFacingDilemma: true,
+  });
   const skillGroups = dilemma.skills as Skill[][];
 
   const meetsRequirements = checkSkillRequirements(
@@ -661,25 +712,26 @@ export function resolveSokath(
  */
 export function resolveDilemma(
   dilemma: DilemmaCard,
-  cards: Card[]
+  cards: Card[],
+  grantedSkills: GrantedSkill[] = []
 ): DilemmaResult {
   switch (dilemma.rule) {
     case "SystemDiagnostics":
-      return resolveSystemDiagnostics(dilemma, cards);
+      return resolveSystemDiagnostics(dilemma, cards, grantedSkills);
     case "Wavefront":
-      return resolveWavefront(dilemma, cards);
+      return resolveWavefront(dilemma, cards, grantedSkills);
     case "CommandDecisions":
-      return resolveCommandDecisions(dilemma, cards);
+      return resolveCommandDecisions(dilemma, cards, grantedSkills);
     case "AnOldDebt":
-      return resolveAnOldDebt(dilemma, cards);
+      return resolveAnOldDebt(dilemma, cards, grantedSkills);
     case "PinnedDown":
-      return resolvePinnedDown(dilemma, cards);
+      return resolvePinnedDown(dilemma, cards, grantedSkills);
     case "LimitedWelcome":
-      return resolveLimitedWelcome(dilemma, cards);
+      return resolveLimitedWelcome(dilemma, cards, grantedSkills);
     case "OrnaranThreat":
-      return resolveOrnaranThreat(dilemma, cards);
+      return resolveOrnaranThreat(dilemma, cards, grantedSkills);
     case "Sokath":
-      return resolveSokath(dilemma, cards);
+      return resolveSokath(dilemma, cards, grantedSkills);
     default:
       // Unknown rule - auto-overcome
       return {

@@ -23,4 +23,5 @@ export {
   selectTurnSummary,
   selectDilemmaEncounter,
   selectDilemmaResult,
+  selectPlayableInterrupts,
 } from "./gameStore";

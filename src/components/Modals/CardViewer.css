@@ -2,12 +2,12 @@
 
 .card-viewer {
   position: fixed;
-  z-index: 1000;
+  /* z-index managed dynamically via getNextZIndex() */
   cursor: grab;
   user-select: none;
   background-color: black;
   border: 4px solid #d198cf; /* light purple-pink like original */
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }

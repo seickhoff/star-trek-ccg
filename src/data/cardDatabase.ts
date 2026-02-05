@@ -158,6 +158,25 @@ const personnel: Record<string, PersonnelCard> = {
     cunning: 5,
     strength: 5,
     jpg: "cards/ST2E-EN03118.jpg",
+    abilities: [
+      {
+        id: "acclimation-drone-cost-reduction",
+        trigger: "whilePlaying",
+        target: {
+          scope: "self",
+        },
+        effects: [
+          {
+            type: "costModifier",
+            value: -1,
+            perMatchingCard: {
+              cardTypes: ["Personnel"],
+              ownership: "commandedNotOwned",
+            },
+          },
+        ],
+      } satisfies Ability,
+    ],
   },
   EN03122: {
     id: "EN03122",
@@ -174,6 +193,25 @@ const personnel: Record<string, PersonnelCard> = {
     cunning: 8,
     strength: 6,
     jpg: "cards/ST2E-EN03122.jpg",
+    abilities: [
+      {
+        id: "borg-queen-skill-grant",
+        trigger: "order",
+        target: {
+          scope: "allInPlay",
+          species: ["Borg"],
+        },
+        effects: [
+          {
+            type: "skillGrant",
+            skill: null, // Player chooses at activation
+          },
+        ],
+        cost: { type: "discardFromDeck", count: 1 },
+        duration: "untilEndOfTurn",
+        usageLimit: "oncePerTurn",
+      } satisfies Ability,
+    ],
   },
   EN03124: {
     id: "EN03124",
@@ -190,6 +228,15 @@ const personnel: Record<string, PersonnelCard> = {
     cunning: 5,
     strength: 5,
     jpg: "cards/ST2E-EN03124.jpg",
+    abilities: [
+      {
+        id: "calibration-drone-hand-refresh",
+        trigger: "order",
+        target: { scope: "self" },
+        effects: [{ type: "handRefresh" }],
+        cost: { type: "sacrificeSelf" },
+      } satisfies Ability,
+    ],
   },
   EN03125: {
     id: "EN03125",
@@ -206,6 +253,24 @@ const personnel: Record<string, PersonnelCard> = {
     cunning: 5,
     strength: 5,
     jpg: "cards/ST2E-EN03125.jpg",
+    abilities: [
+      {
+        id: "cartography-drone-interlink-astrometrics",
+        trigger: "interlink",
+        target: {
+          scope: "allInPlay",
+          species: ["Borg"],
+        },
+        effects: [
+          {
+            type: "skillGrant",
+            skill: "Astrometrics",
+          },
+        ],
+        cost: { type: "discardFromDeck", count: 1 },
+        duration: "untilEndOfMissionAttempt",
+      } satisfies Ability,
+    ],
   },
   EN03126: {
     id: "EN03126",
@@ -222,6 +287,24 @@ const personnel: Record<string, PersonnelCard> = {
     cunning: 6,
     strength: 5,
     jpg: "cards/ST2E-EN03126.jpg",
+    abilities: [
+      {
+        id: "computation-drone-cunning-boost",
+        trigger: "passive",
+        target: {
+          scope: "present",
+          species: ["Borg"],
+          excludeSelf: true,
+        },
+        effects: [
+          {
+            type: "statModifier",
+            stat: "cunning",
+            value: 1,
+          },
+        ],
+      } satisfies Ability,
+    ],
   },
   EN03130: {
     id: "EN03130",
@@ -238,6 +321,28 @@ const personnel: Record<string, PersonnelCard> = {
     cunning: 5,
     strength: 5,
     jpg: "cards/ST2E-EN03130.jpg",
+    abilities: [
+      {
+        id: "information-drone-interlink",
+        trigger: "interlink",
+        target: {
+          scope: "allInPlay",
+          species: ["Borg"],
+        },
+        effects: [
+          {
+            type: "skillGrant",
+            skill: null, // Player chooses from non-Borg personnel present
+            skillSource: {
+              scope: "present",
+              excludeAffiliations: ["Borg"],
+            },
+          },
+        ],
+        cost: { type: "discardFromDeck", count: 1 },
+        duration: "untilEndOfMissionAttempt",
+      } satisfies Ability,
+    ],
   },
   EN03131: {
     id: "EN03131",
@@ -254,6 +359,15 @@ const personnel: Record<string, PersonnelCard> = {
     cunning: 5,
     strength: 5,
     jpg: "cards/ST2E-EN03131.jpg",
+    abilities: [
+      {
+        id: "invasive-drone-beam-to-ship",
+        trigger: "order",
+        target: { scope: "mission" },
+        effects: [{ type: "beamAllToShip" }],
+        cost: { type: "returnToHand" },
+      } satisfies Ability,
+    ],
   },
   EN03134: {
     id: "EN03134",
@@ -304,6 +418,24 @@ const personnel: Record<string, PersonnelCard> = {
     cunning: 5,
     strength: 5,
     jpg: "cards/ST2E-EN03137.jpg",
+    abilities: [
+      {
+        id: "research-drone-interlink-physics",
+        trigger: "interlink",
+        target: {
+          scope: "allInPlay",
+          species: ["Borg"],
+        },
+        effects: [
+          {
+            type: "skillGrant",
+            skill: "Physics",
+          },
+        ],
+        cost: { type: "discardFromDeck", count: 1 },
+        duration: "untilEndOfMissionAttempt",
+      } satisfies Ability,
+    ],
   },
   EN03139: {
     id: "EN03139",
@@ -320,6 +452,24 @@ const personnel: Record<string, PersonnelCard> = {
     cunning: 7,
     strength: 6,
     jpg: "cards/ST2E-EN03139.jpg",
+    abilities: [
+      {
+        id: "seven-of-nine-dilemma-boost",
+        trigger: "whileFacingDilemma",
+        target: { scope: "self" },
+        effects: [
+          {
+            type: "statModifier",
+            stat: "strength",
+            value: 2,
+          },
+          {
+            type: "skillGrant",
+            skill: "Security",
+          },
+        ],
+      } satisfies Ability,
+    ],
   },
   EN03140: {
     id: "EN03140",
@@ -336,6 +486,23 @@ const personnel: Record<string, PersonnelCard> = {
     cunning: 5,
     strength: 5,
     jpg: "cards/ST2E-EN03140.jpg",
+    abilities: [
+      {
+        id: "transwarp-drone-range-boost",
+        trigger: "order",
+        condition: { type: "aboardShip" },
+        target: { scope: "self" },
+        effects: [
+          {
+            type: "shipRangeModifier",
+            value: 2,
+            targetShip: "sourceShip",
+          },
+        ],
+        cost: { type: "returnToHand" },
+        duration: "untilEndOfTurn",
+      } satisfies Ability,
+    ],
   },
 };
 
@@ -396,6 +563,22 @@ const events: Record<string, EventCard> = {
     type: "Event",
     deploy: 3,
     jpg: "cards/ST2E-EN02060.jpg",
+    abilities: [
+      {
+        id: "salvaging-the-wreckage-recover",
+        trigger: "event",
+        target: { scope: "self" },
+        effects: [
+          {
+            type: "recoverFromDiscard",
+            maxCount: 4,
+            cardTypes: ["Personnel", "Ship"],
+            destination: "deckBottom",
+          },
+        ],
+        removeFromGame: true,
+      } satisfies Ability,
+    ],
   },
 };
 
@@ -410,6 +593,19 @@ const interrupts: Record<string, InterruptCard> = {
     unique: false,
     type: "Interrupt",
     jpg: "cards/ST2E-EN03069.jpg",
+    abilities: [
+      {
+        id: "adapt-prevent-dilemma",
+        trigger: "interrupt",
+        interruptTiming: "whenFacingDilemma",
+        target: { scope: "self" },
+        effects: [{ type: "preventAndOvercomeDilemma" }],
+        conditions: [
+          { type: "borgPersonnelFacing" },
+          { type: "dilemmaOvercomeAtAnyMission" },
+        ],
+      } satisfies Ability,
+    ],
   },
   EN01136: {
     id: "EN01136",

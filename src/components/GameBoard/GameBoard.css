@@ -21,7 +21,7 @@
   text-align: center;
   background: rgba(0, 0, 0, 0.7);
   border: 2px solid #9999ff;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 48px 64px;
 }
 
@@ -41,7 +41,7 @@
   background: linear-gradient(135deg, #4caf50, #3d8b40);
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 16px 48px;
   font-size: 18px;
   font-weight: bold;

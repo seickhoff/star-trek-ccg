@@ -1,19 +1,27 @@
 import { create } from "zustand";
 import type {
+  Ability,
   Card,
   DilemmaCard,
+  InterruptCard,
   MissionCard,
   PersonnelCard,
   ShipCard,
+  Skill,
   GamePhase,
   MissionDeployment,
   DilemmaEncounter,
+  GrantedSkill,
+  RangeBoost,
+  SkillSourceFilter,
 } from "../types";
 import {
   isMission,
   isDilemma,
   isPersonnel,
   isShip,
+  isInterrupt,
+  isEvent,
   GAME_CONSTANTS,
 } from "../types";
 import { cardDatabase } from "../data/cardDatabase";
@@ -25,12 +33,26 @@ import {
   type DilemmaResult,
 } from "../logic/dilemmaResolver";
 import { checkMission } from "../logic/missionChecker";
+import { getEffectiveDeployCost } from "../logic/abilities";
 
 /**
  * Deep clone a card to avoid mutation issues
  */
 function cloneCard<T extends Card>(card: T): T {
   return { ...card };
+}
+
+/**
+ * Get all cards currently in play across all missions
+ */
+function getAllCardsInPlay(missions: MissionDeployment[]): Card[] {
+  const cards: Card[] = [];
+  for (const deployment of missions) {
+    for (const group of deployment.groups) {
+      cards.push(...group.cards);
+    }
+  }
+  return cards;
 }
 
 /**
@@ -44,6 +66,71 @@ function createCardInstance<T extends Card>(card: T, index: number): T {
 }
 
 /**
+ * Get available skills from personnel matching a skill source filter.
+ * Used by Interlink abilities that copy skills from specific personnel.
+ *
+ * @param personnel - Personnel in the group to filter
+ * @param source - Filter defining which personnel's skills can be copied
+ * @param excludeUniqueId - Optional unique ID to exclude (the source card itself)
+ * @returns Array of unique skills available from matching personnel
+ */
+export function getSkillsFromSource(
+  personnel: PersonnelCard[],
+  source: SkillSourceFilter,
+  excludeUniqueId?: string
+): Skill[] {
+  const skills = new Set<Skill>();
+
+  for (const person of personnel) {
+    // Skip excluded card
+    if (excludeUniqueId && person.uniqueId === excludeUniqueId) continue;
+
+    // Check affiliation exclusions (e.g., "non-Borg")
+    if (source.excludeAffiliations && person.affiliation) {
+      const hasExcludedAffiliation = person.affiliation.some((aff) =>
+        source.excludeAffiliations!.includes(aff)
+      );
+      if (hasExcludedAffiliation) continue;
+    }
+
+    // Check affiliation inclusions
+    if (source.affiliations && person.affiliation) {
+      const hasRequiredAffiliation = person.affiliation.some((aff) =>
+        source.affiliations!.includes(aff)
+      );
+      if (!hasRequiredAffiliation) continue;
+    }
+
+    // Check species exclusions
+    if (source.excludeSpecies && person.species) {
+      const hasExcludedSpecies = person.species.some((sp) =>
+        source.excludeSpecies!.includes(sp)
+      );
+      if (hasExcludedSpecies) continue;
+    }
+
+    // Check species inclusions
+    if (source.species && person.species) {
+      const hasRequiredSpecies = person.species.some((sp) =>
+        source.species!.includes(sp)
+      );
+      if (!hasRequiredSpecies) continue;
+    }
+
+    // Collect skills from this personnel
+    if (person.skills) {
+      for (const skillGroup of person.skills) {
+        for (const skill of skillGroup) {
+          skills.add(skill as Skill);
+        }
+      }
+    }
+  }
+
+  return Array.from(skills).sort();
+}
+
+/**
  * Game store state
  */
 interface GameStoreState {
@@ -51,6 +138,7 @@ interface GameStoreState {
   deck: Card[];
   hand: Card[];
   discard: Card[];
+  removedFromGame: Card[];
   dilemmaPool: DilemmaCard[];
 
   // Board state
@@ -73,6 +161,11 @@ interface GameStoreState {
   dilemmaEncounter: DilemmaEncounter | null;
   // Current dilemma resolution result (for UI state)
   dilemmaResult: DilemmaResult | null;
+
+  // Order ability tracking
+  usedOrderAbilities: Set<string>; // Format: "cardUniqueId:abilityId"
+  grantedSkills: GrantedSkill[]; // Active skill grants
+  rangeBoosts: RangeBoost[]; // Active range boosts on ships
 
   // Game result
   gameOver: boolean;
@@ -123,6 +216,37 @@ interface GameStoreActions {
   advanceDilemma: () => void;
   clearDilemmaEncounter: () => void;
 
+  // Order abilities
+  executeOrderAbility: (
+    cardUniqueId: string,
+    abilityId: string,
+    params?: {
+      skill?: Skill;
+      // For beamAllToShip effect
+      personnelIds?: string[];
+      targetGroupIndex?: number;
+    }
+  ) => boolean;
+
+  // Interlink abilities (during mission attempts)
+  executeInterlinkAbility: (
+    cardUniqueId: string,
+    abilityId: string,
+    params?: { skill?: Skill }
+  ) => boolean;
+
+  // Interrupt abilities (played from hand during specific timing windows)
+  playInterrupt: (cardUniqueId: string, abilityId: string) => boolean;
+
+  // Event cards (played from hand during PlayAndDraw phase)
+  playEvent: (
+    cardUniqueId: string,
+    params?: {
+      // For recoverFromDiscard effect: which cards to recover
+      selectedCardIds?: string[];
+    }
+  ) => boolean;
+
   // Internal helpers
   _findCardInHand: (uniqueId: string) => Card | undefined;
   _removeFromHand: (uniqueId: string) => void;
@@ -142,6 +266,7 @@ const createInitialState = (): GameStoreState => ({
   deck: [],
   hand: [],
   discard: [],
+  removedFromGame: [],
   dilemmaPool: [],
   missions: [],
   uniquesInPlay: new Set(),
@@ -153,6 +278,9 @@ const createInitialState = (): GameStoreState => ({
   completedSpaceMissions: 0,
   dilemmaEncounter: null,
   dilemmaResult: null,
+  usedOrderAbilities: new Set(),
+  grantedSkills: [],
+  rangeBoosts: [],
   gameOver: false,
   victory: false,
   headquartersIndex: -1,
@@ -238,9 +366,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * - Reset counters to 7
    * - Reset ship ranges
    * - Unstop stopped personnel
+   * - Clear used order abilities
+   * - Remove expired granted skills
    */
   newTurn: () => {
-    const { missions, gameOver } = get();
+    const { missions, grantedSkills, rangeBoosts, gameOver } = get();
 
     if (gameOver) return;
 
@@ -260,11 +390,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
       })),
     }));
 
+    // Remove granted skills with "untilEndOfTurn" duration
+    const remainingSkills = grantedSkills.filter(
+      (grant) => grant.duration !== "untilEndOfTurn"
+    );
+
+    // Remove range boosts with "untilEndOfTurn" duration
+    const remainingBoosts = rangeBoosts.filter(
+      (boost) => boost.duration !== "untilEndOfTurn"
+    );
+
     set((state) => ({
       turn: state.turn + 1,
       phase: "PlayAndDraw",
       counters: GAME_CONSTANTS.STARTING_COUNTERS,
       missions: updatedMissions,
+      usedOrderAbilities: new Set(), // Reset used abilities for new turn
+      grantedSkills: remainingSkills,
+      rangeBoosts: remainingBoosts,
     }));
 
     // Check lose condition at start of turn
@@ -339,7 +482,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // Check if card is deployable (has deploy cost)
     if (!("deploy" in card)) return false;
-    const deployCost = (card as PersonnelCard | ShipCard).deploy;
+
+    // Calculate effective deploy cost (considering cost modifier abilities)
+    // In solitaire, playerId is always "player1"
+    const cardsInPlay = getAllCardsInPlay(missions);
+    const deployCost = getEffectiveDeployCost(
+      card as PersonnelCard | ShipCard,
+      cardsInPlay,
+      "player1"
+    );
 
     // Check if enough counters
     if (counters < deployCost) return false;
@@ -601,7 +752,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * Draws dilemmas and initiates encounter
    */
   attemptMission: (missionIndex: number, groupIndex: number) => {
-    const { missions, dilemmaPool, phase, headquartersIndex } = get();
+    const { missions, dilemmaPool, phase, headquartersIndex, grantedSkills } =
+      get();
 
     // Can only attempt during ExecuteOrders
     if (phase !== "ExecuteOrders") return;
@@ -719,7 +871,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       },
     });
 
-    const result = resolveDilemma(firstDilemma, cards);
+    const result = resolveDilemma(firstDilemma, cards, grantedSkills);
 
     set({ dilemmaResult: result });
 
@@ -752,7 +904,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * Advance to next dilemma or complete encounter
    */
   advanceDilemma: () => {
-    const { dilemmaEncounter, missions } = get();
+    const { dilemmaEncounter, missions, grantedSkills } = get();
 
     if (!dilemmaEncounter) return;
 
@@ -847,7 +999,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
 
     // Resolve next dilemma
-    const result = resolveDilemma(nextDilemma, group.cards);
+    const result = resolveDilemma(nextDilemma, group.cards, grantedSkills);
 
     set({ dilemmaResult: result });
 
@@ -865,6 +1017,740 @@ export const useGameStore = create<GameStore>((set, get) => ({
       dilemmaEncounter: null,
       dilemmaResult: null,
     });
+  },
+
+  /**
+   * Execute an order ability on a card
+   * Order abilities can only be used during Execute Orders phase
+   *
+   * @param cardUniqueId - The unique ID of the card with the ability
+   * @param abilityId - The ID of the ability to execute
+   * @param params - Optional parameters (e.g., skill choice for skill grant)
+   * @returns true if ability was successfully executed
+   */
+  executeOrderAbility: (
+    cardUniqueId: string,
+    abilityId: string,
+    params?: {
+      skill?: Skill;
+      personnelIds?: string[];
+      targetGroupIndex?: number;
+    }
+  ): boolean => {
+    const {
+      phase,
+      missions,
+      deck,
+      discard,
+      usedOrderAbilities,
+      grantedSkills,
+    } = get();
+
+    // Order abilities can only be used during Execute Orders phase
+    if (phase !== "ExecuteOrders") return false;
+
+    // Find the card in play and track its location
+    let sourceCard: PersonnelCard | null = null;
+    let sourceMissionIndex = -1;
+    let sourceGroupIndex = -1;
+
+    for (let mIdx = 0; mIdx < missions.length; mIdx++) {
+      const deployment = missions[mIdx];
+      if (!deployment) continue;
+      for (let gIdx = 0; gIdx < deployment.groups.length; gIdx++) {
+        const group = deployment.groups[gIdx];
+        if (!group) continue;
+        for (const card of group.cards) {
+          if (card.uniqueId === cardUniqueId && isPersonnel(card)) {
+            sourceCard = card as PersonnelCard;
+            sourceMissionIndex = mIdx;
+            sourceGroupIndex = gIdx;
+            break;
+          }
+        }
+        if (sourceCard) break;
+      }
+      if (sourceCard) break;
+    }
+
+    if (!sourceCard || sourceMissionIndex === -1 || sourceGroupIndex === -1)
+      return false;
+
+    // Find the ability
+    const ability = sourceCard.abilities?.find(
+      (a: Ability) => a.id === abilityId && a.trigger === "order"
+    );
+    if (!ability) return false;
+
+    // Check ability condition
+    if (ability.condition) {
+      if (ability.condition.type === "aboardShip") {
+        // Personnel must be aboard a ship (group index > 0, and group contains a ship)
+        if (sourceGroupIndex === 0) return false;
+        const sourceGroup =
+          missions[sourceMissionIndex]?.groups[sourceGroupIndex];
+        if (!sourceGroup || !sourceGroup.cards.some(isShip)) return false;
+      }
+      // Add other condition types as needed
+    }
+
+    // Check usage limit
+    const usageKey = `${cardUniqueId}:${abilityId}`;
+    if (
+      ability.usageLimit === "oncePerTurn" &&
+      usedOrderAbilities.has(usageKey)
+    ) {
+      return false;
+    }
+
+    // Pre-validate effects that require params before paying costs
+    for (const effect of ability.effects) {
+      if (effect.type === "beamAllToShip") {
+        const { personnelIds, targetGroupIndex } = params ?? {};
+        if (
+          !personnelIds ||
+          personnelIds.length === 0 ||
+          targetGroupIndex === undefined
+        ) {
+          return false;
+        }
+        // Validate target group exists and has a ship
+        const missionDeployment = missions[sourceMissionIndex];
+        if (!missionDeployment) return false;
+        const targetGroup = missionDeployment.groups[targetGroupIndex];
+        if (!targetGroup || targetGroupIndex === 0) return false;
+        const hasShip = targetGroup.cards.some(isShip);
+        if (!hasShip) return false;
+      }
+      if (
+        effect.type === "skillGrant" &&
+        effect.skill === null &&
+        !params?.skill
+      ) {
+        return false;
+      }
+    }
+
+    // Check and pay cost
+    if (ability.cost) {
+      if (ability.cost.type === "discardFromDeck") {
+        if (deck.length < ability.cost.count) return false;
+        // Pay cost: discard from deck
+        const discardedCards = deck.slice(0, ability.cost.count);
+        set({
+          deck: deck.slice(ability.cost.count),
+          discard: [...discard, ...discardedCards],
+        });
+      } else if (ability.cost.type === "sacrificeSelf") {
+        // Pay cost: place this card in discard pile (remove from play)
+        const updatedMissions = missions.map((deployment) => ({
+          ...deployment,
+          groups: deployment.groups.map((group) => ({
+            cards: group.cards.filter((c) => c.uniqueId !== cardUniqueId),
+          })),
+        }));
+
+        // Remove from uniques in play if unique
+        const { uniquesInPlay } = get();
+        const newUniquesInPlay = new Set(uniquesInPlay);
+        if (sourceCard.unique) {
+          newUniquesInPlay.delete(sourceCard.id);
+        }
+
+        set({
+          missions: updatedMissions,
+          discard: [...discard, sourceCard],
+          uniquesInPlay: newUniquesInPlay,
+        });
+      } else if (ability.cost.type === "returnToHand") {
+        // Pay cost: return this card to owner's hand (remove from play)
+        const updatedMissions = missions.map((deployment) => ({
+          ...deployment,
+          groups: deployment.groups.map((group) => ({
+            cards: group.cards.filter((c) => c.uniqueId !== cardUniqueId),
+          })),
+        }));
+
+        // Remove from uniques in play if unique (can be played again)
+        const { uniquesInPlay, hand } = get();
+        const newUniquesInPlay = new Set(uniquesInPlay);
+        if (sourceCard.unique) {
+          newUniquesInPlay.delete(sourceCard.id);
+        }
+
+        set({
+          missions: updatedMissions,
+          hand: [...hand, sourceCard],
+          uniquesInPlay: newUniquesInPlay,
+        });
+      }
+      // Add other cost types as needed
+    }
+
+    // Apply effects
+    for (const effect of ability.effects) {
+      if (effect.type === "skillGrant") {
+        // Skill grant effect requires a skill choice if skill is null
+        const grantedSkill = effect.skill ?? params?.skill;
+        if (!grantedSkill) {
+          // No skill provided - cannot complete ability
+          // (UI should prompt for skill before calling this)
+          return false;
+        }
+
+        // Create the granted skill entry
+        const newGrant: GrantedSkill = {
+          skill: grantedSkill,
+          target: ability.target,
+          duration: ability.duration ?? "untilEndOfTurn",
+          sourceCardId: cardUniqueId,
+          sourceAbilityId: abilityId,
+        };
+
+        set({
+          grantedSkills: [...grantedSkills, newGrant],
+        });
+      } else if (effect.type === "handRefresh") {
+        // Hand refresh: shuffle hand, place on bottom of deck, draw equal
+        const { hand, deck } = get();
+        const handCount = hand.length;
+
+        if (handCount > 0) {
+          // Shuffle the hand cards
+          const shuffledHand = shuffle(hand);
+
+          // Place shuffled cards on bottom of deck
+          const newDeck = [...deck, ...shuffledHand];
+
+          // Draw equal number from top of deck
+          const drawnCards = newDeck.slice(0, handCount);
+          const remainingDeck = newDeck.slice(handCount);
+
+          set({
+            hand: drawnCards,
+            deck: remainingDeck,
+          });
+        }
+      } else if (effect.type === "beamAllToShip") {
+        // Beam personnel at this mission aboard a ship at the same mission
+        // Requires: personnelIds (which personnel to beam), targetGroupIndex (which ship)
+        const { personnelIds, targetGroupIndex } = params ?? {};
+
+        if (
+          !personnelIds ||
+          personnelIds.length === 0 ||
+          targetGroupIndex === undefined
+        ) {
+          // No personnel selected or no target - cannot complete effect
+          return false;
+        }
+
+        // Get fresh state after cost payment
+        const { missions: currentMissions } = get();
+        const missionDeployment = currentMissions[sourceMissionIndex];
+        if (!missionDeployment) return false;
+
+        // Validate target group exists and has a ship
+        const targetGroup = missionDeployment.groups[targetGroupIndex];
+        if (!targetGroup || targetGroupIndex === 0) {
+          // Target must be a ship group (not planet group 0)
+          return false;
+        }
+
+        const hasShip = targetGroup.cards.some(isShip);
+        if (!hasShip) return false;
+
+        // Collect personnel to move from all groups at this mission
+        const personnelToMove: PersonnelCard[] = [];
+        const updatedMissions = currentMissions.map((deployment, mIdx) => {
+          if (mIdx !== sourceMissionIndex) return deployment;
+
+          return {
+            ...deployment,
+            groups: deployment.groups.map((group, gIdx) => {
+              if (gIdx === targetGroupIndex) {
+                // This is the target group - will add personnel later
+                return group;
+              }
+
+              // Filter out personnel being moved
+              const remainingCards = group.cards.filter((card) => {
+                if (
+                  isPersonnel(card) &&
+                  personnelIds.includes(card.uniqueId!)
+                ) {
+                  personnelToMove.push(card as PersonnelCard);
+                  return false;
+                }
+                return true;
+              });
+
+              return { cards: remainingCards };
+            }),
+          };
+        });
+
+        // Add personnel to target group
+        const finalMissions = updatedMissions.map((deployment, mIdx) => {
+          if (mIdx !== sourceMissionIndex) return deployment;
+
+          return {
+            ...deployment,
+            groups: deployment.groups.map((group, gIdx) => {
+              if (gIdx === targetGroupIndex) {
+                return { cards: [...group.cards, ...personnelToMove] };
+              }
+              return group;
+            }),
+          };
+        });
+
+        set({ missions: finalMissions });
+      } else if (effect.type === "shipRangeModifier") {
+        // Ship range modifier: boost the ship this personnel was aboard
+        // This requires the personnel to have been aboard a ship (sourceGroupIndex > 0)
+        // Note: by the time we get here, the card may already be removed (returnToHand cost)
+        // so we use the captured source location
+
+        if (effect.targetShip === "sourceShip" && sourceGroupIndex > 0) {
+          // Get fresh state
+          const { missions: currentMissions, rangeBoosts: currentBoosts } =
+            get();
+          const missionDeployment = currentMissions[sourceMissionIndex];
+          if (!missionDeployment) continue;
+
+          const sourceGroup = missionDeployment.groups[sourceGroupIndex];
+          if (!sourceGroup) continue;
+
+          // Find the ship in the source group
+          const ship = sourceGroup.cards.find(isShip) as ShipCard | undefined;
+          if (!ship || !ship.uniqueId) continue;
+
+          // Create the range boost entry
+          const newBoost: RangeBoost = {
+            shipUniqueId: ship.uniqueId,
+            value: effect.value,
+            duration: ability.duration ?? "untilEndOfTurn",
+            sourceCardId: cardUniqueId,
+            sourceAbilityId: abilityId,
+          };
+
+          // Apply the range boost immediately to the ship's rangeRemaining
+          const updatedMissions = currentMissions.map((deployment, mIdx) => {
+            if (mIdx !== sourceMissionIndex) return deployment;
+
+            return {
+              ...deployment,
+              groups: deployment.groups.map((group, gIdx) => {
+                if (gIdx !== sourceGroupIndex) return group;
+
+                return {
+                  cards: group.cards.map((card) => {
+                    if (card.uniqueId === ship.uniqueId && isShip(card)) {
+                      const shipCard = card as ShipCard;
+                      return {
+                        ...shipCard,
+                        rangeRemaining: shipCard.rangeRemaining + effect.value,
+                      };
+                    }
+                    return card;
+                  }),
+                };
+              }),
+            };
+          });
+
+          set({
+            missions: updatedMissions,
+            rangeBoosts: [...currentBoosts, newBoost],
+          });
+        }
+      }
+      // Add other effect types as needed
+    }
+
+    // Mark ability as used
+    const newUsedAbilities = new Set(usedOrderAbilities);
+    newUsedAbilities.add(usageKey);
+    set({ usedOrderAbilities: newUsedAbilities });
+
+    return true;
+  },
+
+  /**
+   * Execute an Interlink ability on a card during a mission attempt
+   * Interlink abilities can only be used while the card is attempting a mission
+   *
+   * @param cardUniqueId - The unique ID of the card with the ability
+   * @param abilityId - The ID of the ability to execute
+   * @param params - Optional parameters (skill for abilities requiring player choice)
+   * @returns true if ability was successfully executed
+   */
+  executeInterlinkAbility: (
+    cardUniqueId: string,
+    abilityId: string,
+    params?: { skill?: Skill }
+  ): boolean => {
+    const { dilemmaEncounter, missions, deck, discard } = get();
+
+    // Interlink abilities can only be used during a mission attempt
+    if (!dilemmaEncounter) return false;
+
+    const { missionIndex, groupIndex } = dilemmaEncounter;
+
+    // Get the attempting group
+    const deployment = missions[missionIndex];
+    if (!deployment) return false;
+
+    const group = deployment.groups[groupIndex];
+    if (!group) return false;
+
+    // Find the card in the attempting group
+    const sourceCard = group.cards.find(
+      (c) => c.uniqueId === cardUniqueId && isPersonnel(c)
+    ) as PersonnelCard | undefined;
+
+    if (!sourceCard) return false;
+
+    // Personnel must be unstopped to use Interlink
+    if (sourceCard.status !== "Unstopped") return false;
+
+    // Find the ability
+    const ability = sourceCard.abilities?.find(
+      (a: Ability) => a.id === abilityId && a.trigger === "interlink"
+    );
+    if (!ability) return false;
+
+    // Apply effects (validate skill before paying cost)
+    for (const effect of ability.effects) {
+      if (effect.type === "skillGrant") {
+        let grantedSkill: Skill | null = effect.skill;
+
+        // If skill is null, we need a skill from params or skillSource
+        if (!grantedSkill) {
+          if (effect.skillSource) {
+            // Skill must come from matching source personnel
+            const availableSkills = getSkillsFromSource(
+              group.cards.filter(isPersonnel),
+              effect.skillSource,
+              sourceCard.uniqueId
+            );
+
+            if (!params?.skill || !availableSkills.includes(params.skill)) {
+              // Either no skill provided or skill not available from source
+              return false;
+            }
+            grantedSkill = params.skill;
+          } else {
+            // No skillSource - any skill is valid (like Borg Queen)
+            if (!params?.skill) return false;
+            grantedSkill = params.skill;
+          }
+        }
+
+        // Check and pay cost (only after validation passes)
+        if (ability.cost) {
+          if (ability.cost.type === "discardFromDeck") {
+            if (deck.length < ability.cost.count) return false;
+            // Pay cost: discard from deck
+            const discardedCards = deck.slice(0, ability.cost.count);
+            set({
+              deck: deck.slice(ability.cost.count),
+              discard: [...discard, ...discardedCards],
+            });
+          }
+          // Add other cost types as needed
+        }
+
+        // Create the granted skill entry
+        const newGrant: GrantedSkill = {
+          skill: grantedSkill,
+          target: ability.target,
+          duration: ability.duration ?? "untilEndOfMissionAttempt",
+          sourceCardId: cardUniqueId,
+          sourceAbilityId: abilityId,
+        };
+
+        set({
+          grantedSkills: [...get().grantedSkills, newGrant],
+        });
+      }
+      // Add other effect types as needed
+    }
+
+    return true;
+  },
+
+  /**
+   * Play an interrupt card from hand
+   * Interrupts are played from hand in response to specific timing windows
+   * and are discarded after use (no deployment cost).
+   *
+   * @param cardUniqueId - The unique ID of the interrupt card in hand
+   * @param abilityId - The ID of the ability to execute
+   * @returns true if the interrupt was successfully played
+   */
+  playInterrupt: (cardUniqueId: string, abilityId: string): boolean => {
+    const { hand, dilemmaEncounter, missions } = get();
+
+    // Find the interrupt card in hand
+    const card = hand.find((c) => c.uniqueId === cardUniqueId);
+    if (!card || !isInterrupt(card)) return false;
+
+    const interruptCard = card as InterruptCard;
+    if (!interruptCard.abilities) return false;
+
+    // Find the ability
+    const ability = interruptCard.abilities.find(
+      (a: Ability) => a.id === abilityId && a.trigger === "interrupt"
+    );
+    if (!ability) return false;
+
+    // Check timing window
+    if (ability.interruptTiming === "whenFacingDilemma") {
+      // Must be during a dilemma encounter
+      if (!dilemmaEncounter) return false;
+    }
+
+    // Check all conditions
+    if (ability.conditions) {
+      for (const condition of ability.conditions) {
+        if (condition.type === "borgPersonnelFacing") {
+          // At least one Borg personnel must be in the attempting group
+          if (!dilemmaEncounter) return false;
+
+          const { missionIndex, groupIndex } = dilemmaEncounter;
+          const deployment = missions[missionIndex];
+          if (!deployment) return false;
+
+          const group = deployment.groups[groupIndex];
+          if (!group) return false;
+
+          const hasBorgPersonnel = group.cards.some(
+            (c) =>
+              isPersonnel(c) &&
+              (c as PersonnelCard).species.includes("Borg") &&
+              (c as PersonnelCard).status === "Unstopped"
+          );
+          if (!hasBorgPersonnel) return false;
+        }
+
+        if (condition.type === "dilemmaOvercomeAtAnyMission") {
+          // A copy of the current dilemma must be overcome at some mission
+          if (!dilemmaEncounter) return false;
+
+          const currentDilemma =
+            dilemmaEncounter.selectedDilemmas[
+              dilemmaEncounter.currentDilemmaIndex
+            ];
+          if (!currentDilemma) return false;
+
+          // Check if any mission has this dilemma (by base ID) in its overcome dilemmas
+          const hasOvercomeCopy = missions.some((deployment) =>
+            deployment.dilemmas.some(
+              (d) => d.id === currentDilemma.id && d.overcome
+            )
+          );
+          if (!hasOvercomeCopy) return false;
+        }
+      }
+    }
+
+    // Apply effects
+    for (const effect of ability.effects) {
+      if (effect.type === "preventAndOvercomeDilemma") {
+        // Prevent and overcome the current dilemma
+        if (!dilemmaEncounter) return false;
+
+        const { missionIndex, selectedDilemmas, currentDilemmaIndex } =
+          dilemmaEncounter;
+
+        const currentDilemma = selectedDilemmas[currentDilemmaIndex];
+        if (!currentDilemma) return false;
+
+        // Mark the dilemma as overcome
+        const updatedDilemma = {
+          ...currentDilemma,
+          overcome: true,
+          faceup: true,
+        };
+
+        // Add dilemma to mission's overcome dilemmas
+        const updatedMissions = [...missions];
+        const missionDeployment = { ...updatedMissions[missionIndex]! };
+        missionDeployment.dilemmas = [
+          ...missionDeployment.dilemmas,
+          updatedDilemma,
+        ];
+        updatedMissions[missionIndex] = missionDeployment;
+
+        // Update selected dilemmas in encounter
+        const updatedSelectedDilemmas = selectedDilemmas.map((d, i) =>
+          i === currentDilemmaIndex ? updatedDilemma : d
+        );
+
+        // Set a result indicating the dilemma was prevented
+        set({
+          missions: updatedMissions,
+          dilemmaEncounter: {
+            ...dilemmaEncounter,
+            selectedDilemmas: updatedSelectedDilemmas,
+          },
+          dilemmaResult: {
+            overcome: true,
+            stoppedPersonnel: [],
+            killedPersonnel: [],
+            requiresSelection: false,
+            selectablePersonnel: [],
+            returnsToPile: false,
+            message: `"${currentDilemma.name}" prevented and overcome by Adapt!`,
+          },
+        });
+      }
+    }
+
+    // Move interrupt from hand to discard (interrupts are destroyed after use)
+    get()._removeFromHand(cardUniqueId);
+    set({
+      discard: [...get().discard, interruptCard],
+    });
+
+    return true;
+  },
+
+  /**
+   * Play an event card from hand
+   * Events are played during PlayAndDraw phase, cost counters, and then
+   * are either destroyed (sent to discard) or removed from the game.
+   *
+   * @param cardUniqueId - The unique ID of the event card in hand
+   * @param params - Parameters for effects that require player selection
+   * @returns true if the event was successfully played
+   */
+  playEvent: (
+    cardUniqueId: string,
+    params?: { selectedCardIds?: string[] }
+  ): boolean => {
+    const { hand, counters, phase, removedFromGame } = get();
+
+    // Events can only be played during PlayAndDraw phase
+    if (phase !== "PlayAndDraw") return false;
+
+    // Find the event card in hand
+    const card = hand.find((c) => c.uniqueId === cardUniqueId);
+    if (!card || !isEvent(card)) return false;
+
+    const eventCard = card as import("../types").EventCard;
+
+    // Check if we have enough counters
+    if (counters < eventCard.deploy) return false;
+
+    // Find the event ability (trigger: "event")
+    const ability = eventCard.abilities?.find((a) => a.trigger === "event");
+    if (!ability) {
+      // Event without ability - just pay cost and destroy
+      get()._removeFromHand(cardUniqueId);
+      const newCounters = counters - eventCard.deploy;
+      set({
+        counters: newCounters,
+        discard: [...get().discard, eventCard],
+      });
+      // Auto-advance to Orders if counters are 0
+      if (newCounters === 0) {
+        set({ phase: "ExecuteOrders" });
+      }
+      return true;
+    }
+
+    // Process effects
+    for (const effect of ability.effects) {
+      if (effect.type === "recoverFromDiscard") {
+        const { selectedCardIds } = params ?? {};
+
+        // Validate selection
+        if (!selectedCardIds || selectedCardIds.length === 0) {
+          // No cards selected - still valid, just no recovery happens
+          // But the event still resolves
+        } else {
+          // Validate we don't exceed maxCount
+          if (selectedCardIds.length > effect.maxCount) {
+            return false;
+          }
+
+          // Get current discard pile
+          const currentDiscard = get().discard;
+
+          // Find and validate selected cards
+          const cardsToRecover: Card[] = [];
+          for (const selectedId of selectedCardIds) {
+            const cardInDiscard = currentDiscard.find(
+              (c) => c.uniqueId === selectedId
+            );
+            if (!cardInDiscard) return false;
+
+            // Check card type matches allowed types
+            if (!effect.cardTypes.includes(cardInDiscard.type)) {
+              return false;
+            }
+
+            cardsToRecover.push(cardInDiscard);
+          }
+
+          // Remove selected cards from discard
+          const updatedDiscard = currentDiscard.filter(
+            (c) => !selectedCardIds.includes(c.uniqueId!)
+          );
+
+          // Place cards on bottom of deck (in selected order)
+          const currentDeck = get().deck;
+          const updatedDeck =
+            effect.destination === "deckBottom"
+              ? [...currentDeck, ...cardsToRecover]
+              : effect.destination === "deckTop"
+                ? [...cardsToRecover, ...currentDeck]
+                : currentDeck; // hand destination handled separately
+
+          if (effect.destination === "hand") {
+            const currentHand = get().hand;
+            set({
+              hand: [...currentHand, ...cardsToRecover],
+              discard: updatedDiscard,
+            });
+          } else {
+            set({
+              deck: updatedDeck,
+              discard: updatedDiscard,
+            });
+          }
+        }
+      }
+      // Add other effect types as needed
+    }
+
+    // Remove event from hand and pay cost
+    get()._removeFromHand(cardUniqueId);
+
+    // Determine where the event goes after playing
+    if (ability.removeFromGame) {
+      // Remove from game
+      set({
+        counters: get().counters - eventCard.deploy,
+        removedFromGame: [...removedFromGame, eventCard],
+      });
+    } else {
+      // Destroy (send to discard)
+      set({
+        counters: get().counters - eventCard.deploy,
+        discard: [...get().discard, eventCard],
+      });
+    }
+
+    // Auto-advance to Orders if counters are 0
+    if (get().counters === 0) {
+      set({ phase: "ExecuteOrders" });
+    }
+
+    return true;
   },
 
   /**
@@ -921,7 +1807,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * Apply dilemma result to game state
    */
   _applyDilemmaResult: (result: DilemmaResult) => {
-    const { dilemmaEncounter, missions, discard, dilemmaPool } = get();
+    const { dilemmaEncounter, missions, discard, dilemmaPool, uniquesInPlay } =
+      get();
 
     if (!dilemmaEncounter) return;
 
@@ -935,6 +1822,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const deployment = { ...updatedMissions[missionIndex]! };
     const newDiscard = [...discard];
     let newDilemmaPool = [...dilemmaPool];
+    const newUniquesInPlay = new Set(uniquesInPlay);
+    const killedUniqueIds: string[] = [];
 
     // Update groups with stopped/killed personnel
     deployment.groups = deployment.groups.map((group, idx) => {
@@ -951,6 +1840,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
           if (result.killedPersonnel.includes(personnel.uniqueId)) {
             // Add to discard with killed status
             newDiscard.push({ ...personnel, status: "Killed" });
+            // Track killed unique cards so they can be deployed again
+            if (personnel.unique) {
+              killedUniqueIds.push(personnel.id);
+            }
             return null; // Mark for removal
           }
 
@@ -990,6 +1883,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     updatedMissions[missionIndex] = deployment;
 
+    // Remove killed unique cards from uniquesInPlay so they can be deployed again
+    for (const id of killedUniqueIds) {
+      newUniquesInPlay.delete(id);
+    }
+
     // Update cost spent with the current dilemma's cost
     const newCostSpent = dilemmaEncounter.costSpent + currentDilemma.deploy;
 
@@ -997,6 +1895,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       missions: updatedMissions,
       discard: newDiscard,
       dilemmaPool: newDilemmaPool,
+      uniquesInPlay: newUniquesInPlay,
       dilemmaEncounter: {
         ...dilemmaEncounter,
         selectedDilemmas: updatedSelectedDilemmas,
@@ -1016,6 +1915,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       score,
       completedPlanetMissions,
       completedSpaceMissions,
+      grantedSkills,
     } = get();
 
     if (!dilemmaEncounter) return;
@@ -1024,8 +1924,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const mission = deployment.mission;
     const group = deployment.groups[dilemmaEncounter.groupIndex]!;
 
-    // Check if mission requirements are still met
-    const requirementsMet = checkMission(group.cards, mission);
+    // Check if mission requirements are still met (include granted skills)
+    const requirementsMet = checkMission(group.cards, mission, grantedSkills);
 
     if (!requirementsMet) {
       // Failed - stop all remaining personnel
@@ -1048,6 +1948,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const isPlanet = mission.missionType === "Planet";
     const isSpace = mission.missionType === "Space";
 
+    // Clear granted skills with "untilEndOfMissionAttempt" duration
+    const remainingSkills = grantedSkills.filter(
+      (grant) => grant.duration !== "untilEndOfMissionAttempt"
+    );
+
     set({
       missions: updatedMissions,
       score: newScore,
@@ -1055,6 +1960,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       completedSpaceMissions: completedSpaceMissions + (isSpace ? 1 : 0),
       dilemmaEncounter: null,
       dilemmaResult: null,
+      grantedSkills: remainingSkills,
     });
 
     // Check win condition
@@ -1065,7 +1971,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
    * Fail mission attempt - stop all remaining personnel
    */
   _failMissionAttempt: () => {
-    const { missions, dilemmaEncounter } = get();
+    const { missions, dilemmaEncounter, grantedSkills } = get();
 
     if (!dilemmaEncounter) return;
 
@@ -1093,10 +1999,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     updatedMissions[missionIndex] = deployment;
 
+    // Clear granted skills with "untilEndOfMissionAttempt" duration
+    const remainingSkills = grantedSkills.filter(
+      (grant) => grant.duration !== "untilEndOfMissionAttempt"
+    );
+
     set({
       missions: updatedMissions,
       dilemmaEncounter: null,
       dilemmaResult: null,
+      grantedSkills: remainingSkills,
     });
   },
 }));
@@ -1283,3 +2195,136 @@ export const selectDilemmaEncounter = (state: GameStore) =>
  * Get current dilemma result
  */
 export const selectDilemmaResult = (state: GameStore) => state.dilemmaResult;
+
+/**
+ * Get playable interrupts from hand for the current timing window
+ * Returns an array of { card, ability } pairs that can be played right now
+ */
+export const selectPlayableInterrupts = (state: GameStore) => {
+  const { hand, dilemmaEncounter, missions } = state;
+
+  const playable: { card: InterruptCard; ability: Ability }[] = [];
+
+  for (const card of hand) {
+    if (!isInterrupt(card)) continue;
+
+    const interruptCard = card as InterruptCard;
+    if (!interruptCard.abilities) continue;
+
+    for (const ability of interruptCard.abilities) {
+      if (ability.trigger !== "interrupt") continue;
+
+      // Check timing window
+      let timingValid = false;
+      if (ability.interruptTiming === "whenFacingDilemma") {
+        timingValid = dilemmaEncounter !== null;
+      }
+      if (!timingValid) continue;
+
+      // Check all conditions
+      let allConditionsMet = true;
+      if (ability.conditions) {
+        for (const condition of ability.conditions) {
+          if (condition.type === "borgPersonnelFacing") {
+            if (!dilemmaEncounter) {
+              allConditionsMet = false;
+              break;
+            }
+
+            const { missionIndex, groupIndex } = dilemmaEncounter;
+            const deployment = missions[missionIndex];
+            if (!deployment) {
+              allConditionsMet = false;
+              break;
+            }
+
+            const group = deployment.groups[groupIndex];
+            if (!group) {
+              allConditionsMet = false;
+              break;
+            }
+
+            const hasBorgPersonnel = group.cards.some(
+              (c) =>
+                isPersonnel(c) &&
+                (c as PersonnelCard).species.includes("Borg") &&
+                (c as PersonnelCard).status === "Unstopped"
+            );
+            if (!hasBorgPersonnel) {
+              allConditionsMet = false;
+              break;
+            }
+          }
+
+          if (condition.type === "dilemmaOvercomeAtAnyMission") {
+            if (!dilemmaEncounter) {
+              allConditionsMet = false;
+              break;
+            }
+
+            const currentDilemma =
+              dilemmaEncounter.selectedDilemmas[
+                dilemmaEncounter.currentDilemmaIndex
+              ];
+            if (!currentDilemma) {
+              allConditionsMet = false;
+              break;
+            }
+
+            const hasOvercomeCopy = missions.some((deployment) =>
+              deployment.dilemmas.some(
+                (d) => d.id === currentDilemma.id && d.overcome
+              )
+            );
+            if (!hasOvercomeCopy) {
+              allConditionsMet = false;
+              break;
+            }
+          }
+        }
+      }
+
+      if (allConditionsMet) {
+        playable.push({ card: interruptCard, ability });
+      }
+    }
+  }
+
+  return playable;
+};
+
+/**
+ * Get playable event cards from hand
+ * Returns events that have enough counters to play during PlayAndDraw phase
+ */
+export const selectPlayableEvents = (state: GameStore) => {
+  const { hand, counters, phase } = state;
+
+  if (phase !== "PlayAndDraw") return [];
+
+  return hand.filter((card) => {
+    if (!isEvent(card)) return false;
+    const eventCard = card as import("../types").EventCard;
+    return eventCard.deploy <= counters;
+  }) as import("../types").EventCard[];
+};
+
+/**
+ * Get cards in discard pile that can be recovered by an event's recoverFromDiscard effect
+ * @param allowedTypes - Array of card types that can be recovered (e.g., ["Personnel", "Ship"])
+ */
+export const selectRecoverableCards =
+  (allowedTypes: import("../types").CardType[]) => (state: GameStore) => {
+    return state.discard.filter((card) => allowedTypes.includes(card.type));
+  };
+
+/**
+ * Get the discard pile
+ */
+export const selectDiscard = (state: GameStore) => state.discard;
+
+/**
+ * Get the removed from game pile
+ */
+export const selectRemovedFromGame = (state: GameStore) =>
+  state.removedFromGame;

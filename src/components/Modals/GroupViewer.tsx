@@ -1,4 +1,5 @@
 import type { Card, PersonnelCard } from "../../types/card";
+import type { GrantedSkill } from "../../types/gameState";
 import { isPersonnel, isShip } from "../../types/card";
 import { DraggablePanel } from "./DraggablePanel";
 import { CardSlot } from "../GameBoard/CardSlot";
@@ -11,6 +12,7 @@ interface GroupViewerProps {
   isOpen: boolean;
   onClose: () => void;
   onCardClick?: (card: Card) => void;
+  grantedSkills?: GrantedSkill[];
 }
 
 /**
@@ -22,8 +24,9 @@ export function GroupViewer({
   isOpen,
   onClose,
   onCardClick,
+  grantedSkills = [],
 }: GroupViewerProps) {
-  const stats = calculateGroupStats(cards);
+  const stats = calculateGroupStats(cards, grantedSkills);
 
   // Get unstopped personnel count
   const personnel = cards.filter(isPersonnel) as PersonnelCard[];

@@ -79,6 +79,7 @@ export interface BaseCard {
   type: CardType;
   unique: boolean;
   jpg: string;
+  ownerId?: string; // Player who started the game with this card (for multiplayer)
 }
 
 // Mission card
@@ -130,11 +131,13 @@ export interface ShipCard extends BaseCard {
 export interface EventCard extends BaseCard {
   type: "Event";
   deploy: number;
+  abilities?: Ability[];
 }
 
 // Interrupt card
 export interface InterruptCard extends BaseCard {
   type: "Interrupt";
+  abilities?: Ability[];
 }
 
 // Dilemma card

@@ -16,7 +16,7 @@ interface CardViewerProps {
  */
 export function CardViewer({ card, onClose }: CardViewerProps) {
   const [position, setPosition] = useState({ x: 100, y: 100 });
-  const [zIndex, setZIndex] = useState(1000);
+  const [zIndex, setZIndex] = useState(getNextZIndex);
   const wasDragged = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -61,8 +61,11 @@ export function CardViewer({ card, onClose }: CardViewerProps) {
     }
   };
 
-  // Reset drag state when card changes (but keep position)
+  // Bring to front and reset drag state when card changes
   useEffect(() => {
+    if (card) {
+      setZIndex(getNextZIndex());
+    }
     wasDragged.current = false;
   }, [card?.uniqueId]);
 

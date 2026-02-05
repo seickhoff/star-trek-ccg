@@ -48,10 +48,11 @@ export function HandCard({ card, canDeploy, onDeploy, onView }: HandCardProps) {
         {card.name}
       </div>
 
-      {canDeploy && onDeploy && (
+      {deployCost !== null && onDeploy && (
         <button
-          className="hand-card__deploy-btn"
+          className={`hand-card__deploy-btn ${!canDeploy ? "hand-card__deploy-btn--disabled" : ""}`}
           onClick={handleDeploy}
+          disabled={!canDeploy}
           title={`Deploy ${card.name}`}
         >
           Deploy

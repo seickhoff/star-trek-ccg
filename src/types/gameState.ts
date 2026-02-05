@@ -6,6 +6,7 @@ import type {
   ShipCard,
   Skill,
 } from "./card";
+import type { EffectDuration, TargetFilter } from "./ability";
 
 // Game phase enum
 export type GamePhase = "PlayAndDraw" | "ExecuteOrders" | "DiscardExcess";
@@ -53,12 +54,45 @@ export interface DilemmaEncounter {
   facedDilemmaIds: string[]; // Track base IDs (not uniqueIds) of faced dilemmas
 }
 
+/**
+ * Tracks a granted skill from an order ability
+ *
+ * Example: Borg Queen grants "Navigation" to all Borg until end of turn
+ */
+export interface GrantedSkill {
+  skill: Skill;
+  target: TargetFilter; // Which cards gain this skill
+  duration: EffectDuration;
+  sourceCardId: string; // The card that granted the skill (uniqueId)
+  sourceAbilityId: string; // The ability that granted it
+}
+
+/**
+ * Tracks a temporary range boost on a ship
+ *
+ * Example: Transwarp Drone grants Range +2 to a ship until end of turn
+ */
+export interface RangeBoost {
+  shipUniqueId: string; // The ship that gains the range boost
+  value: number; // Amount to add to range
+  duration: EffectDuration;
+  sourceCardId: string; // The card that granted the boost (uniqueId)
+  sourceAbilityId: string; // The ability that granted it
+}
+
+/**
+ * Tracks usage of order abilities (for "once per turn" limits)
+ * Key format: `${cardUniqueId}:${abilityId}`
+ */
+export type UsedOrderAbilities = Set<string>;
+
 // Player's complete game state
 export interface GameState {
   // Deck zones
   deck: Card[]; // Draw pile
   hand: Card[]; // Cards in hand
   discard: Card[]; // Discard pile
+  removedFromGame: Card[]; // Cards removed from the game (cannot be recovered)
   dilemmaPool: DilemmaCard[]; // Available dilemmas to draw
 
   // Board state - 5 missions with deployments
@@ -79,6 +113,11 @@ export interface GameState {
 
   // Active dilemma encounter (null if not in encounter)
   dilemmaEncounter: DilemmaEncounter | null;
+
+  // Order ability tracking
+  usedOrderAbilities: UsedOrderAbilities; // Abilities used this turn
+  grantedSkills: GrantedSkill[]; // Active skill grants
+  rangeBoosts: RangeBoost[]; // Active range boosts on ships
 
   // Game result
   gameOver: boolean;
@@ -101,6 +140,7 @@ export function createInitialGameState(): GameState {
     deck: [],
     hand: [],
     discard: [],
+    removedFromGame: [],
     dilemmaPool: [],
     missions: [],
     uniquesInPlay: new Set(),
@@ -111,6 +151,9 @@ export function createInitialGameState(): GameState {
     completedPlanetMissions: 0,
     completedSpaceMissions: 0,
     dilemmaEncounter: null,
+    usedOrderAbilities: new Set(),
+    grantedSkills: [],
+    rangeBoosts: [],
     gameOver: false,
     victory: false,
   };

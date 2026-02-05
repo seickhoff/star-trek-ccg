@@ -2,17 +2,20 @@
 
 .orders-modal {
   position: fixed;
-  z-index: 1000;
+  /* z-index managed dynamically via getNextZIndex() */
   width: 565px;
   min-height: 400px;
+  max-height: calc(100vh - 100px);
   background-image: url("/images/orders.jpg");
   background-repeat: no-repeat;
   background-color: black;
   border: 6px solid #9999ff;
-  border-radius: 12px;
+  border-radius: 8px;
   color: #e0e0e0;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .orders-modal__header {
@@ -51,12 +54,15 @@
 .orders-modal__content {
   padding: 12px;
   padding-left: 140px; /* Account for background image */
+  padding-bottom: 16px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .orders-modal__current {
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid #9999ff;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 12px;
   margin-bottom: 16px;
 }
@@ -77,7 +83,7 @@
 /* Stats summary */
 .orders-modal__stats {
   background: rgba(0, 0, 0, 0.4);
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 8px;
   margin-bottom: 8px;
 }
@@ -131,7 +137,7 @@
 .orders-modal__skill {
   background: rgba(153, 153, 255, 0.2);
   border: 1px solid #9999ff;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 2px 6px;
   font-size: 10px;
   color: #e0e0e0;
@@ -159,7 +165,7 @@
 /* Sections */
 .orders-modal__section {
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 12px;
   margin-bottom: 12px;
 }
@@ -177,7 +183,7 @@
   align-items: center;
   background: rgba(153, 153, 255, 0.2);
   border: 1px solid #9999ff;
-  border-radius: 4px;
+  border-radius: 8px;
   padding: 8px 12px;
   color: #e0e0e0;
   cursor: pointer;
@@ -197,46 +203,59 @@
   color: #ff9900;
 }
 
-/* Beam personnel */
-.orders-modal__beam-row {
-  display: flex;
-  align-items: center;
+/* Beam personnel - grid layout for 2-3 per row */
+.orders-modal__beam-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(153, 153, 255, 0.2);
 }
 
-.orders-modal__beam-row:last-child {
-  border-bottom: none;
+.orders-modal__beam-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(153, 153, 255, 0.2);
 }
 
 .orders-modal__beam-person {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  min-width: 150px;
+  gap: 4px;
 }
 
 .orders-modal__person-name {
-  font-size: 11px;
+  font-size: 10px;
   color: #b0b0b0;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .orders-modal__beam-targets {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
 }
 
 .orders-modal__beam-btn {
   background: rgba(76, 175, 80, 0.2);
   border: 1px solid #4caf50;
-  border-radius: 4px;
-  padding: 4px 12px;
+  border-radius: 8px;
+  padding: 4px 8px;
   color: #4caf50;
-  font-size: 11px;
+  font-size: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
+  text-align: center;
+  width: 100%;
 }
 
 .orders-modal__beam-btn:hover {
@@ -249,4 +268,259 @@
   font-style: italic;
   text-align: center;
   padding: 12px;
+}
+
+/* Order abilities - grid layout for 2-3 per row */
+.orders-modal__ability-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.orders-modal__ability-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(153, 153, 255, 0.2);
+}
+
+.orders-modal__ability-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.orders-modal__abilities {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.orders-modal__ability-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: rgba(255, 153, 0, 0.15);
+  border: 1px solid #ff9900;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #ff9900;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.orders-modal__ability-btn:hover:not(:disabled) {
+  background: rgba(255, 153, 0, 0.3);
+}
+
+.orders-modal__ability-btn--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: #666;
+  color: #666;
+}
+
+.orders-modal__ability-btn--used {
+  opacity: 0.5;
+  border-color: #666;
+  color: #888;
+  background: rgba(100, 100, 100, 0.2);
+}
+
+.orders-modal__ability-name {
+  font-weight: bold;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.orders-modal__ability-desc {
+  font-size: 10px;
+  color: #c0c0c0;
+  line-height: 1.3;
+}
+
+.orders-modal__ability-btn--disabled .orders-modal__ability-desc,
+.orders-modal__ability-btn--used .orders-modal__ability-desc {
+  color: #666;
+}
+
+.orders-modal__ability-used {
+  font-size: 10px;
+  font-style: italic;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* Active granted skills */
+.orders-modal__granted-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.orders-modal__granted-skill {
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #4caf50;
+}
+
+.orders-modal__granted-target {
+  color: #88cc88;
+  font-size: 10px;
+}
+
+/* Beam to ship selection UI */
+.orders-modal__beam-selection {
+  border: 2px solid #ff9900;
+  background: rgba(255, 153, 0, 0.1);
+}
+
+.orders-modal__beam-instructions {
+  font-size: 12px;
+  color: #c0c0c0;
+  margin-bottom: 12px;
+}
+
+.orders-modal__beam-personnel-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.orders-modal__beam-person-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(153, 153, 255, 0.3);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #e0e0e0;
+  font-size: 10px;
+  position: relative;
+}
+
+.orders-modal__beam-person-btn:hover {
+  background: rgba(153, 153, 255, 0.2);
+  border-color: #9999ff;
+}
+
+.orders-modal__beam-person-btn--selected {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: #4caf50;
+}
+
+.orders-modal__beam-location {
+  color: #888;
+  font-size: 9px;
+  font-style: italic;
+}
+
+.orders-modal__beam-check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  color: #4caf50;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.orders-modal__beam-ship-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.orders-modal__beam-ship-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(153, 153, 255, 0.3);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #e0e0e0;
+}
+
+.orders-modal__beam-ship-btn:hover {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: #4caf50;
+}
+
+.orders-modal__beam-ship-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.orders-modal__beam-ship-name {
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.orders-modal__beam-ship-crew {
+  font-size: 10px;
+  color: #888;
+}
+
+.orders-modal__beam-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.orders-modal__beam-cancel,
+.orders-modal__beam-back {
+  background: rgba(100, 100, 100, 0.3);
+  border: 1px solid #666;
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: #c0c0c0;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.15s ease;
+}
+
+.orders-modal__beam-cancel:hover,
+.orders-modal__beam-back:hover {
+  background: rgba(100, 100, 100, 0.5);
+}
+
+.orders-modal__beam-next {
+  background: rgba(76, 175, 80, 0.3);
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: #4caf50;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: bold;
+  transition: all 0.15s ease;
+}
+
+.orders-modal__beam-next:hover:not(:disabled) {
+  background: rgba(76, 175, 80, 0.5);
+}
+
+.orders-modal__beam-next:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }

@@ -1,5 +1,5 @@
 import type { Card, PersonnelCard, ShipCard } from "../../types/card";
-import type { MissionDeployment } from "../../types/gameState";
+import type { MissionDeployment, GrantedSkill } from "../../types/gameState";
 import { isPersonnel, isShip } from "../../types/card";
 import { CardSlot } from "./CardSlot";
 import { checkMission, calculateGroupStats } from "../../logic/missionChecker";
@@ -14,6 +14,7 @@ interface MissionColumnProps {
   onGroupClick?: (missionIndex: number, groupIndex: number) => void;
   onAttemptMission?: (missionIndex: number, groupIndex: number) => void;
   canAttempt?: boolean;
+  grantedSkills?: GrantedSkill[];
 }
 
 /**
@@ -29,6 +30,7 @@ export function MissionColumn({
   onGroupClick,
   onAttemptMission,
   canAttempt = false,
+  grantedSkills = [],
 }: MissionColumnProps) {
   const { mission, groups, dilemmas } = deployment;
 
@@ -97,7 +99,7 @@ export function MissionColumn({
       <div className="mission-column__personnel">
         {groups.map((group, groupIndex) => {
           const summary = getGroupSummary(group.cards);
-          const stats = calculateGroupStats(group.cards);
+          const stats = calculateGroupStats(group.cards, grantedSkills);
           const isShipGroup = groupIndex > 0;
 
           // Find the ship in ship groups
@@ -192,7 +194,11 @@ export function MissionColumn({
                 ((mission.missionType === "Planet" && groupIndex === 0) ||
                   (mission.missionType === "Space" && groupIndex > 0)) &&
                 (() => {
-                  const meetsRequirements = checkMission(group.cards, mission);
+                  const meetsRequirements = checkMission(
+                    group.cards,
+                    mission,
+                    grantedSkills
+                  );
                   return (
                     <button
                       className={`mission-column__attempt-btn ${!meetsRequirements ? "mission-column__attempt-btn--disabled" : ""}`}

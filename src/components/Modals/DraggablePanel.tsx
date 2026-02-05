@@ -26,8 +26,15 @@ export function DraggablePanel({
   width = "400px",
 }: DraggablePanelProps) {
   const [position, setPosition] = useState({ x: 100, y: 100 });
-  const [zIndex, setZIndex] = useState(1000);
+  const [zIndex, setZIndex] = useState(getNextZIndex);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Bring to front when opened
+  useEffect(() => {
+    if (isOpen) {
+      setZIndex(getNextZIndex());
+    }
+  }, [isOpen]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     // Bring to front on any click
