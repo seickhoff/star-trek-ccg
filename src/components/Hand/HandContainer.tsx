@@ -1,5 +1,5 @@
-import type { Card } from "../../types/card";
-import { isPersonnel, isShip } from "../../types/card";
+import type { Card, EventCard } from "../../types/card";
+import { isPersonnel, isShip, isEvent } from "../../types/card";
 import { HandCard } from "./HandCard";
 import "./HandContainer.css";
 
@@ -9,6 +9,7 @@ interface HandContainerProps {
   phase: string;
   uniquesInPlay: Set<string>;
   onDeploy?: (card: Card) => void;
+  onPlayEvent?: (card: Card) => void;
   onView?: (card: Card) => void;
 }
 
@@ -22,6 +23,7 @@ export function HandContainer({
   phase,
   uniquesInPlay,
   onDeploy,
+  onPlayEvent,
   onView,
 }: HandContainerProps) {
   const canDeployCard = (card: Card): boolean => {
@@ -37,6 +39,18 @@ export function HandContainer({
     // Check cost
     const deployCost = (card as { deploy: number }).deploy;
     return counters >= deployCost;
+  };
+
+  const canPlayEvent = (card: Card): boolean => {
+    // Can only play during PlayAndDraw
+    if (phase !== "PlayAndDraw") return false;
+
+    // Must be an event
+    if (!isEvent(card)) return false;
+
+    // Check cost
+    const playCost = (card as EventCard).deploy;
+    return counters >= playCost;
   };
 
   return (
@@ -55,7 +69,9 @@ export function HandContainer({
               key={card.uniqueId}
               card={card}
               canDeploy={canDeployCard(card)}
+              canPlay={canPlayEvent(card)}
               onDeploy={onDeploy}
+              onPlayEvent={onPlayEvent}
               onView={onView}
             />
           ))

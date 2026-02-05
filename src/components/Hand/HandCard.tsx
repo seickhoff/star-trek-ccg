@@ -1,12 +1,19 @@
-import type { Card, PersonnelCard, ShipCard } from "../../types/card";
-import { isPersonnel, isShip } from "../../types/card";
+import type {
+  Card,
+  PersonnelCard,
+  ShipCard,
+  EventCard,
+} from "../../types/card";
+import { isPersonnel, isShip, isEvent } from "../../types/card";
 import { CardSlot } from "../GameBoard/CardSlot";
 import "./HandCard.css";
 
 interface HandCardProps {
   card: Card;
   canDeploy: boolean;
+  canPlay: boolean;
   onDeploy?: (card: Card) => void;
+  onPlayEvent?: (card: Card) => void;
   onView?: (card: Card) => void;
 }
 
@@ -14,12 +21,24 @@ interface HandCardProps {
  * Card displayed in the player's hand
  * Shows deploy cost and allows deployment/viewing
  */
-export function HandCard({ card, canDeploy, onDeploy, onView }: HandCardProps) {
-  // Get deploy cost
+export function HandCard({
+  card,
+  canDeploy,
+  canPlay,
+  onDeploy,
+  onPlayEvent,
+  onView,
+}: HandCardProps) {
+  // Get deploy cost for personnel/ships
   const deployCost: number | null =
     isPersonnel(card) || isShip(card)
       ? (card as PersonnelCard | ShipCard).deploy
       : null;
+
+  // Get play cost for events
+  const playCost: number | null = isEvent(card)
+    ? (card as EventCard).deploy
+    : null;
 
   const handleClick = () => {
     if (onView) {
@@ -34,11 +53,22 @@ export function HandCard({ card, canDeploy, onDeploy, onView }: HandCardProps) {
     }
   };
 
+  const handlePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (canPlay && onPlayEvent) {
+      onPlayEvent(card);
+    }
+  };
+
+  // Show cost badge for deployable cards or playable events
+  const costToShow = deployCost ?? playCost;
+  const isPlayable = canDeploy || canPlay;
+
   return (
-    <div className={`hand-card ${canDeploy ? "hand-card--deployable" : ""}`}>
-      {deployCost !== null && (
+    <div className={`hand-card ${isPlayable ? "hand-card--deployable" : ""}`}>
+      {costToShow !== null && (
         <div className="hand-card__cost">
-          <span className="hand-card__cost-value">{deployCost}</span>
+          <span className="hand-card__cost-value">{costToShow}</span>
         </div>
       )}
 
@@ -56,6 +86,17 @@ export function HandCard({ card, canDeploy, onDeploy, onView }: HandCardProps) {
           title={`Deploy ${card.name}`}
         >
           Deploy
+        </button>
+      )}
+
+      {playCost !== null && onPlayEvent && (
+        <button
+          className={`hand-card__deploy-btn hand-card__play-btn ${!canPlay ? "hand-card__deploy-btn--disabled" : ""}`}
+          onClick={handlePlay}
+          disabled={!canPlay}
+          title={`Play ${card.name}`}
+        >
+          Play
         </button>
       )}
     </div>

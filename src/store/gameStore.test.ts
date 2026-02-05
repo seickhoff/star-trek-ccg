@@ -9,6 +9,7 @@ import type {
   StaffingIcon,
   Skill,
   Ability,
+  MissionDeployment,
 } from "../types";
 
 describe("gameStore", () => {
@@ -1391,6 +1392,117 @@ describe("gameStore", () => {
         // facedDilemmaIds should be defined and contain at least the first dilemma's ID
         expect(encounter.facedDilemmaIds).toBeDefined();
         expect(Array.isArray(encounter.facedDilemmaIds)).toBe(true);
+      }
+    });
+
+    it("waits for user to continue after detecting duplicate dilemma (does not auto-advance)", () => {
+      const state = useGameStore.getState();
+      const personnel = state.hand
+        .filter((c) => c.type === "Personnel")
+        .slice(0, 4);
+
+      const planetMissionIndex = state.missions.findIndex(
+        (m) => m.mission.missionType === "Planet" && !m.mission.completed
+      );
+
+      if (planetMissionIndex === -1) {
+        console.log("No planet mission found, skipping test");
+        return;
+      }
+
+      for (const p of personnel) {
+        if (p.uniqueId)
+          useGameStore.getState().deploy(p.uniqueId, planetMissionIndex);
+      }
+
+      const dilemmaPool = useGameStore.getState().dilemmaPool;
+      if (dilemmaPool.length < 2) {
+        console.log("Not enough dilemmas in pool, skipping test");
+        return;
+      }
+
+      // Create three dilemmas: first is unique, second is duplicate, third is different
+      const baseDilemma = dilemmaPool[0]!;
+      const differentDilemma = dilemmaPool[1]!;
+      const testDilemmas = [
+        { ...baseDilemma, uniqueId: `${baseDilemma.id}-test-1` },
+        { ...baseDilemma, uniqueId: `${baseDilemma.id}-test-2` }, // Duplicate of first
+        { ...differentDilemma, uniqueId: `${differentDilemma.id}-test-1` }, // Different dilemma
+      ];
+
+      useGameStore.setState({ phase: "ExecuteOrders" });
+      useGameStore.getState().attemptMission(planetMissionIndex, 0);
+
+      const initialEncounter = useGameStore.getState().dilemmaEncounter;
+      if (!initialEncounter) {
+        console.log("No encounter created, skipping test");
+        return;
+      }
+
+      // Ensure personnel are unstopped (they may have been stopped by initial dilemma)
+      const missions = useGameStore.getState().missions;
+      const updatedMissions = missions.map((m, idx) => {
+        if (idx !== planetMissionIndex) return m;
+        return {
+          ...m,
+          groups: m.groups.map((group) => ({
+            cards: group.cards.map((card) => {
+              if (card.type === "Personnel") {
+                return { ...card, status: "Unstopped" as const };
+              }
+              return card;
+            }),
+          })),
+        };
+      }) as MissionDeployment[];
+
+      // Set up controlled encounter with first dilemma already faced
+      // Also clear the dilemmaResult from the initial resolution
+      useGameStore.setState({
+        missions: updatedMissions,
+        dilemmaEncounter: {
+          ...initialEncounter,
+          selectedDilemmas: testDilemmas,
+          currentDilemmaIndex: 0,
+          facedDilemmaIds: [baseDilemma.id], // First dilemma already faced
+        },
+        dilemmaResult: null, // Clear previous result
+      });
+
+      // Advance to the second dilemma (which is a duplicate)
+      useGameStore.getState().advanceDilemma();
+
+      // Check that duplicate was detected and message was set
+      const afterFirstAdvance = useGameStore.getState();
+
+      // If encounter was ended (all stopped or mission completed), skip the rest
+      if (!afterFirstAdvance.dilemmaEncounter) {
+        console.log("Encounter ended early, skipping duplicate test");
+        return;
+      }
+
+      expect(afterFirstAdvance.dilemmaResult).toBeDefined();
+      expect(afterFirstAdvance.dilemmaResult?.message).toBeDefined();
+      expect(afterFirstAdvance.dilemmaResult?.message).toContain(
+        "Duplicate dilemma"
+      );
+      expect(afterFirstAdvance.dilemmaResult?.message).toContain(
+        "auto-overcome"
+      );
+      expect(afterFirstAdvance.dilemmaResult?.overcome).toBe(true);
+      expect(afterFirstAdvance.dilemmaResult?.stoppedPersonnel).toEqual([]);
+
+      // Crucially, the currentDilemmaIndex should be at the duplicate (index 1),
+      // NOT at the third dilemma (index 2) - proving we didn't auto-advance
+      expect(afterFirstAdvance.dilemmaEncounter?.currentDilemmaIndex).toBe(1);
+
+      // Now manually advance again (simulating user clicking Continue)
+      useGameStore.getState().advanceDilemma();
+
+      // Now we should be at the third dilemma (index 2) - or encounter ended if mission completed
+      const afterSecondAdvance = useGameStore.getState();
+      if (afterSecondAdvance.dilemmaEncounter) {
+        expect(afterSecondAdvance.dilemmaEncounter.currentDilemmaIndex).toBe(2);
       }
     });
   });

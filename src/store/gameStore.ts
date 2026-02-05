@@ -966,6 +966,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       );
 
       // Update encounter to next dilemma (keeping same facedDilemmaIds since duplicate wasn't faced)
+      // Don't recursively advance - let the UI show the duplicate message and wait for user to continue
       set({
         missions: updatedMissions,
         dilemmaEncounter: {
@@ -984,8 +985,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         },
       });
 
-      // Recursively advance to check the next dilemma
-      get().advanceDilemma();
+      // Wait for user to click Continue (like normal dilemma resolution)
+      // The next advanceDilemma() call will check the next dilemma for duplicates
       return;
     }
 

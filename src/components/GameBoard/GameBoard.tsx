@@ -11,7 +11,13 @@ import {
 import { MissionColumn } from "./MissionColumn";
 import { TopBar } from "../UI/TopBar";
 import { HandContainer } from "../Hand/HandContainer";
-import { CardViewer, GroupViewer, OrdersModal, DilemmaModal } from "../Modals";
+import {
+  CardViewer,
+  GroupViewer,
+  OrdersModal,
+  DilemmaModal,
+  DiscardPicker,
+} from "../Modals";
 import { defaultDeck } from "../../data/defaultDeck";
 import { useAudio, GAME_SOUNDS } from "../../hooks";
 import "./GameBoard.css";
@@ -30,6 +36,7 @@ export function GameBoard() {
     counters,
     score,
     deck,
+    discard,
     dilemmaEncounter,
     gameOver,
     victory,
@@ -52,6 +59,7 @@ export function GameBoard() {
     executeOrderAbility,
     executeInterlinkAbility,
     playInterrupt,
+    playEvent,
   } = useGameStore();
 
   // Derived selectors
@@ -122,6 +130,12 @@ export function GameBoard() {
     missionIndex: number;
     groupIndex: number;
   }>({ isOpen: false, missionIndex: 0, groupIndex: 0 });
+  const [discardPickerState, setDiscardPickerState] = useState<{
+    isOpen: boolean;
+    eventCard: Card | null;
+    maxSelections: number;
+    allowedTypes: string[];
+  }>({ isOpen: false, eventCard: null, maxSelections: 0, allowedTypes: [] });
 
   // Handlers
   const handleNewGame = useCallback(() => {
@@ -148,6 +162,70 @@ export function GameBoard() {
     },
     [deploy, play]
   );
+
+  const handlePlayEvent = useCallback(
+    (card: Card) => {
+      if (!card.uniqueId) return;
+
+      // Check if this event has a recoverFromDiscard effect that needs selection
+      const eventCard = card as import("../../types").EventCard;
+      const ability = eventCard.abilities?.find((a) => a.trigger === "event");
+      const recoverEffect = ability?.effects.find(
+        (e) => e.type === "recoverFromDiscard"
+      );
+
+      if (
+        recoverEffect &&
+        recoverEffect.type === "recoverFromDiscard" &&
+        discard.length > 0
+      ) {
+        // Open discard picker modal
+        setDiscardPickerState({
+          isOpen: true,
+          eventCard: card,
+          maxSelections: recoverEffect.maxCount,
+          allowedTypes: recoverEffect.cardTypes,
+        });
+      } else {
+        // No selection needed, just play the event
+        const success = playEvent(card.uniqueId);
+        if (success) {
+          play(GAME_SOUNDS.deploy);
+        }
+      }
+    },
+    [discard.length, playEvent, play]
+  );
+
+  const handleDiscardPickerConfirm = useCallback(
+    (selectedCardIds: string[]) => {
+      if (!discardPickerState.eventCard?.uniqueId) return;
+
+      const success = playEvent(discardPickerState.eventCard.uniqueId, {
+        selectedCardIds,
+      });
+      if (success) {
+        play(GAME_SOUNDS.deploy);
+      }
+
+      setDiscardPickerState({
+        isOpen: false,
+        eventCard: null,
+        maxSelections: 0,
+        allowedTypes: [],
+      });
+    },
+    [discardPickerState.eventCard, playEvent, play]
+  );
+
+  const handleDiscardPickerClose = useCallback(() => {
+    setDiscardPickerState({
+      isOpen: false,
+      eventCard: null,
+      maxSelections: 0,
+      allowedTypes: [],
+    });
+  }, []);
 
   const handleViewCard = useCallback(
     (card: Card) => {
@@ -342,6 +420,7 @@ export function GameBoard() {
         phase={phase}
         uniquesInPlay={uniquesInPlay}
         onDeploy={handleDeploy}
+        onPlayEvent={handlePlayEvent}
         onView={handleViewCard}
       />
 
@@ -386,6 +465,17 @@ export function GameBoard() {
         onCardClick={handleViewCard}
         onExecuteInterlink={handleExecuteInterlinkAbility}
         onPlayInterrupt={handlePlayInterrupt}
+      />
+
+      <DiscardPicker
+        isOpen={discardPickerState.isOpen}
+        onClose={handleDiscardPickerClose}
+        onConfirm={handleDiscardPickerConfirm}
+        onCardClick={handleViewCard}
+        discardPile={discard}
+        maxSelections={discardPickerState.maxSelections}
+        allowedTypes={discardPickerState.allowedTypes}
+        eventCard={discardPickerState.eventCard}
       />
     </div>
   );
