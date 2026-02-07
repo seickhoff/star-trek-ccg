@@ -14,6 +14,8 @@ import type {
   GrantedSkill,
   RangeBoost,
   SkillSourceFilter,
+  ActionLogEntry,
+  ActionLogType,
 } from "../types";
 import {
   isMission,
@@ -34,6 +36,24 @@ import {
 } from "../logic/dilemmaResolver";
 import { checkMission } from "../logic/missionChecker";
 import { getEffectiveDeployCost } from "../logic/abilities";
+
+/**
+ * Generate unique ID for log entries
+ */
+let logIdCounter = 0;
+function createLogEntry(
+  type: ActionLogType,
+  message: string,
+  details?: string
+): ActionLogEntry {
+  return {
+    id: `log-${++logIdCounter}`,
+    timestamp: Date.now(),
+    type,
+    message,
+    details,
+  };
+}
 
 /**
  * Deep clone a card to avoid mutation issues
@@ -173,6 +193,9 @@ interface GameStoreState {
 
   // Headquarters mission index (for deploying cards)
   headquartersIndex: number;
+
+  // Action log for troubleshooting
+  actionLog: ActionLogEntry[];
 }
 
 /**
@@ -284,6 +307,7 @@ const createInitialState = (): GameStoreState => ({
   gameOver: false,
   victory: false,
   headquartersIndex: -1,
+  actionLog: [],
 });
 
 /**
@@ -342,6 +366,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const initialHand = shuffledDeck.slice(0, GAME_CONSTANTS.MAX_HAND_SIZE);
     const remainingDeck = shuffledDeck.slice(GAME_CONSTANTS.MAX_HAND_SIZE);
 
+    // Reset log counter for new game
+    logIdCounter = 0;
+
     set({
       ...createInitialState(),
       deck: remainingDeck,
@@ -349,6 +376,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       dilemmaPool: shuffledDilemmas,
       missions,
       headquartersIndex,
+      actionLog: [
+        createLogEntry(
+          "game_start",
+          "Game started",
+          `Deck: ${remainingDeck.length} cards, Hand: ${initialHand.length} cards, Dilemmas: ${shuffledDilemmas.length}`
+        ),
+      ],
     });
   },
 
@@ -400,14 +434,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
       (boost) => boost.duration !== "untilEndOfTurn"
     );
 
+    const newTurn = get().turn + 1;
+
     set((state) => ({
-      turn: state.turn + 1,
+      turn: newTurn,
       phase: "PlayAndDraw",
       counters: GAME_CONSTANTS.STARTING_COUNTERS,
       missions: updatedMissions,
       usedOrderAbilities: new Set(), // Reset used abilities for new turn
       grantedSkills: remainingSkills,
       rangeBoosts: remainingBoosts,
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry("new_turn", `Turn ${newTurn} started`),
+      ],
     }));
 
     // Check lose condition at start of turn
@@ -427,9 +467,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Rule 6.6: Must spend all seven counters each turn.
       // If your deck is empty, you do not have to spend all seven counters.
       if (counters > 0 && deck.length > 0) return;
-      set({ phase: "ExecuteOrders" });
+      set((state) => ({
+        phase: "ExecuteOrders",
+        actionLog: [
+          ...state.actionLog,
+          createLogEntry("phase_change", "Execute Orders phase"),
+        ],
+      }));
     } else if (phase === "ExecuteOrders") {
-      set({ phase: "DiscardExcess" });
+      set((state) => ({
+        phase: "DiscardExcess",
+        actionLog: [
+          ...state.actionLog,
+          createLogEntry("phase_change", "Discard Excess phase"),
+        ],
+      }));
     } else if (phase === "DiscardExcess") {
       // Can only end turn if hand size is valid
       if (hand.length <= GAME_CONSTANTS.MAX_HAND_SIZE && counters === 0) {
@@ -453,16 +505,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const drawnCards = deck.slice(0, actualCount);
     const remainingDeck = deck.slice(actualCount);
+    const cardNames = drawnCards.map((c) => c.name).join(", ");
 
-    set({
+    set((state) => ({
       deck: remainingDeck,
       hand: [...hand, ...drawnCards],
       counters: counters - actualCount,
-    });
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry(
+          "draw",
+          `Drew ${actualCount} card${actualCount > 1 ? "s" : ""}`,
+          cardNames
+        ),
+      ],
+    }));
 
     // Auto-advance to Orders if counters are 0
     if (counters - actualCount === 0) {
-      set({ phase: "ExecuteOrders" });
+      set((state) => ({
+        phase: "ExecuteOrders",
+        actionLog: [
+          ...state.actionLog,
+          createLogEntry("phase_change", "Execute Orders phase"),
+        ],
+      }));
     }
   },
 
@@ -544,16 +611,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       const newUniques = new Set(uniquesInPlay);
       if (card.unique) newUniques.add(card.id);
+      const missionName = missions[targetMission]?.mission.name ?? "unknown";
 
-      set({
+      set((state) => ({
         missions: updatedMissions,
         counters: counters - deployCost,
         uniquesInPlay: newUniques,
-      });
+        actionLog: [
+          ...state.actionLog,
+          createLogEntry(
+            "deploy",
+            `Deployed ${card.name}`,
+            `To ${missionName} (cost ${deployCost})`
+          ),
+        ],
+      }));
 
       // Auto-advance if counters are 0
       if (counters - deployCost === 0) {
-        set({ phase: "ExecuteOrders" });
+        set((state) => ({
+          phase: "ExecuteOrders",
+          actionLog: [
+            ...state.actionLog,
+            createLogEntry("phase_change", "Execute Orders phase"),
+          ],
+        }));
       }
 
       return true;
@@ -573,16 +655,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       const newUniques = new Set(uniquesInPlay);
       if (card.unique) newUniques.add(card.id);
+      const missionName = missions[targetMission]?.mission.name ?? "unknown";
 
-      set({
+      set((state) => ({
         missions: updatedMissions,
         counters: counters - deployCost,
         uniquesInPlay: newUniques,
-      });
+        actionLog: [
+          ...state.actionLog,
+          createLogEntry(
+            "deploy",
+            `Deployed ${card.name}`,
+            `Ship to ${missionName} (cost ${deployCost})`
+          ),
+        ],
+      }));
 
       // Auto-advance if counters are 0
       if (counters - deployCost === 0) {
-        set({ phase: "ExecuteOrders" });
+        set((state) => ({
+          phase: "ExecuteOrders",
+          actionLog: [
+            ...state.actionLog,
+            createLogEntry("phase_change", "Execute Orders phase"),
+          ],
+        }));
       }
 
       return true;
@@ -606,9 +703,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     get()._removeFromHand(cardUniqueId);
 
-    set({
+    set((state) => ({
       discard: [...discard, card],
-    });
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry("discard", `Discarded ${card.name}`),
+      ],
+    }));
   },
 
   /**
@@ -679,7 +780,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return m;
     });
 
-    set({ missions: updatedMissions });
+    set((state) => ({
+      missions: updatedMissions,
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry(
+          "move_ship",
+          `Moved ${ship.name}`,
+          `From ${sourceMissionCard.name} to ${destMissionCard.name} (range ${rangeCost})`
+        ),
+      ],
+    }));
   },
 
   /**
@@ -733,7 +844,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
 
     updatedMissions[missionIndex] = updatedDeployment;
-    set({ missions: updatedMissions });
+
+    // Determine beam direction for log message
+    const beamDirection = toGroup === 0 ? "to planet" : "to ship";
+    const targetShip =
+      toGroup > 0 ? targetGroup.cards.find(isShip)?.name : null;
+
+    set((state) => ({
+      missions: updatedMissions,
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry(
+          "beam",
+          `Beamed ${personnel.name}`,
+          targetShip ? `To ${targetShip}` : beamDirection
+        ),
+      ],
+    }));
   },
 
   /**
@@ -847,10 +974,28 @@ export const useGameStore = create<GameStore>((set, get) => ({
       facedDilemmaIds: [], // Rule 6.5: Track faced dilemma base IDs
     };
 
-    set({
+    // Get personnel names for log
+    const personnelNames = unstoppedPersonnel
+      .map((c) => (c as PersonnelCard).name)
+      .join(", ");
+
+    set((state) => ({
       dilemmaEncounter: encounter,
       dilemmaPool: remainingPool,
-    });
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry(
+          "mission_attempt",
+          `Attempting ${mission.name}`,
+          `${unstoppedPersonnel.length} personnel: ${personnelNames}`
+        ),
+        createLogEntry(
+          "dilemma_draw",
+          `Drew ${selectedDilemmas.length} dilemma${selectedDilemmas.length !== 1 ? "s" : ""}`,
+          `Cost budget: ${costBudget}`
+        ),
+      ],
+    }));
 
     // If no dilemmas, go straight to scoring
     if (selectedDilemmas.length === 0) {
@@ -864,12 +1009,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // Rule 6.5: Track this dilemma's base ID as faced
     // (First dilemma can't be a duplicate since facedDilemmaIds starts empty)
-    set({
+    set((state) => ({
       dilemmaEncounter: {
         ...encounter,
         facedDilemmaIds: [firstDilemma.id],
       },
-    });
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry(
+          "dilemma_draw",
+          `Facing: ${firstDilemma.name}`,
+          `Cost ${firstDilemma.deploy} (1/${selectedDilemmas.length})`
+        ),
+      ],
+    }));
 
     const result = resolveDilemma(firstDilemma, cards, grantedSkills);
 
@@ -967,7 +1120,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       // Update encounter to next dilemma (keeping same facedDilemmaIds since duplicate wasn't faced)
       // Don't recursively advance - let the UI show the duplicate message and wait for user to continue
-      set({
+      set((state) => ({
         missions: updatedMissions,
         dilemmaEncounter: {
           ...dilemmaEncounter,
@@ -983,7 +1136,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
           returnsToPile: false,
           message: `Duplicate dilemma "${nextDilemma.name}" auto-overcome (Rule 6.5)`,
         },
-      });
+        actionLog: [
+          ...state.actionLog,
+          createLogEntry(
+            "dilemma_result",
+            `${nextDilemma.name}: Duplicate auto-overcome`,
+            "Rule 6.5 - duplicate dilemmas are overcome"
+          ),
+        ],
+      }));
 
       // Wait for user to click Continue (like normal dilemma resolution)
       // The next advanceDilemma() call will check the next dilemma for duplicates
@@ -991,13 +1152,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     // Not a duplicate - add to faced IDs and resolve normally
-    set({
+    set((state) => ({
       dilemmaEncounter: {
         ...dilemmaEncounter,
         currentDilemmaIndex: nextIndex,
         facedDilemmaIds: [...dilemmaEncounter.facedDilemmaIds, nextDilemma.id],
       },
-    });
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry(
+          "dilemma_draw",
+          `Facing: ${nextDilemma.name}`,
+          `Cost ${nextDilemma.deploy} (${nextIndex + 1}/${selectedDilemmas.length})`
+        ),
+      ],
+    }));
 
     // Resolve next dilemma
     const result = resolveDilemma(nextDilemma, group.cards, grantedSkills);
@@ -1370,10 +1539,38 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Add other effect types as needed
     }
 
+    // Build effect description for log
+    const effectDescriptions: string[] = [];
+    for (const effect of ability.effects) {
+      if (effect.type === "skillGrant") {
+        const skill = effect.skill ?? params?.skill;
+        effectDescriptions.push(`Granted ${skill} skill`);
+      } else if (effect.type === "handRefresh") {
+        effectDescriptions.push("Hand refreshed");
+      } else if (effect.type === "beamAllToShip") {
+        effectDescriptions.push(
+          `Beamed ${params?.personnelIds?.length ?? 0} personnel`
+        );
+      } else if (effect.type === "shipRangeModifier") {
+        effectDescriptions.push(`Range +${effect.value}`);
+      }
+    }
+
     // Mark ability as used
     const newUsedAbilities = new Set(usedOrderAbilities);
     newUsedAbilities.add(usageKey);
-    set({ usedOrderAbilities: newUsedAbilities });
+
+    set((state) => ({
+      usedOrderAbilities: newUsedAbilities,
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry(
+          "order_ability",
+          `${sourceCard.name}: Order ability`,
+          effectDescriptions.join(", ") || "Activated"
+        ),
+      ],
+    }));
 
     return true;
   },
@@ -1472,9 +1669,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
           sourceAbilityId: abilityId,
         };
 
-        set({
+        set((state) => ({
           grantedSkills: [...get().grantedSkills, newGrant],
-        });
+          actionLog: [
+            ...state.actionLog,
+            createLogEntry(
+              "interlink",
+              `${sourceCard.name}: Interlink`,
+              `Granted ${grantedSkill} skill`
+            ),
+          ],
+        }));
       }
       // Add other effect types as needed
     }
@@ -1612,9 +1817,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // Move interrupt from hand to discard (interrupts are destroyed after use)
     get()._removeFromHand(cardUniqueId);
-    set({
+
+    // Build effect description for log
+    let effectDesc = "";
+    for (const effect of ability.effects) {
+      if (effect.type === "preventAndOvercomeDilemma") {
+        effectDesc = "Prevented and overcame dilemma";
+      }
+    }
+
+    set((state) => ({
       discard: [...get().discard, interruptCard],
-    });
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry(
+          "interrupt",
+          `Played ${interruptCard.name}`,
+          effectDesc || "Interrupt effect applied"
+        ),
+      ],
+    }));
 
     return true;
   },
@@ -1652,13 +1874,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Event without ability - just pay cost and destroy
       get()._removeFromHand(cardUniqueId);
       const newCounters = counters - eventCard.deploy;
-      set({
+      set((state) => ({
         counters: newCounters,
         discard: [...get().discard, eventCard],
-      });
+        actionLog: [
+          ...state.actionLog,
+          createLogEntry(
+            "event",
+            `Played ${eventCard.name}`,
+            `Cost ${eventCard.deploy}`
+          ),
+        ],
+      }));
       // Auto-advance to Orders if counters are 0
       if (newCounters === 0) {
-        set({ phase: "ExecuteOrders" });
+        set((state) => ({
+          phase: "ExecuteOrders",
+          actionLog: [
+            ...state.actionLog,
+            createLogEntry("phase_change", "Execute Orders phase"),
+          ],
+        }));
       }
       return true;
     }
@@ -1731,24 +1967,60 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Remove event from hand and pay cost
     get()._removeFromHand(cardUniqueId);
 
+    // Build effect description for log
+    const effectDescriptions: string[] = [];
+    for (const effect of ability.effects) {
+      if (effect.type === "recoverFromDiscard") {
+        const count = params?.selectedCardIds?.length ?? 0;
+        if (count > 0) {
+          effectDescriptions.push(
+            `Recovered ${count} card${count > 1 ? "s" : ""} from discard`
+          );
+        }
+      }
+    }
+
     // Determine where the event goes after playing
     if (ability.removeFromGame) {
       // Remove from game
-      set({
+      set((state) => ({
         counters: get().counters - eventCard.deploy,
         removedFromGame: [...removedFromGame, eventCard],
-      });
+        actionLog: [
+          ...state.actionLog,
+          createLogEntry(
+            "event",
+            `Played ${eventCard.name}`,
+            effectDescriptions.join(", ") ||
+              `Cost ${eventCard.deploy}, removed from game`
+          ),
+        ],
+      }));
     } else {
       // Destroy (send to discard)
-      set({
+      set((state) => ({
         counters: get().counters - eventCard.deploy,
         discard: [...get().discard, eventCard],
-      });
+        actionLog: [
+          ...state.actionLog,
+          createLogEntry(
+            "event",
+            `Played ${eventCard.name}`,
+            effectDescriptions.join(", ") || `Cost ${eventCard.deploy}`
+          ),
+        ],
+      }));
     }
 
     // Auto-advance to Orders if counters are 0
     if (get().counters === 0) {
-      set({ phase: "ExecuteOrders" });
+      set((state) => ({
+        phase: "ExecuteOrders",
+        actionLog: [
+          ...state.actionLog,
+          createLogEntry("phase_change", "Execute Orders phase"),
+        ],
+      }));
     }
 
     return true;
@@ -1781,7 +2053,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       completedPlanetMissions >= 1 &&
       completedSpaceMissions >= 1
     ) {
-      set({ gameOver: true, victory: true });
+      set((state) => ({
+        gameOver: true,
+        victory: true,
+        actionLog: [
+          ...state.actionLog,
+          createLogEntry(
+            "game_over",
+            "Victory!",
+            `Final score: ${score} points`
+          ),
+        ],
+      }));
     }
   },
 
@@ -1799,7 +2082,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       );
 
       if (!hasDeployableCards && !hasCardsInPlay) {
-        set({ gameOver: true, victory: false });
+        set((state) => ({
+          gameOver: true,
+          victory: false,
+          actionLog: [
+            ...state.actionLog,
+            createLogEntry("game_over", "Defeat", "No cards remaining to play"),
+          ],
+        }));
       }
     }
   },
@@ -1821,10 +2111,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const updatedMissions = [...missions];
     const deployment = { ...updatedMissions[missionIndex]! };
+    const originalGroup = deployment.groups[groupIndex]!;
     const newDiscard = [...discard];
     let newDilemmaPool = [...dilemmaPool];
     const newUniquesInPlay = new Set(uniquesInPlay);
     const killedUniqueIds: string[] = [];
+
+    // Get names of stopped/killed personnel for logging
+    const stoppedNames: string[] = [];
+    const killedNames: string[] = [];
+    for (const card of originalGroup.cards) {
+      if (!isPersonnel(card)) continue;
+      const personnel = card as PersonnelCard;
+      if (
+        personnel.uniqueId &&
+        result.stoppedPersonnel.includes(personnel.uniqueId)
+      ) {
+        stoppedNames.push(personnel.name);
+      }
+      if (
+        personnel.uniqueId &&
+        result.killedPersonnel.includes(personnel.uniqueId)
+      ) {
+        killedNames.push(personnel.name);
+      }
+    }
 
     // Update groups with stopped/killed personnel
     deployment.groups = deployment.groups.map((group, idx) => {
@@ -1892,7 +2203,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Update cost spent with the current dilemma's cost
     const newCostSpent = dilemmaEncounter.costSpent + currentDilemma.deploy;
 
-    set({
+    // Build dilemma result log message
+    const resultParts: string[] = [];
+    if (result.overcome) resultParts.push("Overcome");
+    if (stoppedNames.length > 0) {
+      resultParts.push(`Stopped: ${stoppedNames.join(", ")}`);
+    }
+    if (killedNames.length > 0) {
+      resultParts.push(`Killed: ${killedNames.join(", ")}`);
+    }
+
+    // Build details with remaining personnel count
+    const remainingUnstopped = originalGroup.cards.filter(
+      (c) =>
+        isPersonnel(c) &&
+        (c as PersonnelCard).status === "Unstopped" &&
+        !result.stoppedPersonnel.includes(c.uniqueId!) &&
+        !result.killedPersonnel.includes(c.uniqueId!)
+    ).length;
+    const detailParts: string[] = [];
+    if (remainingUnstopped > 0) {
+      detailParts.push(`${remainingUnstopped} unstopped remaining`);
+    }
+    if (result.returnsToPile) {
+      detailParts.push("Returns to pile");
+    }
+
+    set((state) => ({
       missions: updatedMissions,
       discard: newDiscard,
       dilemmaPool: newDilemmaPool,
@@ -1903,7 +2240,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         costSpent: newCostSpent,
       },
       dilemmaResult: result,
-    });
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry(
+          "dilemma_result",
+          `${currentDilemma.name}: ${resultParts.join(", ") || "No effect"}`,
+          detailParts.length > 0 ? detailParts.join(", ") : undefined
+        ),
+      ],
+    }));
   },
 
   /**
@@ -1954,7 +2299,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       (grant) => grant.duration !== "untilEndOfMissionAttempt"
     );
 
-    set({
+    set((state) => ({
       missions: updatedMissions,
       score: newScore,
       completedPlanetMissions: completedPlanetMissions + (isPlanet ? 1 : 0),
@@ -1962,7 +2307,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       dilemmaEncounter: null,
       dilemmaResult: null,
       grantedSkills: remainingSkills,
-    });
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry(
+          "mission_complete",
+          `Mission completed: ${mission.name}`,
+          `+${missionScore} points (total: ${newScore})`
+        ),
+      ],
+    }));
 
     // Check win condition
     get()._checkWinCondition();
@@ -1999,18 +2352,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
 
     updatedMissions[missionIndex] = deployment;
+    const missionName = deployment.mission.name;
 
     // Clear granted skills with "untilEndOfMissionAttempt" duration
     const remainingSkills = grantedSkills.filter(
       (grant) => grant.duration !== "untilEndOfMissionAttempt"
     );
 
-    set({
+    set((state) => ({
       missions: updatedMissions,
       dilemmaEncounter: null,
       dilemmaResult: null,
       grantedSkills: remainingSkills,
-    });
+      actionLog: [
+        ...state.actionLog,
+        createLogEntry(
+          "mission_fail",
+          `Mission attempt failed: ${missionName}`,
+          "All remaining personnel stopped"
+        ),
+      ],
+    }));
   },
 }));
 
@@ -2329,3 +2691,8 @@ export const selectDiscard = (state: GameStore) => state.discard;
  */
 export const selectRemovedFromGame = (state: GameStore) =>
   state.removedFromGame;
+
+/**
+ * Get the action log
+ */
+export const selectActionLog = (state: GameStore) => state.actionLog;

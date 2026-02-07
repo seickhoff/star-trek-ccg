@@ -24,4 +24,5 @@ export {
   selectDilemmaEncounter,
   selectDilemmaResult,
   selectPlayableInterrupts,
+  selectActionLog,
 } from "./gameStore";

@@ -478,12 +478,12 @@ export function DilemmaModal({
               className="dilemma-modal__continue-btn"
               onClick={onContinue}
             >
-              {encounter.currentDilemmaIndex <
-              encounter.selectedDilemmas.length - 1
-                ? "Next Dilemma"
-                : unstoppedPersonnel.length > 0
-                  ? "Complete Mission"
-                  : "Mission Failed"}
+              {unstoppedPersonnel.length === 0
+                ? "Mission Failed"
+                : encounter.currentDilemmaIndex <
+                    encounter.selectedDilemmas.length - 1
+                  ? "Next Dilemma"
+                  : "Complete Mission"}
             </button>
           </div>
         )}

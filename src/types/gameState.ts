@@ -166,3 +166,33 @@ export const GAME_CONSTANTS = {
   WIN_SCORE: 100,
   MISSION_COUNT: 5,
 } as const;
+
+// Action log entry types
+export type ActionLogType =
+  | "game_start"
+  | "new_turn"
+  | "phase_change"
+  | "draw"
+  | "deploy"
+  | "discard"
+  | "move_ship"
+  | "beam"
+  | "mission_attempt"
+  | "dilemma_draw"
+  | "dilemma_result"
+  | "mission_complete"
+  | "mission_fail"
+  | "order_ability"
+  | "interlink"
+  | "interrupt"
+  | "event"
+  | "game_over";
+
+// Action log entry for tracking game events
+export interface ActionLogEntry {
+  id: string; // Unique ID for React key
+  timestamp: number;
+  type: ActionLogType;
+  message: string;
+  details?: string; // Optional secondary details
+}

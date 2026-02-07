@@ -11,9 +11,11 @@ interface TopBarProps {
   canAdvancePhase: boolean;
   gameOver: boolean;
   victory: boolean;
+  showActionLog: boolean;
   onDraw: () => void;
   onAdvancePhase: () => void;
   onNewGame: () => void;
+  onToggleActionLog: () => void;
 }
 
 const PHASE_LABELS: Record<GamePhase, string> = {
@@ -41,9 +43,11 @@ export function TopBar({
   canAdvancePhase,
   gameOver,
   victory,
+  showActionLog,
   onDraw,
   onAdvancePhase,
   onNewGame,
+  onToggleActionLog,
 }: TopBarProps) {
   return (
     <div className="top-bar">
@@ -130,6 +134,14 @@ export function TopBar({
               }
             >
               {phase === "DiscardExcess" ? "End Turn" : "Next Phase"}
+            </button>
+
+            <button
+              className="top-bar__btn top-bar__btn--log"
+              onClick={onToggleActionLog}
+              title={showActionLog ? "Hide action log" : "Show action log"}
+            >
+              {showActionLog ? "Hide Log" : "Show Log"}
             </button>
 
             <button

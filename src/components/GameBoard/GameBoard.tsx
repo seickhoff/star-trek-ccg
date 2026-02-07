@@ -7,6 +7,7 @@ import {
   selectCanAdvancePhase,
   selectDilemmaResult,
   selectPlayableInterrupts,
+  selectActionLog,
 } from "../../store";
 import { MissionColumn } from "./MissionColumn";
 import { TopBar } from "../UI/TopBar";
@@ -17,6 +18,7 @@ import {
   OrdersModal,
   DilemmaModal,
   DiscardPicker,
+  ActionLog,
 } from "../Modals";
 import { defaultDeck } from "../../data/defaultDeck";
 import { useAudio, GAME_SOUNDS } from "../../hooks";
@@ -67,6 +69,10 @@ export function GameBoard() {
   const canAdvancePhase = useGameStore(selectCanAdvancePhase);
   const dilemmaResult = useGameStore(selectDilemmaResult);
   const playableInterrupts = useGameStore(selectPlayableInterrupts);
+  const actionLog = useGameStore(selectActionLog);
+
+  // Action log visibility (always open when game is running)
+  const [showActionLog, setShowActionLog] = useState(true);
 
   // Audio
   const { play } = useAudio();
@@ -390,9 +396,11 @@ export function GameBoard() {
         canAdvancePhase={canAdvancePhase}
         gameOver={gameOver}
         victory={victory}
+        showActionLog={showActionLog}
         onDraw={handleDraw}
         onAdvancePhase={nextPhase}
         onNewGame={handleNewGame}
+        onToggleActionLog={() => setShowActionLog(!showActionLog)}
       />
 
       {/* Mission columns */}
@@ -476,6 +484,13 @@ export function GameBoard() {
         maxSelections={discardPickerState.maxSelections}
         allowedTypes={discardPickerState.allowedTypes}
         eventCard={discardPickerState.eventCard}
+      />
+
+      {/* Action Log */}
+      <ActionLog
+        entries={actionLog}
+        isOpen={showActionLog}
+        onClose={() => setShowActionLog(false)}
       />
     </div>
   );

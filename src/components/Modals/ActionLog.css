@@ -1,0 +1,172 @@
+/* ActionLog - Draggable action log panel */
+
+.action-log {
+  position: fixed;
+  width: 320px;
+  max-height: 400px;
+  background-color: rgba(0, 0, 0, 0.9);
+  border: 2px solid #4a90d9;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.action-log:active {
+  cursor: grabbing;
+}
+
+.action-log__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background-color: #4a90d9;
+  border-radius: 6px 6px 0 0;
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.action-log__title {
+  letter-spacing: 0.5px;
+}
+
+.action-log__close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.action-log__close:hover {
+  opacity: 1;
+}
+
+.action-log__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  max-height: 350px;
+}
+
+.action-log__empty {
+  color: #888;
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+}
+
+.action-log__entry {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 6px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid #666;
+}
+
+.action-log__time {
+  color: #666;
+  font-size: 9px;
+  margin-bottom: 2px;
+}
+
+.action-log__message {
+  color: #ddd;
+}
+
+.action-log__details {
+  color: #888;
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+/* Entry type colors */
+.action-log__entry--turn {
+  border-left-color: #f0a500;
+  background-color: rgba(240, 165, 0, 0.1);
+}
+
+.action-log__entry--phase {
+  border-left-color: #a855f7;
+  background-color: rgba(168, 85, 247, 0.1);
+}
+
+.action-log__entry--card {
+  border-left-color: #22c55e;
+  background-color: rgba(34, 197, 94, 0.1);
+}
+
+.action-log__entry--move {
+  border-left-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.action-log__entry--dilemma {
+  border-left-color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.action-log__entry--dilemma-result {
+  border-left-color: #f97316;
+  background-color: rgba(249, 115, 22, 0.1);
+}
+
+.action-log__entry--success {
+  border-left-color: #10b981;
+  background-color: rgba(16, 185, 129, 0.15);
+}
+
+.action-log__entry--success .action-log__message {
+  color: #10b981;
+  font-weight: bold;
+}
+
+.action-log__entry--fail {
+  border-left-color: #dc2626;
+  background-color: rgba(220, 38, 38, 0.15);
+}
+
+.action-log__entry--fail .action-log__message {
+  color: #dc2626;
+}
+
+.action-log__entry--game-over {
+  border-left-color: #fbbf24;
+  background-color: rgba(251, 191, 36, 0.15);
+}
+
+.action-log__entry--game-over .action-log__message {
+  color: #fbbf24;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+/* Scrollbar styling */
+.action-log__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.action-log__content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.action-log__content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.action-log__content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

@@ -143,6 +143,19 @@
   background: #3d9f40;
 }
 
+.top-bar__btn--log {
+  background: #4a90d9;
+  color: #fff;
+}
+
+.top-bar__btn--log:hover {
+  background: #5aa0e9;
+}
+
+.top-bar__btn--log:active {
+  background: #3a80c9;
+}
+
 .top-bar__btn--new {
   background: #666;
   color: #fff;
