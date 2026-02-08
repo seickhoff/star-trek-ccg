@@ -66,9 +66,7 @@ export function DraggablePanel({
           ×
         </button>
       </div>
-      {!minimized && (
-        <div className="draggable-panel__content">{children}</div>
-      )}
+      {!minimized && <div className="draggable-panel__content">{children}</div>}
     </div>
   );
 }

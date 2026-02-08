@@ -4,16 +4,15 @@ import type {
   Card,
   Skill,
   InterruptCard,
-} from "../../types/card";
-import type { Ability, SkillGrantEffect } from "../../types/ability";
-import type {
+  Ability,
+  SkillGrantEffect,
   DilemmaEncounter,
   GrantedSkill,
   DilemmaResult,
-} from "../../types/gameState";
+} from "@stccg/shared";
 import { CardSlot } from "../GameBoard/CardSlot";
 import { useDraggablePanel } from "../../hooks/useDraggablePanel";
-import { calculateGroupStats } from "../../logic/missionChecker";
+import { calculateGroupStats } from "@stccg/shared";
 import { getSkillsFromSource } from "../../store/gameStore";
 import "./DilemmaModal.css";
 
@@ -66,7 +65,10 @@ export function DilemmaModal({
   onPlayInterrupt,
 }: DilemmaModalProps) {
   const { position, zIndex, minimized, containerRef, handleMouseDown } =
-    useDraggablePanel({ isOpen: !!encounter, initialPosition: { x: 50, y: 50 } });
+    useDraggablePanel({
+      isOpen: !!encounter,
+      initialPosition: { x: 50, y: 50 },
+    });
 
   // Track selected skills for interlink abilities that require skill selection
   // Key format: "personnelId:abilityId"
@@ -188,7 +190,9 @@ export function DilemmaModal({
                   <span key={skill} className="dilemma-modal__skill">
                     {skill}
                     {count > 1 && (
-                      <span className="dilemma-modal__skill-count">×{count}</span>
+                      <span className="dilemma-modal__skill-count">
+                        ×{count}
+                      </span>
                     )}
                   </span>
                 ))}
@@ -223,7 +227,9 @@ export function DilemmaModal({
                     </div>
                     <button
                       className="dilemma-modal__interrupt-btn"
-                      onClick={() => onPlayInterrupt(card.uniqueId!, ability.id)}
+                      onClick={() =>
+                        onPlayInterrupt(card.uniqueId!, ability.id)
+                      }
                       title="Play this interrupt to prevent the dilemma"
                     >
                       Play
@@ -343,20 +349,17 @@ export function DilemmaModal({
             />
 
             <div className="dilemma-modal__card-info">
-              <h3 className="dilemma-modal__card-name">{currentDilemma.name}</h3>
+              <h3 className="dilemma-modal__card-name">
+                {currentDilemma.name}
+              </h3>
               <div className="dilemma-modal__card-type">
                 {currentDilemma.where} Dilemma
               </div>
 
-              {currentDilemma.skills && (
+              {currentDilemma.text && (
                 <div className="dilemma-modal__requirements">
-                  <span className="dilemma-modal__req-label">Requires:</span>
                   <span className="dilemma-modal__req-skills">
-                    {Array.isArray(currentDilemma.skills[0])
-                      ? (currentDilemma.skills as string[][])
-                          .map((group) => group.join(" + "))
-                          .join(" OR ")
-                      : (currentDilemma.skills as string[]).join(" + ")}
+                    {currentDilemma.text}
                   </span>
                 </div>
               )}
@@ -365,7 +368,9 @@ export function DilemmaModal({
 
           {/* Result message */}
           {dilemmaResult?.message && (
-            <div className="dilemma-modal__message">{dilemmaResult.message}</div>
+            <div className="dilemma-modal__message">
+              {dilemmaResult.message}
+            </div>
           )}
 
           {/* Personnel selection - only when required */}
@@ -378,7 +383,10 @@ export function DilemmaModal({
                 </h4>
                 <div className="dilemma-modal__personnel">
                   {selectablePersonnel.map((person) => (
-                    <div key={person.uniqueId} className="dilemma-modal__person">
+                    <div
+                      key={person.uniqueId}
+                      className="dilemma-modal__person"
+                    >
                       <CardSlot
                         card={person}
                         size="thumb"

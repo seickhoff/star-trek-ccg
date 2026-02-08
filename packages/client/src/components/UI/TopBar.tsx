@@ -1,4 +1,4 @@
-import type { GamePhase } from "../../types/gameState";
+import type { GamePhase } from "@stccg/shared";
 import "./TopBar.css";
 
 interface TopBarProps {

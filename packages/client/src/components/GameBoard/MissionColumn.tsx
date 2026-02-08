@@ -1,8 +1,13 @@
-import type { Card, PersonnelCard, ShipCard } from "../../types/card";
-import type { MissionDeployment, GrantedSkill } from "../../types/gameState";
-import { isPersonnel, isShip } from "../../types/card";
+import type {
+  Card,
+  PersonnelCard,
+  ShipCard,
+  MissionDeployment,
+  GrantedSkill,
+} from "@stccg/shared";
+import { isPersonnel, isShip } from "@stccg/shared";
 import { CardSlot } from "./CardSlot";
-import { checkMission, calculateGroupStats } from "../../logic/missionChecker";
+import { checkMission, calculateGroupStats } from "@stccg/shared";
 import "./MissionColumn.css";
 
 interface MissionColumnProps {
@@ -73,41 +78,42 @@ export function MissionColumn({
         </div>
 
         {/* Dilemmas at mission (overcome + placed on mission) */}
-        {dilemmas.length > 0 && (() => {
-          const overcomeCount = dilemmas.filter((d) => d.overcome).length;
-          const placedCount = dilemmas.length - overcomeCount;
-          return (
-            <div
-              className="mission-column__dilemma-badge"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDilemmasClick?.(missionIndex);
-              }}
-              title={`${overcomeCount} overcome, ${placedCount} placed on mission (click to view)`}
-            >
-              {overcomeCount > 0 && (
-                <>
-                  <span className="mission-column__dilemma-badge-count">
-                    {overcomeCount}
-                  </span>
-                  <span className="mission-column__dilemma-badge-label">
-                    overcome
-                  </span>
-                </>
-              )}
-              {placedCount > 0 && (
-                <>
-                  <span className="mission-column__dilemma-badge-count mission-column__dilemma-badge-count--placed">
-                    {placedCount}
-                  </span>
-                  <span className="mission-column__dilemma-badge-label">
-                    on mission
-                  </span>
-                </>
-              )}
-            </div>
-          );
-        })()}
+        {dilemmas.length > 0 &&
+          (() => {
+            const overcomeCount = dilemmas.filter((d) => d.overcome).length;
+            const placedCount = dilemmas.length - overcomeCount;
+            return (
+              <div
+                className="mission-column__dilemma-badge"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDilemmasClick?.(missionIndex);
+                }}
+                title={`${overcomeCount} overcome, ${placedCount} placed on mission (click to view)`}
+              >
+                {overcomeCount > 0 && (
+                  <>
+                    <span className="mission-column__dilemma-badge-count">
+                      {overcomeCount}
+                    </span>
+                    <span className="mission-column__dilemma-badge-label">
+                      overcome
+                    </span>
+                  </>
+                )}
+                {placedCount > 0 && (
+                  <>
+                    <span className="mission-column__dilemma-badge-count mission-column__dilemma-badge-count--placed">
+                      {placedCount}
+                    </span>
+                    <span className="mission-column__dilemma-badge-label">
+                      on mission
+                    </span>
+                  </>
+                )}
+              </div>
+            );
+          })()}
       </div>
 
       {/* Personnel/Ship deployment area */}

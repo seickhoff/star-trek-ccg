@@ -60,16 +60,36 @@ export type Affiliation =
   | "Romulan"
   | "Starfleet";
 
-// Dilemma resolution rule types
+// Dilemma requirement for passing a check (one of several OR options)
+export interface DilemmaRequirement {
+  skills?: Skill[]; // Required skills (repeated = need multiple)
+  singlePersonnel?: boolean; // true = one person must have all; default = group total
+  attribute?: AttributeName; // Optional attribute check
+  attributeThreshold?: number; // Must exceed this value (>)
+}
+
+// What happens when a dilemma check fails
+export type DilemmaFailPenalty =
+  | { type: "randomKill" }
+  | { type: "randomKillWithSkill"; skill: Skill }
+  | { type: "stopAllReturnToPile" }
+  | { type: "chooseMatchingToStopElseStopAll"; skills: Skill[] };
+
+// Structured dilemma rule (discriminated union)
 export type DilemmaRule =
-  | "SystemDiagnostics"
-  | "Wavefront"
-  | "CommandDecisions"
-  | "AnOldDebt"
-  | "PinnedDown"
-  | "LimitedWelcome"
-  | "OrnaranThreat"
-  | "Sokath";
+  | {
+      type: "chooseToStop";
+      skills: Skill[];
+      penalty: "randomKill" | "stopAllReturnToPile";
+    }
+  | {
+      type: "unlessCheck";
+      requirements: DilemmaRequirement[];
+      penalty: DilemmaFailPenalty;
+    }
+  | { type: "randomThenCheck"; requirements: DilemmaRequirement[] }
+  | { type: "randomStop"; stops: { remainingThreshold: number }[] }
+  | { type: "crewLimit"; keepCount: number };
 
 // Base properties shared by all cards
 export interface BaseCard {
@@ -144,14 +164,12 @@ export interface InterruptCard extends BaseCard {
 export interface DilemmaCard extends BaseCard {
   type: "Dilemma";
   where: DilemmaLocation;
-  deploy: number;
+  cost: number;
   overcome: boolean;
   faceup: boolean;
+  text: string;
+  lore: string;
   rule: DilemmaRule;
-  skills?: Skill[] | Skill[][]; // Some dilemmas have flat array, others nested
-  abilityname?: AttributeName[][];
-  abilityvalue?: number[][];
-  skillkill?: Skill; // Skill that causes kill if present
 }
 
 // Union type for all cards

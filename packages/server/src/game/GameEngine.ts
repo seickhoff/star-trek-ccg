@@ -28,15 +28,16 @@ import {
   isEvent,
 } from "@stccg/shared";
 import type { GameAction } from "@stccg/shared";
-import { cardDatabase } from "../data/cardDatabase.js";
-import { shuffle } from "./RNG.js";
-import { resetShipRange, checkStaffed } from "../logic/shipMovement.js";
 import {
+  cardDatabase,
+  resetShipRange,
+  checkStaffed,
   resolveDilemma,
   resolveSelectionStop,
-} from "../logic/dilemmaResolver.js";
-import { checkMission } from "../logic/missionChecker.js";
-import { getEffectiveDeployCost } from "../logic/abilities.js";
+  checkMission,
+  getEffectiveDeployCost,
+} from "@stccg/shared";
+import { shuffle } from "./RNG.js";
 
 /**
  * Result of executing an action
@@ -963,9 +964,9 @@ export class GameEngine {
 
     for (const dilemma of sortedDilemmas) {
       if (selectedDilemmas.length >= drawCount) break;
-      if (costSpent + dilemma.deploy <= costBudget) {
+      if (costSpent + dilemma.cost <= costBudget) {
         selectedDilemmas.push(dilemma);
-        costSpent += dilemma.deploy;
+        costSpent += dilemma.cost;
         // Remove from pool
         const poolIndex = this.state.dilemmaPool.findIndex(
           (d) => d.uniqueId === dilemma.uniqueId
@@ -1066,7 +1067,10 @@ export class GameEngine {
     // resolveCurrentDilemma so the player had an interrupt window).
     // If an interrupt (e.g. Adapt) was played, dilemmaResult will have been
     // overwritten with overcome=true and empty stopped/killed lists.
-    if (this.state.dilemmaResult && !this.state.dilemmaResult.requiresSelection) {
+    if (
+      this.state.dilemmaResult &&
+      !this.state.dilemmaResult.requiresSelection
+    ) {
       this.applyPendingDilemmaEffects();
     }
 
@@ -1101,6 +1105,8 @@ export class GameEngine {
             `${nextDilemma.name} auto-overcome (duplicate)`
           )
         );
+        // Clear pending result so recursive call doesn't re-apply old effects
+        this.state.dilemmaResult = null;
         return this.advanceDilemma();
       }
 
@@ -1134,7 +1140,7 @@ export class GameEngine {
 
     // Track faced dilemma
     encounter.facedDilemmaIds.push(dilemma.id);
-    encounter.costSpent += dilemma.deploy;
+    encounter.costSpent += dilemma.cost;
 
     // Resolve dilemma — calculate what WOULD happen
     const result = resolveDilemma(
@@ -1167,7 +1173,7 @@ export class GameEngine {
       createLogEntry(
         "dilemma_draw",
         `Facing ${dilemma.name}`,
-        `Cost: ${dilemma.deploy}`
+        `Cost: ${dilemma.cost}`
       )
     );
   }

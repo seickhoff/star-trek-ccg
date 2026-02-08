@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { ActionLogEntry } from "../../types";
+import type { ActionLogEntry } from "@stccg/shared";
 import { useDraggablePanel } from "../../hooks/useDraggablePanel";
 import "./ActionLog.css";
 

@@ -1,5 +1,5 @@
-import type { Card, EventCard } from "../../types/card";
-import { isPersonnel, isShip, isEvent } from "../../types/card";
+import type { Card, EventCard } from "@stccg/shared";
+import { isPersonnel, isShip, isEvent } from "@stccg/shared";
 import { HandCard } from "./HandCard";
 import "./HandContainer.css";
 

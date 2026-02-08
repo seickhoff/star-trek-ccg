@@ -1,5 +1,5 @@
-import type { Card, PersonnelCard, ShipCard } from "../../types/card";
-import { isPersonnel, isShip, isMission, isDilemma } from "../../types/card";
+import type { Card, PersonnelCard, ShipCard } from "@stccg/shared";
+import { isPersonnel, isShip, isMission, isDilemma } from "@stccg/shared";
 import "./CardSlot.css";
 
 interface CardSlotProps {

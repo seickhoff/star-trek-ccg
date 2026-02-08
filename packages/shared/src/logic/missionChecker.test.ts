@@ -9,7 +9,7 @@ import {
   hasSkillCount,
   getAttributeTotal,
 } from "./missionChecker";
-import type { PersonnelCard, MissionCard, ShipCard } from "../types/card";
+import type { PersonnelCard, MissionCard, ShipCard } from "../types";
 
 // Test fixtures
 const createPersonnel = (

@@ -9,6 +9,8 @@ export type {
   Quadrant,
   Skill,
   Affiliation,
+  DilemmaRequirement,
+  DilemmaFailPenalty,
   DilemmaRule,
   BaseCard,
   MissionCard,

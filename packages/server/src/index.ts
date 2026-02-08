@@ -1,4 +1,9 @@
+import { configureShuffle } from "@stccg/shared";
+import { shuffle as cryptoShuffle } from "./game/RNG.js";
 import { GameServer } from "./server.js";
+
+// Inject crypto-secure shuffle into shared logic (dilemmaResolver, etc.)
+configureShuffle(cryptoShuffle);
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 

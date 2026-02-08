@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useGameStore, selectPlayableInterrupts } from "./gameStore";
-import { defaultDeck } from "../data/defaultDeck";
-import { GAME_CONSTANTS } from "../types";
+import { defaultDeck } from "@stccg/shared";
+import { GAME_CONSTANTS } from "@stccg/shared";
 import type {
   Card,
   PersonnelCard,
@@ -10,7 +10,7 @@ import type {
   Skill,
   Ability,
   MissionDeployment,
-} from "../types";
+} from "@stccg/shared";
 
 describe("gameStore", () => {
   beforeEach(() => {
@@ -803,7 +803,7 @@ describe("gameStore", () => {
       if (encounter) {
         // Total cost of selected dilemmas should not exceed budget
         const totalCost = encounter.selectedDilemmas.reduce(
-          (sum, d) => sum + d.deploy,
+          (sum, d) => sum + d.cost,
           0
         );
         expect(totalCost).toBeLessThanOrEqual(encounter.costBudget);
@@ -839,8 +839,8 @@ describe("gameStore", () => {
         // Dilemmas should be sorted by cost descending (highest first)
         for (let i = 1; i < encounter.selectedDilemmas.length; i++) {
           expect(
-            encounter.selectedDilemmas[i - 1]!.deploy
-          ).toBeGreaterThanOrEqual(encounter.selectedDilemmas[i]!.deploy);
+            encounter.selectedDilemmas[i - 1]!.cost
+          ).toBeGreaterThanOrEqual(encounter.selectedDilemmas[i]!.cost);
         }
       }
     });
@@ -879,7 +879,7 @@ describe("gameStore", () => {
       if (dilemmaResult && !dilemmaResult.requiresSelection) {
         const encounter = useGameStore.getState().dilemmaEncounter;
         if (encounter) {
-          const firstDilemmaCost = encounter.selectedDilemmas[0]!.deploy;
+          const firstDilemmaCost = encounter.selectedDilemmas[0]!.cost;
           expect(encounter.costSpent).toBe(firstDilemmaCost);
         }
       }
@@ -4077,11 +4077,16 @@ describe("gameStore", () => {
         unique: false,
         type: "Dilemma" as const,
         where: "Planet" as const,
-        deploy: 1,
+        cost: 1,
         overcome: false,
         faceup: false,
-        rule: "SystemDiagnostics" as const,
-        skills: [["Leadership" as Skill]],
+        rule: {
+          type: "chooseToStop" as const,
+          skills: ["Leadership" as Skill],
+          penalty: "stopAllReturnToPile" as const,
+        },
+        text: "Choose a personnel who has Leadership to be stopped.",
+        lore: "Test lore.",
         jpg: "test.jpg",
       };
 
@@ -4186,11 +4191,16 @@ describe("gameStore", () => {
         unique: false,
         type: "Dilemma" as const,
         where: "Planet" as const,
-        deploy: 1,
+        cost: 1,
         overcome: false,
         faceup: false,
-        rule: "SystemDiagnostics" as const,
-        skills: [["Leadership" as Skill]],
+        rule: {
+          type: "chooseToStop" as const,
+          skills: ["Leadership" as Skill],
+          penalty: "stopAllReturnToPile" as const,
+        },
+        text: "Choose a personnel who has Leadership to be stopped.",
+        lore: "Test lore.",
         jpg: "test.jpg",
       };
 
@@ -4285,11 +4295,16 @@ describe("gameStore", () => {
         unique: false,
         type: "Dilemma" as const,
         where: "Planet" as const,
-        deploy: 1,
+        cost: 1,
         overcome: false,
         faceup: false,
-        rule: "SystemDiagnostics" as const,
-        skills: [["Leadership" as Skill]],
+        rule: {
+          type: "chooseToStop" as const,
+          skills: ["Leadership" as Skill],
+          penalty: "stopAllReturnToPile" as const,
+        },
+        text: "Choose a personnel who has Leadership to be stopped.",
+        lore: "Test lore.",
         jpg: "test.jpg",
       };
 
@@ -4420,11 +4435,16 @@ describe("gameStore", () => {
         unique: false,
         type: "Dilemma" as const,
         where: "Planet" as const,
-        deploy: 1,
+        cost: 1,
         overcome: false,
         faceup: false,
-        rule: "SystemDiagnostics" as const,
-        skills: [["Leadership" as Skill]],
+        rule: {
+          type: "chooseToStop" as const,
+          skills: ["Leadership" as Skill],
+          penalty: "stopAllReturnToPile" as const,
+        },
+        text: "Choose a personnel who has Leadership to be stopped.",
+        lore: "Test lore.",
         jpg: "test.jpg",
       };
 
@@ -4849,10 +4869,12 @@ describe("gameStore", () => {
         unique: false,
         type: "Dilemma" as const,
         where: "Dual" as const,
-        deploy: 2,
+        cost: 2,
         overcome: false,
         faceup: false,
-        rule: "LimitedWelcome" as const,
+        rule: { type: "crewLimit" as const, keepCount: 9 },
+        text: "Randomly select nine personnel.",
+        lore: "Test lore.",
         jpg: "cards/test.jpg",
       };
 

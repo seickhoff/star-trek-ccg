@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { Skill } from "../../types/card";
-import { ALL_SKILLS } from "../../data/cardDatabase";
+import type { Skill } from "@stccg/shared";
+import { ALL_SKILLS } from "@stccg/shared";
 import "./SkillPicker.css";
 
 interface SkillPickerProps {

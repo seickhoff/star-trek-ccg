@@ -5,14 +5,14 @@ import type {
   Skill,
   AttributeName,
   GrantedSkill,
-} from "@stccg/shared";
-import { isPersonnel } from "@stccg/shared";
+} from "../types";
+import { isPersonnel } from "../types";
 import {
   getEffectiveStats,
   getGrantedSkillsForPersonnel,
   getDilemmaGrantedSkills,
   type AbilityContext,
-} from "./abilities.js";
+} from "./abilities";
 
 /**
  * Skill counts for a group of personnel

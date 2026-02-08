@@ -21,7 +21,7 @@ import {
   ActionLog,
 } from "../Modals";
 import { useConnectionStore } from "../../store/connectionStore";
-import { defaultDeck } from "../../data/defaultDeck";
+import { defaultDeck } from "@stccg/shared";
 import { useAudio, GAME_SOUNDS } from "../../hooks";
 import "./GameBoard.css";
 
@@ -553,7 +553,6 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         isOpen={showActionLog}
         onClose={() => setShowActionLog(false)}
       />
-
     </div>
   );
 }

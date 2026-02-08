@@ -1,9 +1,8 @@
-import type { Card, PersonnelCard } from "../../types/card";
-import type { GrantedSkill } from "../../types/gameState";
-import { isPersonnel, isShip } from "../../types/card";
+import type { Card, PersonnelCard, GrantedSkill } from "@stccg/shared";
+import { isPersonnel, isShip } from "@stccg/shared";
 import { DraggablePanel } from "./DraggablePanel";
 import { CardSlot } from "../GameBoard/CardSlot";
-import { calculateGroupStats } from "../../logic/missionChecker";
+import { calculateGroupStats } from "@stccg/shared";
 import "./GroupViewer.css";
 
 interface GroupViewerProps {

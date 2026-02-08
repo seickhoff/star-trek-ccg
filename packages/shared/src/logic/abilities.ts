@@ -4,10 +4,13 @@ import type {
   CostModifierEffect,
   OwnershipCondition,
   TargetFilter,
-} from "../types/ability";
-import type { Card, PersonnelCard, ShipCard, Skill } from "../types/card";
-import { isPersonnel } from "../types/card";
-import type { GrantedSkill } from "../types/gameState";
+  Card,
+  PersonnelCard,
+  ShipCard,
+  Skill,
+  GrantedSkill,
+} from "../types";
+import { isPersonnel } from "../types";
 
 /**
  * Effective stats after applying all passive ability modifiers

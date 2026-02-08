@@ -7,7 +7,7 @@ import {
   moveShip,
   resetShipRange,
 } from "./shipMovement";
-import type { PersonnelCard, MissionCard, ShipCard } from "../types/card";
+import type { PersonnelCard, MissionCard, ShipCard } from "../types";
 
 // Test fixtures
 const createPersonnel = (

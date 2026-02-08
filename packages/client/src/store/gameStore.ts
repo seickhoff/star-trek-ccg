@@ -2,7 +2,9 @@ import { create } from "zustand";
 import type {
   Ability,
   Card,
+  CardType,
   DilemmaCard,
+  EventCard,
   InterruptCard,
   MissionCard,
   PersonnelCard,
@@ -16,7 +18,8 @@ import type {
   SkillSourceFilter,
   ActionLogEntry,
   ActionLogType,
-} from "../types";
+  DilemmaResolution,
+} from "@stccg/shared";
 import {
   isMission,
   isDilemma,
@@ -25,17 +28,15 @@ import {
   isInterrupt,
   isEvent,
   GAME_CONSTANTS,
-} from "../types";
-import { cardDatabase } from "../data/cardDatabase";
-import { shuffle } from "../utils/shuffle";
-import { resetShipRange, checkStaffed } from "../logic/shipMovement";
-import {
+  cardDatabase,
+  shuffle,
+  resetShipRange,
+  checkStaffed,
   resolveDilemma,
   resolveSelectionStop,
-  type DilemmaResult,
-} from "../logic/dilemmaResolver";
-import { checkMission } from "../logic/missionChecker";
-import { getEffectiveDeployCost } from "../logic/abilities";
+  checkMission,
+  getEffectiveDeployCost,
+} from "@stccg/shared";
 
 /**
  * Generate unique ID for log entries
@@ -180,7 +181,7 @@ interface GameStoreState {
   // Dilemma encounter
   dilemmaEncounter: DilemmaEncounter | null;
   // Current dilemma resolution result (for UI state)
-  dilemmaResult: DilemmaResult | null;
+  dilemmaResult: DilemmaResolution | null;
 
   // Order ability tracking
   usedOrderAbilities: Set<string>; // Format: "cardUniqueId:abilityId"
@@ -275,7 +276,7 @@ interface GameStoreActions {
   _removeFromHand: (uniqueId: string) => void;
   _checkWinCondition: () => void;
   _checkLoseCondition: () => void;
-  _applyDilemmaResult: (result: DilemmaResult) => void;
+  _applyDilemmaResult: (result: DilemmaResolution) => void;
   _scoreMission: (missionIndex: number) => void;
   _failMissionAttempt: () => void;
 }
@@ -950,15 +951,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // For solitaire: select dilemmas by cost (highest first within budget)
     // Shuffle first, then sort by cost descending and select within budget
     const shuffledDilemmas = shuffle(applicableDilemmas) as DilemmaCard[];
-    shuffledDilemmas.sort((a, b) => b.deploy - a.deploy);
+    shuffledDilemmas.sort((a, b) => b.cost - a.cost);
 
     // Select dilemmas that fit within the cost budget
     const selectedDilemmas: DilemmaCard[] = [];
     let totalCost = 0;
     for (const dilemma of shuffledDilemmas) {
-      if (totalCost + dilemma.deploy <= costBudget) {
+      if (totalCost + dilemma.cost <= costBudget) {
         selectedDilemmas.push(dilemma);
-        totalCost += dilemma.deploy;
+        totalCost += dilemma.cost;
       }
     }
 
@@ -1023,7 +1024,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         createLogEntry(
           "dilemma_draw",
           `Facing: ${firstDilemma.name}`,
-          `Cost ${firstDilemma.deploy} (1/${selectedDilemmas.length})`
+          `Cost ${firstDilemma.cost} (1/${selectedDilemmas.length})`
         ),
       ],
     }));
@@ -1167,7 +1168,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         createLogEntry(
           "dilemma_draw",
           `Facing: ${nextDilemma.name}`,
-          `Cost ${nextDilemma.deploy} (${nextIndex + 1}/${selectedDilemmas.length})`
+          `Cost ${nextDilemma.cost} (${nextIndex + 1}/${selectedDilemmas.length})`
         ),
       ],
     }));
@@ -1867,13 +1868,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const card = hand.find((c) => c.uniqueId === cardUniqueId);
     if (!card || !isEvent(card)) return false;
 
-    const eventCard = card as import("../types").EventCard;
+    const eventCard = card as EventCard;
 
     // Check if we have enough counters
     if (counters < eventCard.deploy) return false;
 
     // Find the event ability (trigger: "event")
-    const ability = eventCard.abilities?.find((a) => a.trigger === "event");
+    const ability = eventCard.abilities?.find(
+      (a: Ability) => a.trigger === "event"
+    );
     if (!ability) {
       // Event without ability - just pay cost and destroy
       get()._removeFromHand(cardUniqueId);
@@ -2101,7 +2104,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   /**
    * Apply dilemma result to game state
    */
-  _applyDilemmaResult: (result: DilemmaResult) => {
+  _applyDilemmaResult: (result: DilemmaResolution) => {
     const { dilemmaEncounter, missions, discard, dilemmaPool, uniquesInPlay } =
       get();
 
@@ -2185,10 +2188,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     // Update cost spent with the current dilemma's cost
-    const newCostSpent = dilemmaEncounter.costSpent + currentDilemma.deploy;
+    const newCostSpent = dilemmaEncounter.costSpent + currentDilemma.cost;
 
     // Build dilemma result log message using the resolver's message
-    const resultSummary = result.message.replace(/\.$/, "") || (result.overcome ? "Overcome" : "Not overcome");
+    const resultSummary =
+      result.message.replace(/\.$/, "") ||
+      (result.overcome ? "Overcome" : "Not overcome");
 
     // Build details with remaining personnel count
     const remainingUnstopped = originalGroup.cards.filter(
@@ -2644,9 +2649,9 @@ export const selectPlayableEvents = (state: GameStore) => {
 
   return hand.filter((card) => {
     if (!isEvent(card)) return false;
-    const eventCard = card as import("../types").EventCard;
+    const eventCard = card as EventCard;
     return eventCard.deploy <= counters;
-  }) as import("../types").EventCard[];
+  }) as EventCard[];
 };
 
 /**
@@ -2654,7 +2659,7 @@ export const selectPlayableEvents = (state: GameStore) => {
  * @param allowedTypes - Array of card types that can be recovered (e.g., ["Personnel", "Ship"])
  */
 export const selectRecoverableCards =
-  (allowedTypes: import("../types").CardType[]) => (state: GameStore) => {
+  (allowedTypes: CardType[]) => (state: GameStore) => {
     return state.discard.filter((card) => allowedTypes.includes(card.type));
   };
 

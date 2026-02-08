@@ -49,7 +49,8 @@ export function useDraggablePanel({
       const el = containerRef.current;
       const panelWidth = el ? el.offsetWidth : 200;
       const headerHeight = el
-        ? (el.querySelector(headerSelector) as HTMLElement)?.offsetHeight ?? 40
+        ? ((el.querySelector(headerSelector) as HTMLElement)?.offsetHeight ??
+          40)
         : 40;
 
       const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -63,7 +64,10 @@ export function useDraggablePanel({
           const rawX = startPosX + dx;
           const rawY = startPosY + dy;
           setPosition({
-            x: Math.max(-panelWidth + 80, Math.min(rawX, window.innerWidth - 80)),
+            x: Math.max(
+              -panelWidth + 80,
+              Math.min(rawX, window.innerWidth - 80)
+            ),
             y: Math.max(0, Math.min(rawY, window.innerHeight - headerHeight)),
           });
         }
@@ -92,5 +96,12 @@ export function useDraggablePanel({
     [position]
   );
 
-  return { position, zIndex, minimized, setMinimized, containerRef, handleMouseDown };
+  return {
+    position,
+    zIndex,
+    minimized,
+    setMinimized,
+    containerRef,
+    handleMouseDown,
+  };
 }

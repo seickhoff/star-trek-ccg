@@ -1,11 +1,17 @@
 import { useState } from "react";
-import type { Card, ShipCard, PersonnelCard, Skill } from "../../types/card";
-import type { MissionDeployment, GrantedSkill } from "../../types/gameState";
-import type { Ability } from "../../types/ability";
-import { isShip, isPersonnel } from "../../types/card";
+import type {
+  Card,
+  ShipCard,
+  PersonnelCard,
+  Skill,
+  MissionDeployment,
+  GrantedSkill,
+  Ability,
+} from "@stccg/shared";
+import { isShip, isPersonnel } from "@stccg/shared";
 import { CardSlot } from "../GameBoard/CardSlot";
-import { checkStaffed, calculateRangeCost } from "../../logic/shipMovement";
-import { calculateGroupStats, checkMission } from "../../logic/missionChecker";
+import { checkStaffed, calculateRangeCost } from "@stccg/shared";
+import { calculateGroupStats, checkMission } from "@stccg/shared";
 import { useDraggablePanel } from "../../hooks/useDraggablePanel";
 import { SkillPicker } from "./SkillPicker";
 import "./OrdersModal.css";
@@ -390,269 +396,185 @@ export function OrdersModal({
           ×
         </button>
       </div>
-      {!minimized && <div className="orders-modal__content">
-        {/* Current group info */}
-        <div className="orders-modal__current">
-          <h3 className="orders-modal__section-title">
-            {ship ? `${ship.name}` : "Away Team"} at {mission.mission.name}
-          </h3>
+      {!minimized && (
+        <div className="orders-modal__content">
+          {/* Current group info */}
+          <div className="orders-modal__current">
+            <h3 className="orders-modal__section-title">
+              {ship ? `${ship.name}` : "Away Team"} at {mission.mission.name}
+            </h3>
 
-          <div className="orders-modal__cards">
-            {cards.map((card) => (
-              <CardSlot
-                key={card.uniqueId}
-                card={card}
-                size="thumb"
-                onClick={() => onCardClick?.(card)}
-              />
-            ))}
-          </div>
-
-          {/* Stats summary */}
-          <div className="orders-modal__stats">
-            <div className="orders-modal__stats-row">
-              <span className="orders-modal__stat-label">Personnel:</span>
-              <span className="orders-modal__stat-value">
-                {unstoppedPersonnel.length} ready
-                {stoppedPersonnel.length > 0 &&
-                  `, ${stoppedPersonnel.length} stopped`}
-              </span>
+            <div className="orders-modal__cards">
+              {cards.map((card) => (
+                <CardSlot
+                  key={card.uniqueId}
+                  card={card}
+                  size="thumb"
+                  onClick={() => onCardClick?.(card)}
+                />
+              ))}
             </div>
-            <div className="orders-modal__stats-row">
-              <span className="orders-modal__stat orders-modal__stat--integrity">
-                I: {stats.integrity}
-              </span>
-              <span className="orders-modal__stat orders-modal__stat--cunning">
-                C: {stats.cunning}
-              </span>
-              <span className="orders-modal__stat orders-modal__stat--strength">
-                S: {stats.strength}
-              </span>
-            </div>
-          </div>
 
-          {/* Skills */}
-          {skillEntries.length > 0 && (
-            <div className="orders-modal__skills">
-              {skillEntries.map(([skill, count]) => (
-                <span key={skill} className="orders-modal__skill">
-                  {skill}
-                  {count > 1 && (
-                    <span className="orders-modal__skill-count">×{count}</span>
-                  )}
+            {/* Stats summary */}
+            <div className="orders-modal__stats">
+              <div className="orders-modal__stats-row">
+                <span className="orders-modal__stat-label">Personnel:</span>
+                <span className="orders-modal__stat-value">
+                  {unstoppedPersonnel.length} ready
+                  {stoppedPersonnel.length > 0 &&
+                    `, ${stoppedPersonnel.length} stopped`}
                 </span>
-              ))}
+              </div>
+              <div className="orders-modal__stats-row">
+                <span className="orders-modal__stat orders-modal__stat--integrity">
+                  I: {stats.integrity}
+                </span>
+                <span className="orders-modal__stat orders-modal__stat--cunning">
+                  C: {stats.cunning}
+                </span>
+                <span className="orders-modal__stat orders-modal__stat--strength">
+                  S: {stats.strength}
+                </span>
+              </div>
             </div>
-          )}
 
-          {ship && (
-            <div className="orders-modal__ship-status">
-              <span>
-                Range: {ship.rangeRemaining}/{ship.range}
-              </span>
-              <span className={isStaffed ? "staffed" : "not-staffed"}>
-                {isStaffed ? "✓ Staffed" : "✗ Not staffed"}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Ship movement options */}
-        {ship && validDestinations.length > 0 && (
-          <div className="orders-modal__section">
-            <h4 className="orders-modal__section-title">Move Ship</h4>
-            <div className="orders-modal__destinations">
-              {validDestinations.map((dest) => (
-                <button
-                  key={dest.missionIndex}
-                  className="orders-modal__dest-btn"
-                  onClick={() => {
-                    onMoveShip?.(
-                      currentMissionIndex,
-                      currentGroupIndex,
-                      dest.missionIndex
-                    );
-                    onClose();
-                  }}
-                >
-                  <span className="orders-modal__dest-name">
-                    {dest.name}
-                    {dest.completed && (
-                      <span className="orders-modal__dest-status orders-modal__dest-status--completed">
-                        Completed
-                      </span>
-                    )}
-                    {!dest.completed && !dest.isHeadquarters && (
-                      <span
-                        className={`orders-modal__dest-status ${dest.attemptable ? "orders-modal__dest-status--ready" : "orders-modal__dest-status--not-ready"}`}
-                      >
-                        {dest.attemptable
-                          ? "Can attempt"
-                          : "Cannot attempt"}
+            {/* Skills */}
+            {skillEntries.length > 0 && (
+              <div className="orders-modal__skills">
+                {skillEntries.map(([skill, count]) => (
+                  <span key={skill} className="orders-modal__skill">
+                    {skill}
+                    {count > 1 && (
+                      <span className="orders-modal__skill-count">
+                        ×{count}
                       </span>
                     )}
                   </span>
-                  <span className="orders-modal__dest-cost">
-                    Cost: {dest.rangeCost} range
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {ship && validDestinations.length === 0 && isStaffed && (
-          <div className="orders-modal__no-options">
-            No valid destinations (not enough range)
-          </div>
-        )}
-
-        {ship && !isStaffed && (
-          <div className="orders-modal__no-options">
-            Cannot move - ship is not properly staffed
-          </div>
-        )}
-
-        {/* Beam personnel options */}
-        {unstoppedPersonnel.length > 0 && otherGroups.length > 0 && (
-          <div className="orders-modal__section">
-            <h4 className="orders-modal__section-title">Beam Personnel</h4>
-
-            {unstoppedPersonnel.length > 1 && (
-              <div className="orders-modal__beam-all">
-                {currentGroupIndex !== 0 &&
-                  mission.mission.missionType !== "Space" && (
-                    <button
-                      className="orders-modal__beam-btn orders-modal__beam-btn--all"
-                      onClick={() =>
-                        onBeamAllToPlanet?.(
-                          currentMissionIndex,
-                          currentGroupIndex
-                        )
-                      }
-                    >
-                      All →{" "}
-                      {mission.mission.missionType === "Headquarters"
-                        ? mission.mission.name
-                        : "Planet"}{" "}
-                      ({unstoppedPersonnel.length})
-                    </button>
-                  )}
-                {otherGroups
-                  .filter(({ index }) => index > 0)
-                  .map(({ group: targetGroup, index }) => {
-                    const targetShip = targetGroup.cards.find(isShip);
-                    const personnelCount =
-                      targetGroup.cards.filter(isPersonnel).length;
-                    return (
-                      <button
-                        key={index}
-                        className="orders-modal__beam-btn orders-modal__beam-btn--all"
-                        onClick={() =>
-                          onBeamAllToShip?.(
-                            currentMissionIndex,
-                            currentGroupIndex,
-                            index
-                          )
-                        }
-                      >
-                        All → {targetShip?.name || `Group ${index}`} (
-                        {personnelCount})
-                      </button>
-                    );
-                  })}
+                ))}
               </div>
             )}
 
-            <div className="orders-modal__beam-grid">
-              {unstoppedPersonnel.map((person) => (
-                <div key={person.uniqueId} className="orders-modal__beam-row">
-                  <div className="orders-modal__beam-person">
-                    <CardSlot
-                      card={person}
-                      size="thumb"
-                      onClick={() => onCardClick?.(person)}
-                    />
-                    <span className="orders-modal__person-name">
-                      {person.name}
-                    </span>
-                  </div>
-
-                  <div className="orders-modal__beam-targets">
-                    {currentGroupIndex !== 0 &&
-                      mission.mission.missionType !== "Space" && (
-                        <button
-                          className="orders-modal__beam-btn"
-                          onClick={() => {
-                            onBeamToPlanet?.(
-                              person.uniqueId!,
-                              currentMissionIndex,
-                              currentGroupIndex
-                            );
-                          }}
-                        >
-                          →{" "}
-                          {mission.mission.missionType === "Headquarters"
-                            ? mission.mission.name
-                            : "Planet"}
-                        </button>
-                      )}
-
-                    {otherGroups
-                      .filter(({ index }) => index > 0)
-                      .map(({ group: targetGroup, index }) => {
-                        const targetShip = targetGroup.cards.find(isShip);
-                        const personnelCount =
-                          targetGroup.cards.filter(isPersonnel).length;
-                        return (
-                          <button
-                            key={index}
-                            className="orders-modal__beam-btn"
-                            onClick={() => {
-                              onBeamToShip?.(
-                                person.uniqueId!,
-                                currentMissionIndex,
-                                currentGroupIndex,
-                                index
-                              );
-                            }}
-                          >
-                            → {targetShip?.name || `Group ${index}`} (
-                            {personnelCount})
-                          </button>
-                        );
-                      })}
-                  </div>
-                </div>
-              ))}
-            </div>
+            {ship && (
+              <div className="orders-modal__ship-status">
+                <span>
+                  Range: {ship.rangeRemaining}/{ship.range}
+                </span>
+                <span className={isStaffed ? "staffed" : "not-staffed"}>
+                  {isStaffed ? "✓ Staffed" : "✗ Not staffed"}
+                </span>
+              </div>
+            )}
           </div>
-        )}
 
-        {unstoppedPersonnel.length === 0 && (
-          <div className="orders-modal__no-options">
-            No unstopped personnel to beam
-          </div>
-        )}
-
-        {/* Order abilities section */}
-        {personnelWithOrderAbilities.length > 0 && (
-          <div className="orders-modal__section">
-            <h4 className="orders-modal__section-title">Order Abilities</h4>
-
-            <div className="orders-modal__ability-grid">
-              {personnelWithOrderAbilities.map((person) => {
-                const orderAbilities =
-                  person.abilities?.filter(
-                    (a: Ability) => a.trigger === "order"
-                  ) || [];
-
-                return (
-                  <div
-                    key={person.uniqueId}
-                    className="orders-modal__ability-row"
+          {/* Ship movement options */}
+          {ship && validDestinations.length > 0 && (
+            <div className="orders-modal__section">
+              <h4 className="orders-modal__section-title">Move Ship</h4>
+              <div className="orders-modal__destinations">
+                {validDestinations.map((dest) => (
+                  <button
+                    key={dest.missionIndex}
+                    className="orders-modal__dest-btn"
+                    onClick={() => {
+                      onMoveShip?.(
+                        currentMissionIndex,
+                        currentGroupIndex,
+                        dest.missionIndex
+                      );
+                      onClose();
+                    }}
                   >
-                    <div className="orders-modal__ability-person">
+                    <span className="orders-modal__dest-name">
+                      {dest.name}
+                      {dest.completed && (
+                        <span className="orders-modal__dest-status orders-modal__dest-status--completed">
+                          Completed
+                        </span>
+                      )}
+                      {!dest.completed && !dest.isHeadquarters && (
+                        <span
+                          className={`orders-modal__dest-status ${dest.attemptable ? "orders-modal__dest-status--ready" : "orders-modal__dest-status--not-ready"}`}
+                        >
+                          {dest.attemptable ? "Can attempt" : "Cannot attempt"}
+                        </span>
+                      )}
+                    </span>
+                    <span className="orders-modal__dest-cost">
+                      Cost: {dest.rangeCost} range
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {ship && validDestinations.length === 0 && isStaffed && (
+            <div className="orders-modal__no-options">
+              No valid destinations (not enough range)
+            </div>
+          )}
+
+          {ship && !isStaffed && (
+            <div className="orders-modal__no-options">
+              Cannot move - ship is not properly staffed
+            </div>
+          )}
+
+          {/* Beam personnel options */}
+          {unstoppedPersonnel.length > 0 && otherGroups.length > 0 && (
+            <div className="orders-modal__section">
+              <h4 className="orders-modal__section-title">Beam Personnel</h4>
+
+              {unstoppedPersonnel.length > 1 && (
+                <div className="orders-modal__beam-all">
+                  {currentGroupIndex !== 0 &&
+                    mission.mission.missionType !== "Space" && (
+                      <button
+                        className="orders-modal__beam-btn orders-modal__beam-btn--all"
+                        onClick={() =>
+                          onBeamAllToPlanet?.(
+                            currentMissionIndex,
+                            currentGroupIndex
+                          )
+                        }
+                      >
+                        All →{" "}
+                        {mission.mission.missionType === "Headquarters"
+                          ? mission.mission.name
+                          : "Planet"}{" "}
+                        ({unstoppedPersonnel.length})
+                      </button>
+                    )}
+                  {otherGroups
+                    .filter(({ index }) => index > 0)
+                    .map(({ group: targetGroup, index }) => {
+                      const targetShip = targetGroup.cards.find(isShip);
+                      const personnelCount =
+                        targetGroup.cards.filter(isPersonnel).length;
+                      return (
+                        <button
+                          key={index}
+                          className="orders-modal__beam-btn orders-modal__beam-btn--all"
+                          onClick={() =>
+                            onBeamAllToShip?.(
+                              currentMissionIndex,
+                              currentGroupIndex,
+                              index
+                            )
+                          }
+                        >
+                          All → {targetShip?.name || `Group ${index}`} (
+                          {personnelCount})
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
+
+              <div className="orders-modal__beam-grid">
+                {unstoppedPersonnel.map((person) => (
+                  <div key={person.uniqueId} className="orders-modal__beam-row">
+                    <div className="orders-modal__beam-person">
                       <CardSlot
                         card={person}
                         size="thumb"
@@ -663,214 +585,305 @@ export function OrdersModal({
                       </span>
                     </div>
 
-                    <div className="orders-modal__abilities">
-                      {orderAbilities.map((ability: Ability) => {
-                        const isUsable = canUseAbility(
-                          person.uniqueId!,
-                          ability
-                        );
-                        const usageKey = `${person.uniqueId}:${ability.id}`;
-                        const isUsed = usedOrderAbilities?.includes(usageKey);
+                    <div className="orders-modal__beam-targets">
+                      {currentGroupIndex !== 0 &&
+                        mission.mission.missionType !== "Space" && (
+                          <button
+                            className="orders-modal__beam-btn"
+                            onClick={() => {
+                              onBeamToPlanet?.(
+                                person.uniqueId!,
+                                currentMissionIndex,
+                                currentGroupIndex
+                              );
+                            }}
+                          >
+                            →{" "}
+                            {mission.mission.missionType === "Headquarters"
+                              ? mission.mission.name
+                              : "Planet"}
+                          </button>
+                        )}
 
+                      {otherGroups
+                        .filter(({ index }) => index > 0)
+                        .map(({ group: targetGroup, index }) => {
+                          const targetShip = targetGroup.cards.find(isShip);
+                          const personnelCount =
+                            targetGroup.cards.filter(isPersonnel).length;
+                          return (
+                            <button
+                              key={index}
+                              className="orders-modal__beam-btn"
+                              onClick={() => {
+                                onBeamToShip?.(
+                                  person.uniqueId!,
+                                  currentMissionIndex,
+                                  currentGroupIndex,
+                                  index
+                                );
+                              }}
+                            >
+                              → {targetShip?.name || `Group ${index}`} (
+                              {personnelCount})
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {unstoppedPersonnel.length === 0 && (
+            <div className="orders-modal__no-options">
+              No unstopped personnel to beam
+            </div>
+          )}
+
+          {/* Order abilities section */}
+          {personnelWithOrderAbilities.length > 0 && (
+            <div className="orders-modal__section">
+              <h4 className="orders-modal__section-title">Order Abilities</h4>
+
+              <div className="orders-modal__ability-grid">
+                {personnelWithOrderAbilities.map((person) => {
+                  const orderAbilities =
+                    person.abilities?.filter(
+                      (a: Ability) => a.trigger === "order"
+                    ) || [];
+
+                  return (
+                    <div
+                      key={person.uniqueId}
+                      className="orders-modal__ability-row"
+                    >
+                      <div className="orders-modal__ability-person">
+                        <CardSlot
+                          card={person}
+                          size="thumb"
+                          onClick={() => onCardClick?.(person)}
+                        />
+                        <span className="orders-modal__person-name">
+                          {person.name}
+                        </span>
+                      </div>
+
+                      <div className="orders-modal__abilities">
+                        {orderAbilities.map((ability: Ability) => {
+                          const isUsable = canUseAbility(
+                            person.uniqueId!,
+                            ability
+                          );
+                          const usageKey = `${person.uniqueId}:${ability.id}`;
+                          const isUsed = usedOrderAbilities?.includes(usageKey);
+
+                          return (
+                            <button
+                              key={ability.id}
+                              className={`orders-modal__ability-btn ${
+                                isUsed ? "orders-modal__ability-btn--used" : ""
+                              } ${!isUsable ? "orders-modal__ability-btn--disabled" : ""}`}
+                              disabled={!isUsable}
+                              onClick={() =>
+                                handleExecuteOrderAbility(
+                                  person.uniqueId!,
+                                  ability
+                                )
+                              }
+                            >
+                              <span className="orders-modal__ability-name">
+                                Order
+                              </span>
+                              <span className="orders-modal__ability-desc">
+                                {getAbilityDescription(ability)}
+                              </span>
+                              {isUsed && (
+                                <span className="orders-modal__ability-used">
+                                  (Used)
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Active granted skills display */}
+          {grantedSkills.length > 0 && (
+            <div className="orders-modal__section">
+              <h4 className="orders-modal__section-title">
+                Active Skill Grants
+              </h4>
+              <div className="orders-modal__granted-skills">
+                {grantedSkills.map((grant, idx) => (
+                  <span key={idx} className="orders-modal__granted-skill">
+                    {grant.skill}
+                    {grant.target.species && (
+                      <span className="orders-modal__granted-target">
+                        {" → "}
+                        {grant.target.species.join("/")}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Beam to ship selection UI */}
+          {beamSelectionState.isSelecting && (
+            <div className="orders-modal__section orders-modal__beam-selection">
+              <h4 className="orders-modal__section-title">
+                {beamSelectionState.step === "selectPersonnel"
+                  ? "Select Personnel to Beam"
+                  : "Select Target Ship"}
+              </h4>
+
+              {beamSelectionState.step === "selectPersonnel" && (
+                <>
+                  <p className="orders-modal__beam-instructions">
+                    Select personnel at this mission to beam aboard a ship.
+                  </p>
+                  <div className="orders-modal__beam-personnel-list">
+                    {/* List all personnel at this mission (across all groups) */}
+                    {mission.groups.flatMap((group, gIdx) =>
+                      group.cards
+                        .filter(isPersonnel)
+                        .filter(
+                          (p) =>
+                            (p as PersonnelCard).uniqueId !==
+                            beamSelectionState.cardUniqueId
+                        )
+                        .map((p) => {
+                          const personnel = p as PersonnelCard;
+                          const isSelected =
+                            beamSelectionState.selectedPersonnelIds.includes(
+                              personnel.uniqueId!
+                            );
+                          return (
+                            <button
+                              key={personnel.uniqueId}
+                              className={`orders-modal__beam-person-btn ${
+                                isSelected
+                                  ? "orders-modal__beam-person-btn--selected"
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                handleTogglePersonnelForBeam(
+                                  personnel.uniqueId!
+                                )
+                              }
+                            >
+                              <CardSlot card={personnel} size="thumb" />
+                              <span>{personnel.name}</span>
+                              {gIdx > 0 && (
+                                <span className="orders-modal__beam-location">
+                                  (aboard)
+                                </span>
+                              )}
+                              {isSelected && (
+                                <span className="orders-modal__beam-check">
+                                  ✓
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })
+                    )}
+                  </div>
+                  <div className="orders-modal__beam-actions">
+                    <button
+                      className="orders-modal__beam-cancel"
+                      onClick={handleCancelBeamSelection}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="orders-modal__beam-next"
+                      disabled={
+                        beamSelectionState.selectedPersonnelIds.length === 0
+                      }
+                      onClick={() =>
+                        setBeamSelectionState((prev) => ({
+                          ...prev,
+                          step: "selectShip",
+                        }))
+                      }
+                    >
+                      Next: Select Ship (
+                      {beamSelectionState.selectedPersonnelIds.length} selected)
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {beamSelectionState.step === "selectShip" && (
+                <>
+                  <p className="orders-modal__beam-instructions">
+                    Select a ship to beam{" "}
+                    {beamSelectionState.selectedPersonnelIds.length} personnel
+                    aboard.
+                  </p>
+                  <div className="orders-modal__beam-ship-list">
+                    {mission.groups
+                      .map((group, gIdx) => ({ group, gIdx }))
+                      .filter(({ gIdx }) => gIdx > 0) // Only ship groups
+                      .filter(({ group }) => group.cards.some(isShip))
+                      .map(({ group, gIdx }) => {
+                        const shipCard = group.cards.find(isShip) as ShipCard;
+                        const crewCount =
+                          group.cards.filter(isPersonnel).length;
                         return (
                           <button
-                            key={ability.id}
-                            className={`orders-modal__ability-btn ${
-                              isUsed ? "orders-modal__ability-btn--used" : ""
-                            } ${!isUsable ? "orders-modal__ability-btn--disabled" : ""}`}
-                            disabled={!isUsable}
-                            onClick={() =>
-                              handleExecuteOrderAbility(
-                                person.uniqueId!,
-                                ability
-                              )
-                            }
+                            key={gIdx}
+                            className="orders-modal__beam-ship-btn"
+                            onClick={() => handleSelectShipForBeam(gIdx)}
                           >
-                            <span className="orders-modal__ability-name">
-                              Order
-                            </span>
-                            <span className="orders-modal__ability-desc">
-                              {getAbilityDescription(ability)}
-                            </span>
-                            {isUsed && (
-                              <span className="orders-modal__ability-used">
-                                (Used)
+                            <CardSlot card={shipCard} size="thumb" />
+                            <div className="orders-modal__beam-ship-info">
+                              <span className="orders-modal__beam-ship-name">
+                                {shipCard.name}
                               </span>
-                            )}
+                              <span className="orders-modal__beam-ship-crew">
+                                {crewCount} aboard
+                              </span>
+                            </div>
                           </button>
                         );
                       })}
-                    </div>
                   </div>
-                );
-              })}
+                  <div className="orders-modal__beam-actions">
+                    <button
+                      className="orders-modal__beam-back"
+                      onClick={() =>
+                        setBeamSelectionState((prev) => ({
+                          ...prev,
+                          step: "selectPersonnel",
+                        }))
+                      }
+                    >
+                      Back
+                    </button>
+                    <button
+                      className="orders-modal__beam-cancel"
+                      onClick={handleCancelBeamSelection}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
-          </div>
-        )}
-
-        {/* Active granted skills display */}
-        {grantedSkills.length > 0 && (
-          <div className="orders-modal__section">
-            <h4 className="orders-modal__section-title">Active Skill Grants</h4>
-            <div className="orders-modal__granted-skills">
-              {grantedSkills.map((grant, idx) => (
-                <span key={idx} className="orders-modal__granted-skill">
-                  {grant.skill}
-                  {grant.target.species && (
-                    <span className="orders-modal__granted-target">
-                      {" → "}
-                      {grant.target.species.join("/")}
-                    </span>
-                  )}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Beam to ship selection UI */}
-        {beamSelectionState.isSelecting && (
-          <div className="orders-modal__section orders-modal__beam-selection">
-            <h4 className="orders-modal__section-title">
-              {beamSelectionState.step === "selectPersonnel"
-                ? "Select Personnel to Beam"
-                : "Select Target Ship"}
-            </h4>
-
-            {beamSelectionState.step === "selectPersonnel" && (
-              <>
-                <p className="orders-modal__beam-instructions">
-                  Select personnel at this mission to beam aboard a ship.
-                </p>
-                <div className="orders-modal__beam-personnel-list">
-                  {/* List all personnel at this mission (across all groups) */}
-                  {mission.groups.flatMap((group, gIdx) =>
-                    group.cards
-                      .filter(isPersonnel)
-                      .filter(
-                        (p) =>
-                          (p as PersonnelCard).uniqueId !==
-                          beamSelectionState.cardUniqueId
-                      )
-                      .map((p) => {
-                        const personnel = p as PersonnelCard;
-                        const isSelected =
-                          beamSelectionState.selectedPersonnelIds.includes(
-                            personnel.uniqueId!
-                          );
-                        return (
-                          <button
-                            key={personnel.uniqueId}
-                            className={`orders-modal__beam-person-btn ${
-                              isSelected
-                                ? "orders-modal__beam-person-btn--selected"
-                                : ""
-                            }`}
-                            onClick={() =>
-                              handleTogglePersonnelForBeam(personnel.uniqueId!)
-                            }
-                          >
-                            <CardSlot card={personnel} size="thumb" />
-                            <span>{personnel.name}</span>
-                            {gIdx > 0 && (
-                              <span className="orders-modal__beam-location">
-                                (aboard)
-                              </span>
-                            )}
-                            {isSelected && (
-                              <span className="orders-modal__beam-check">
-                                ✓
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })
-                  )}
-                </div>
-                <div className="orders-modal__beam-actions">
-                  <button
-                    className="orders-modal__beam-cancel"
-                    onClick={handleCancelBeamSelection}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="orders-modal__beam-next"
-                    disabled={
-                      beamSelectionState.selectedPersonnelIds.length === 0
-                    }
-                    onClick={() =>
-                      setBeamSelectionState((prev) => ({
-                        ...prev,
-                        step: "selectShip",
-                      }))
-                    }
-                  >
-                    Next: Select Ship (
-                    {beamSelectionState.selectedPersonnelIds.length} selected)
-                  </button>
-                </div>
-              </>
-            )}
-
-            {beamSelectionState.step === "selectShip" && (
-              <>
-                <p className="orders-modal__beam-instructions">
-                  Select a ship to beam{" "}
-                  {beamSelectionState.selectedPersonnelIds.length} personnel
-                  aboard.
-                </p>
-                <div className="orders-modal__beam-ship-list">
-                  {mission.groups
-                    .map((group, gIdx) => ({ group, gIdx }))
-                    .filter(({ gIdx }) => gIdx > 0) // Only ship groups
-                    .filter(({ group }) => group.cards.some(isShip))
-                    .map(({ group, gIdx }) => {
-                      const shipCard = group.cards.find(isShip) as ShipCard;
-                      const crewCount = group.cards.filter(isPersonnel).length;
-                      return (
-                        <button
-                          key={gIdx}
-                          className="orders-modal__beam-ship-btn"
-                          onClick={() => handleSelectShipForBeam(gIdx)}
-                        >
-                          <CardSlot card={shipCard} size="thumb" />
-                          <div className="orders-modal__beam-ship-info">
-                            <span className="orders-modal__beam-ship-name">
-                              {shipCard.name}
-                            </span>
-                            <span className="orders-modal__beam-ship-crew">
-                              {crewCount} aboard
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                </div>
-                <div className="orders-modal__beam-actions">
-                  <button
-                    className="orders-modal__beam-back"
-                    onClick={() =>
-                      setBeamSelectionState((prev) => ({
-                        ...prev,
-                        step: "selectPersonnel",
-                      }))
-                    }
-                  >
-                    Back
-                  </button>
-                  <button
-                    className="orders-modal__beam-cancel"
-                    onClick={handleCancelBeamSelection}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>}
+          )}
+        </div>
+      )}
 
       {/* Skill picker modal */}
       <SkillPicker

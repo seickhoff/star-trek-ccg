@@ -1,10 +1,5 @@
-import type {
-  Card,
-  PersonnelCard,
-  ShipCard,
-  EventCard,
-} from "../../types/card";
-import { isPersonnel, isShip, isEvent } from "../../types/card";
+import type { Card, PersonnelCard, ShipCard, EventCard } from "@stccg/shared";
+import { isPersonnel, isShip, isEvent } from "@stccg/shared";
 import { CardSlot } from "../GameBoard/CardSlot";
 import "./HandCard.css";
 

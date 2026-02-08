@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Card } from "../../types/card";
+import type { Card } from "@stccg/shared";
 import { DraggablePanel } from "./DraggablePanel";
 import { CardSlot } from "../GameBoard/CardSlot";
 import "./DiscardPicker.css";

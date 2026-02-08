@@ -11,13 +11,9 @@ import {
   getGrantedSkillsForPersonnel,
   getDilemmaGrantedSkills,
 } from "./abilities";
-import type { PersonnelCard, ShipCard } from "../types/card";
-import type {
-  Ability,
-  CostModifierEffect,
-  TargetFilter,
-} from "../types/ability";
-import type { GrantedSkill } from "../types/gameState";
+import type { PersonnelCard, ShipCard } from "../types";
+import type { Ability, CostModifierEffect, TargetFilter } from "../types";
+import type { GrantedSkill } from "../types";
 
 // Test fixtures
 const createPersonnel = (
