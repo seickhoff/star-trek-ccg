@@ -1,4 +1,4 @@
-import type { Skill } from "../types/card";
+import type { Skill } from "../types/card.js";
 
 /**
  * Base interface for all client-to-server actions

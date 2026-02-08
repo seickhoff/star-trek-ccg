@@ -23,7 +23,7 @@ export type {
   DiscardCardAction,
   GameAction,
   ActionType,
-} from "./actions";
+} from "./actions.js";
 
 // Event types (server → client)
 export type {
@@ -39,4 +39,4 @@ export type {
   ErrorEvent,
   GameEvent,
   EventType,
-} from "./events";
+} from "./events.js";

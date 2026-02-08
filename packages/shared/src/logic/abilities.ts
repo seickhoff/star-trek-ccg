@@ -9,8 +9,8 @@ import type {
   ShipCard,
   Skill,
   GrantedSkill,
-} from "../types";
-import { isPersonnel } from "../types";
+} from "../types/index.js";
+import { isPersonnel } from "../types/index.js";
 
 /**
  * Effective stats after applying all passive ability modifiers

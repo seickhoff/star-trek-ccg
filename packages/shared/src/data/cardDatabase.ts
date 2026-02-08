@@ -9,7 +9,7 @@ import type {
   PersonnelCard,
   ShipCard,
   Skill,
-} from "../types";
+} from "../types/index.js";
 
 // All valid skills in the game
 export const ALL_SKILLS: Skill[] = [

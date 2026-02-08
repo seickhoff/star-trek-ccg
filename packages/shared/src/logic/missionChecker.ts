@@ -5,14 +5,14 @@ import type {
   Skill,
   AttributeName,
   GrantedSkill,
-} from "../types";
-import { isPersonnel } from "../types";
+} from "../types/index.js";
+import { isPersonnel } from "../types/index.js";
 import {
   getEffectiveStats,
   getGrantedSkillsForPersonnel,
   getDilemmaGrantedSkills,
   type AbilityContext,
-} from "./abilities";
+} from "./abilities.js";
 
 /**
  * Skill counts for a group of personnel

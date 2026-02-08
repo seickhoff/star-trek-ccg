@@ -1,19 +1,19 @@
 // Re-export all types
-export * from "./types";
+export * from "./types/index.js";
 
 // Re-export protocol
-export * from "./protocol";
+export * from "./protocol/index.js";
 
 // Utils
-export { shuffle, shuffleInPlace, configureShuffle } from "./utils/shuffle";
+export { shuffle, shuffleInPlace, configureShuffle } from "./utils/shuffle.js";
 
 // Data
-export * from "./data/cardDatabase";
-export { defaultDeck, DECK_STATS } from "./data/defaultDeck";
+export * from "./data/cardDatabase.js";
+export { defaultDeck, DECK_STATS } from "./data/defaultDeck.js";
 
 // Logic — abilities and shipMovement have no name collisions
-export * from "./logic/abilities";
-export * from "./logic/shipMovement";
+export * from "./logic/abilities.js";
+export * from "./logic/shipMovement.js";
 
 // missionChecker: selective exports to avoid GroupStats collision with types/gameState
 export {
@@ -27,11 +27,11 @@ export {
   findPersonnelWithSkill,
   hasSkillCount,
   getAttributeTotal,
-} from "./logic/missionChecker";
+} from "./logic/missionChecker.js";
 
 // dilemmaResolver: DilemmaResolution (renamed from DilemmaResult to avoid gameState collision)
 export {
   type DilemmaResolution,
   resolveDilemma,
   resolveSelectionStop,
-} from "./logic/dilemmaResolver";
+} from "./logic/dilemmaResolver.js";

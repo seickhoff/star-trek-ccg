@@ -6,8 +6,8 @@ import type {
   PersonnelCard,
   ShipCard,
   Skill,
-} from "./card";
-import type { EffectDuration, TargetFilter } from "./ability";
+} from "./card.js";
+import type { EffectDuration, TargetFilter } from "./ability.js";
 
 // Game phase enum
 export type GamePhase = "PlayAndDraw" | "ExecuteOrders" | "DiscardExcess";

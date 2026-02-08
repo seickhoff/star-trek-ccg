@@ -1,4 +1,4 @@
-import type { Affiliation, CardType, Skill } from "./card";
+import type { Affiliation, CardType, Skill } from "./card.js";
 
 /**
  * When an ability is evaluated/triggered

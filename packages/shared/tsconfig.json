@@ -5,7 +5,10 @@
     "rootDir": "./src",
     "noEmit": false,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
 }

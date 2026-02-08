@@ -5,10 +5,10 @@ import type {
   Card,
   Skill,
   GrantedSkill,
-} from "../types";
-import { isPersonnel } from "../types";
-import { shuffle } from "../utils/shuffle";
-import { calculateGroupStats } from "./missionChecker";
+} from "../types/index.js";
+import { isPersonnel } from "../types/index.js";
+import { shuffle } from "../utils/shuffle.js";
+import { calculateGroupStats } from "./missionChecker.js";
 
 /**
  * Result of resolving a dilemma

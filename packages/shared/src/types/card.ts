@@ -1,4 +1,4 @@
-import type { Ability } from "./ability";
+import type { Ability } from "./ability.js";
 
 // Card type discriminants
 export type CardType =

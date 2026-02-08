@@ -21,7 +21,7 @@ export type {
   DilemmaCard,
   Card,
   CardDatabase,
-} from "./card";
+} from "./card.js";
 
 export {
   isMission,
@@ -30,7 +30,7 @@ export {
   isEvent,
   isInterrupt,
   isDilemma,
-} from "./card";
+} from "./card.js";
 
 // Ability types
 export type {
@@ -54,7 +54,7 @@ export type {
   UsageLimit,
   AbilityEffect,
   Ability,
-} from "./ability";
+} from "./ability.js";
 
 // Game state types
 export type {
@@ -70,6 +70,6 @@ export type {
   ActionLogEntry,
   DilemmaResult,
   SerializableGameState,
-} from "./gameState";
+} from "./gameState.js";
 
-export { PHASE_INDEX, PHASE_FROM_INDEX, GAME_CONSTANTS } from "./gameState";
+export { PHASE_INDEX, PHASE_FROM_INDEX, GAME_CONSTANTS } from "./gameState.js";

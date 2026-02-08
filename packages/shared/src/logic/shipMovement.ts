@@ -1,5 +1,5 @@
-import type { Card, MissionCard, PersonnelCard, ShipCard } from "../types";
-import { isPersonnel, isShip } from "../types";
+import type { Card, MissionCard, PersonnelCard, ShipCard } from "../types/index.js";
+import { isPersonnel, isShip } from "../types/index.js";
 
 /**
  * Staffing requirement counts
