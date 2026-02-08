@@ -31,7 +31,6 @@ import {
 import type { GameAction } from "@stccg/shared";
 import {
   cardDatabase,
-  resetShipRange,
   checkStaffed,
   resolveDilemma,
   resolveSelectionStop,
@@ -504,7 +503,7 @@ export class GameEngine {
             card.status = "Unstopped";
           }
           if (isShip(card)) {
-            resetShipRange(card);
+            card.rangeRemaining = card.range;
           }
         }
       }

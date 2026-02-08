@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import type {
   DilemmaCard,
   PersonnelCard,
+  ShipCard,
   MissionCard,
   GameAction,
 } from "@stccg/shared";
@@ -52,6 +53,25 @@ function mockPersonnel(overrides: Partial<PersonnelCard> = {}): PersonnelCard {
     integrity: 5,
     cunning: 5,
     strength: 5,
+    ...overrides,
+  };
+}
+
+function mockShip(overrides: Partial<ShipCard> = {}): ShipCard {
+  return {
+    id: "s-test",
+    uniqueId: `s-${Math.random().toString(36).slice(2, 8)}`,
+    name: "Test Ship",
+    type: "Ship",
+    unique: false,
+    jpg: "test.jpg",
+    affiliation: ["Federation"],
+    deploy: 1,
+    staffing: [["Staff"]],
+    range: 8,
+    rangeRemaining: 8,
+    weapons: 6,
+    shields: 6,
     ...overrides,
   };
 }
@@ -1132,5 +1152,45 @@ describe("Phase validation", () => {
 
     expect(result.success).toBe(false);
     expect(result.reason).toContain("Execute Orders");
+  });
+});
+
+// =============================================================================
+// New turn resets ship range
+// =============================================================================
+
+describe("New turn resets ship range", () => {
+  it("resets rangeRemaining to base range on new turn", () => {
+    const engine = new GameEngine();
+    const state = engine.getState();
+
+    const ship = mockShip({ uniqueId: "ship1", range: 8, rangeRemaining: 2 });
+
+    state.missions[0] = {
+      mission: mockMission({
+        id: "hq",
+        name: "HQ",
+        missionType: "Headquarters",
+        affiliation: [],
+        score: undefined,
+        skills: undefined,
+      }),
+      groups: [{ cards: [ship] }],
+      dilemmas: [],
+    };
+    state.headquartersIndex = 0;
+
+    // Spend all counters so we can advance past PlayAndDraw
+    state.counters = 0;
+    state.phase = "PlayAndDraw";
+
+    // PlayAndDraw → ExecuteOrders
+    engine.executeAction(action({ type: "NEXT_PHASE" }));
+    // ExecuteOrders → DiscardExcess
+    engine.executeAction(action({ type: "NEXT_PHASE" }));
+    // DiscardExcess → newTurn (triggers reset)
+    engine.executeAction(action({ type: "NEXT_PHASE" }));
+
+    expect(ship.rangeRemaining).toBe(8);
   });
 });
