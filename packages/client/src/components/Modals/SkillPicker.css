@@ -1,0 +1,116 @@
+/* SkillPicker - Modal for selecting a skill */
+
+.skill-picker__overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.skill-picker {
+  background: #1a1a2e;
+  border: 2px solid #9999ff;
+  border-radius: 12px;
+  width: 400px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.skill-picker__header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #9999ff;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.skill-picker__title {
+  color: #ff9900;
+  font-size: 16px;
+  margin: 0;
+  text-align: center;
+}
+
+.skill-picker__content {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.skill-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.skill-picker__skill {
+  background: rgba(153, 153, 255, 0.15);
+  border: 1px solid #666;
+  border-radius: 8px;
+  padding: 8px 4px;
+  color: #e0e0e0;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.skill-picker__skill:hover {
+  background: rgba(153, 153, 255, 0.3);
+  border-color: #9999ff;
+}
+
+.skill-picker__skill--selected {
+  background: rgba(255, 153, 0, 0.3);
+  border-color: #ff9900;
+  color: #ff9900;
+  font-weight: bold;
+}
+
+.skill-picker__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid #9999ff;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.skill-picker__btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.skill-picker__btn--cancel {
+  background: transparent;
+  border: 1px solid #666;
+  color: #999;
+}
+
+.skill-picker__btn--cancel:hover {
+  border-color: #ff6666;
+  color: #ff6666;
+}
+
+.skill-picker__btn--confirm {
+  background: rgba(76, 175, 80, 0.3);
+  border: 1px solid #4caf50;
+  color: #4caf50;
+}
+
+.skill-picker__btn--confirm:hover:not(:disabled) {
+  background: rgba(76, 175, 80, 0.5);
+}
+
+.skill-picker__btn--confirm:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

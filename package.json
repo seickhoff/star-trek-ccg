@@ -1,0 +1,26 @@
+{
+  "name": "star-trek-ccg",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:client": "npm run dev -w @stccg/client",
+    "dev:server": "npm run dev -w @stccg/server",
+    "build": "npm run build --workspaces --if-present",
+    "build:shared": "npm run build -w @stccg/shared",
+    "build:server": "npm run build -w @stccg/server",
+    "build:client": "npm run build -w @stccg/client",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "prettier --write \"packages/*/src/**/*.{ts,tsx,css}\"",
+    "format:check": "prettier --check \"packages/*/src/**/*.{ts,tsx,css}\"",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  }
+}

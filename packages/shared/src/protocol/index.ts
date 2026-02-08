@@ -1,0 +1,42 @@
+// Action types (client → server)
+export type {
+  BaseAction,
+  JoinGameAction,
+  SetupGameAction,
+  ResetGameAction,
+  DrawAction,
+  DeployAction,
+  PlayEventAction,
+  NextPhaseAction,
+  MoveShipAction,
+  BeamToShipAction,
+  BeamToPlanetAction,
+  BeamAllToShipAction,
+  BeamAllToPlanetAction,
+  AttemptMissionAction,
+  ExecuteOrderAbilityAction,
+  SelectPersonnelForDilemmaAction,
+  AdvanceDilemmaAction,
+  ClearDilemmaEncounterAction,
+  ExecuteInterlinkAbilityAction,
+  PlayInterruptAction,
+  DiscardCardAction,
+  GameAction,
+  ActionType,
+} from "./actions";
+
+// Event types (server → client)
+export type {
+  BaseEvent,
+  ConnectedEvent,
+  PlayerJoinedEvent,
+  PlayerDisconnectedEvent,
+  StateSyncEvent,
+  StateUpdateEvent,
+  ActionRejectedEvent,
+  GameStartedEvent,
+  GameOverEvent,
+  ErrorEvent,
+  GameEvent,
+  EventType,
+} from "./events";

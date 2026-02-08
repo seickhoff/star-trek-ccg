@@ -1,0 +1,95 @@
+/* GameBoard - Main game layout */
+
+.game-board {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding-top: 60px; /* Space for top bar */
+  padding-bottom: 160px; /* Space for hand */
+}
+
+/* Start screen */
+.game-board--start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.game-board__start-screen {
+  text-align: center;
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid #9999ff;
+  border-radius: 16px;
+  padding: 48px 64px;
+}
+
+.game-board__title {
+  color: #ff9900;
+  font-size: 36px;
+  margin-bottom: 8px;
+}
+
+.game-board__subtitle {
+  color: #9999ff;
+  font-size: 16px;
+  margin-bottom: 32px;
+}
+
+.game-board__start-btn {
+  background: linear-gradient(135deg, #4caf50, #3d8b40);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 48px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.game-board__start-btn:hover {
+  background: linear-gradient(135deg, #5cbf60, #4caf50);
+  transform: scale(1.05);
+}
+
+.game-board__start-btn:active {
+  transform: scale(1.02);
+}
+
+/* Mission columns */
+.game-board__missions {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .game-board__missions {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .game-board {
+    padding-top: 80px; /* More space for wrapped top bar */
+  }
+
+  .game-board__start-screen {
+    padding: 32px;
+  }
+
+  .game-board__title {
+    font-size: 28px;
+  }
+
+  .game-board__start-btn {
+    padding: 12px 32px;
+    font-size: 16px;
+  }
+}
