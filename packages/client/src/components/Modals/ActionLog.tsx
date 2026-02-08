@@ -1,21 +1,20 @@
 import { useEffect, useRef } from "react";
-import type { ActionLogEntry } from "@stccg/shared";
+import type { ActionLogEntry, CardRef } from "@stccg/shared";
 import { useDraggablePanel } from "../../hooks/useDraggablePanel";
 import "./ActionLog.css";
 
 interface ActionLogProps {
   entries: ActionLogEntry[];
-  isOpen: boolean;
-  onClose: () => void;
+  onCardClick?: (cardRef: CardRef) => void;
 }
 
 /**
- * Draggable action log panel for troubleshooting
- * Click anywhere (except close button) to drag; click without drag to minimize
+ * Draggable Captain's Log panel
+ * Click anywhere to drag; click without drag to minimize
  */
-export function ActionLog({ entries, isOpen, onClose }: ActionLogProps) {
+export function ActionLog({ entries, onCardClick }: ActionLogProps) {
   const { position, zIndex, minimized, containerRef, handleMouseDown } =
-    useDraggablePanel({ isOpen, initialPosition: { x: 20, y: 80 } });
+    useDraggablePanel({ isOpen: true, initialPosition: { x: 20, y: 80 } });
 
   const logContentRef = useRef<HTMLDivElement>(null);
 
@@ -68,8 +67,6 @@ export function ActionLog({ entries, isOpen, onClose }: ActionLogProps) {
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <div
       ref={containerRef}
@@ -82,34 +79,77 @@ export function ActionLog({ entries, isOpen, onClose }: ActionLogProps) {
       onMouseDown={(e) => handleMouseDown(e, ".action-log__header")}
     >
       <div className="action-log__header">
-        <span className="action-log__title">Action Log</span>
-        <button
-          className="action-log__close"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          ×
-        </button>
+        <span className="action-log__title">Captain's Log</span>
       </div>
       {!minimized && (
         <div className="action-log__content" ref={logContentRef}>
           {entries.length === 0 ? (
             <div className="action-log__empty">No actions yet</div>
           ) : (
-            [...entries].reverse().map((entry) => (
-              <div
-                key={entry.id}
-                className={`action-log__entry ${getTypeClass(entry.type)}`}
-              >
-                <span className="action-log__time">
-                  {formatTime(entry.timestamp)}
-                </span>
-                <span className="action-log__message">{entry.message}</span>
-                {entry.details && (
-                  <span className="action-log__details">{entry.details}</span>
-                )}
-              </div>
-            ))
+            [...entries].reverse().map((entry) => {
+              const isSingle = entry.cardRefs?.length === 1;
+              return (
+                <div
+                  key={entry.id}
+                  className={`action-log__entry ${getTypeClass(entry.type)}${isSingle ? " action-log__entry--has-card" : ""}`}
+                >
+                  <div className="action-log__text">
+                    <span className="action-log__time">
+                      {formatTime(entry.timestamp)}
+                    </span>
+                    <span className="action-log__message">{entry.message}</span>
+                    {entry.details && (
+                      <span className="action-log__details">
+                        {entry.details}
+                      </span>
+                    )}
+                    {!isSingle &&
+                      entry.cardRefs &&
+                      entry.cardRefs.length > 1 && (
+                        <span className="action-log__cards">
+                          {entry.cardRefs.map((ref, i) => (
+                            <button
+                              type="button"
+                              key={`${ref.cardId}-${i}`}
+                              className="action-log__card-btn"
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onCardClick?.(ref);
+                              }}
+                              title={ref.name}
+                            >
+                              <img
+                                src={ref.jpg}
+                                alt={ref.name}
+                                className="action-log__card-icon"
+                              />
+                            </button>
+                          ))}
+                        </span>
+                      )}
+                  </div>
+                  {isSingle && (
+                    <button
+                      type="button"
+                      className="action-log__card-btn"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCardClick?.(entry.cardRefs![0]!);
+                      }}
+                      title={entry.cardRefs![0]!.name}
+                    >
+                      <img
+                        src={entry.cardRefs![0]!.jpg}
+                        alt={entry.cardRefs![0]!.name}
+                        className="action-log__card-icon"
+                      />
+                    </button>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       )}

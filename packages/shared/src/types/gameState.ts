@@ -1,5 +1,6 @@
 import type {
   Card,
+  CardType,
   DilemmaCard,
   MissionCard,
   PersonnelCard,
@@ -101,6 +102,14 @@ export type ActionLogType =
   | "game_over"
   | "rejected";
 
+// A reference to a card mentioned in an action log entry (for thumbnail display)
+export interface CardRef {
+  cardId: string; // Database card ID (e.g., "EN03118")
+  name: string;
+  type: CardType;
+  jpg: string;
+}
+
 // Action log entry for tracking game events
 export interface ActionLogEntry {
   id: string;
@@ -108,6 +117,7 @@ export interface ActionLogEntry {
   type: ActionLogType;
   message: string;
   details?: string;
+  cardRefs?: CardRef[];
 }
 
 // Result of resolving a dilemma (for UI display)
@@ -121,6 +131,7 @@ export interface DilemmaResult {
   selectionPrompt?: string;
   returnsToPile?: boolean;
   message?: string;
+  failureReason?: string;
 }
 
 // ============================================================================

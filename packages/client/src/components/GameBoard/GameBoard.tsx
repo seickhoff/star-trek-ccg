@@ -1,5 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { Card, PersonnelCard, Skill, GameAction } from "@stccg/shared";
+import type {
+  Card,
+  CardRef,
+  PersonnelCard,
+  Skill,
+  GameAction,
+} from "@stccg/shared";
 import { isPersonnel } from "@stccg/shared";
 import {
   useClientGameStore,
@@ -59,9 +65,6 @@ export function GameBoard({ sendAction }: GameBoardProps) {
   const dilemmaResult = useClientGameStore(selectDilemmaResult);
   const playableInterrupts = useClientGameStore(selectPlayableInterrupts);
   const actionLog = useClientGameStore(selectActionLog);
-
-  // Action log visibility (always open when game is running)
-  const [showActionLog, setShowActionLog] = useState(true);
 
   // Add rejected actions to the action log
   const addLogEntry = useClientGameStore((s) => s.addLogEntry);
@@ -255,6 +258,24 @@ export function GameBoard({ sendAction }: GameBoardProps) {
     [phase, hand, sendAction]
   );
 
+  const handleLogCardClick = useCallback((ref: CardRef) => {
+    const base = {
+      id: ref.cardId,
+      name: ref.name,
+      type: ref.type,
+      unique: false,
+      jpg: ref.jpg,
+    };
+    // Add type-specific defaults so CardSlot doesn't crash
+    if (ref.type === "Personnel") {
+      setViewingCard({ ...base, status: "Unstopped" } as Card);
+    } else if (ref.type === "Ship") {
+      setViewingCard({ ...base, range: 0, rangeRemaining: 0 } as Card);
+    } else {
+      setViewingCard(base as Card);
+    }
+  }, []);
+
   const handleGroupClick = useCallback(
     (missionIndex: number, groupIndex: number) => {
       const mission = missions[missionIndex];
@@ -320,6 +341,13 @@ export function GameBoard({ sendAction }: GameBoardProps) {
       fromGroup: number,
       toGroup: number
     ) => {
+      // Check if this is the last unstopped personnel in the source group
+      const group = missions[missionIndex]?.groups[fromGroup];
+      const unstoppedCount =
+        group?.cards.filter(
+          (c) => isPersonnel(c) && (c as PersonnelCard).status === "Unstopped"
+        ).length ?? 0;
+
       sendAction({
         type: "BEAM_TO_SHIP",
         personnelId,
@@ -328,12 +356,24 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         toGroup,
       });
       play(GAME_SOUNDS.beam);
+
+      // If last unstopped personnel, switch to destination group
+      if (unstoppedCount <= 1) {
+        setOrdersModalState((s) => ({ ...s, groupIndex: toGroup }));
+      }
     },
-    [sendAction, play]
+    [sendAction, play, missions]
   );
 
   const handleBeamToPlanet = useCallback(
     (personnelId: string, missionIndex: number, fromGroup: number) => {
+      // Check if this is the last unstopped personnel in the source group
+      const group = missions[missionIndex]?.groups[fromGroup];
+      const unstoppedCount =
+        group?.cards.filter(
+          (c) => isPersonnel(c) && (c as PersonnelCard).status === "Unstopped"
+        ).length ?? 0;
+
       sendAction({
         type: "BEAM_TO_PLANET",
         personnelId,
@@ -341,8 +381,13 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         fromGroup,
       });
       play(GAME_SOUNDS.beam);
+
+      // If last unstopped personnel, switch to destination group
+      if (unstoppedCount <= 1) {
+        setOrdersModalState((s) => ({ ...s, groupIndex: 0 }));
+      }
     },
-    [sendAction, play]
+    [sendAction, play, missions]
   );
 
   const handleBeamAllToShip = useCallback(
@@ -354,6 +399,8 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         toGroup,
       });
       play(GAME_SOUNDS.beam);
+      // Switch to destination group
+      setOrdersModalState((s) => ({ ...s, groupIndex: toGroup }));
     },
     [sendAction, play]
   );
@@ -366,6 +413,8 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         fromGroup,
       });
       play(GAME_SOUNDS.beam);
+      // Switch to destination group (planet = group 0)
+      setOrdersModalState((s) => ({ ...s, groupIndex: 0 }));
     },
     [sendAction, play]
   );
@@ -456,11 +505,9 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         canAdvancePhase={canAdvancePhase}
         gameOver={gameOver}
         victory={victory}
-        showActionLog={showActionLog}
         onDraw={handleDraw}
         onAdvancePhase={() => sendAction({ type: "NEXT_PHASE" })}
         onNewGame={handleNewGame}
-        onToggleActionLog={() => setShowActionLog(!showActionLog)}
       />
 
       {/* Mission columns */}
@@ -547,12 +594,8 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         eventCard={discardPickerState.eventCard}
       />
 
-      {/* Action Log */}
-      <ActionLog
-        entries={actionLog}
-        isOpen={showActionLog}
-        onClose={() => setShowActionLog(false)}
-      />
+      {/* Captain's Log */}
+      <ActionLog entries={actionLog} onCardClick={handleLogCardClick} />
     </div>
   );
 }

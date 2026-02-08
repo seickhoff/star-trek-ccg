@@ -19,7 +19,8 @@ This is my solitaire version of the Star Trek Collectible Card Game, Second Edit
 - **React 18** - UI framework
 - **TypeScript 5** - Type safety
 - **Vite** - Build tool and dev server
-- **Zustand** - State management
+- **Node.js + WebSocket** - Game server
+- **Zustand** - Client state management
 - **Vitest** - Unit testing
 - **Prettier** - Code formatting
 - **ESLint** - Linting
@@ -30,17 +31,14 @@ This is my solitaire version of the Star Trek Collectible Card Game, Second Edit
 # Install dependencies
 npm install
 
-# Start development server
+# Start client + server
 npm run dev
 
 # Run tests
 npm run test
 
-# Build for production
+# Build all packages
 npm run build
-
-# Preview production build
-npm run preview
 
 # Lint code
 npm run lint
@@ -60,26 +58,22 @@ npm run format
 ## Notable Differences from the Actual CCG
 
 - One player (solitaire mode)
-- Equipment, events, and interrupts are not yet implemented
 - Uses a preconfigured Borg deck
-  - Missions: 5, Personnel: 22, Ships: 4, Dilemmas: 20 (space: 4, planet: 6, dual: 10)
+  - Missions: 5, Personnel: 22, Ships: 4, Events: 3, Interrupts: 3, Dilemmas: 20 (space: 4, planet: 6, dual: 10)
 - To win, complete the missions before the deck runs out
 
 ## Project Structure
 
 ```
-src/
-├── components/          # React components
-│   ├── GameBoard/       # Mission columns, card slots
-│   ├── Hand/            # Hand container and cards
-│   ├── Modals/          # Orders, Dilemma, CardViewer, GroupViewer
-│   └── UI/              # TopBar, AudioPlayer
-├── hooks/               # Custom React hooks
-├── logic/               # Pure game logic functions
-├── store/               # Zustand state management
-├── types/               # TypeScript type definitions
-├── data/                # Card database and deck configs
-└── utils/               # Utility functions
+packages/
+├── shared/              # Types, card database, game logic
+├── server/              # WebSocket game server
+└── client/              # Vite + React client
+    └── src/
+        ├── components/  # GameBoard, Hand, Modals, UI
+        ├── hooks/       # Custom React hooks
+        ├── store/       # Zustand state management
+        └── utils/       # Utility functions
 ```
 
 ## Resources

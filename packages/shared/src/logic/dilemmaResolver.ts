@@ -22,6 +22,7 @@ export interface DilemmaResolution {
   requiresSelection: boolean;
   selectablePersonnel: string[];
   selectionPrompt?: string;
+  failureReason?: string;
 }
 
 /**
@@ -229,6 +230,35 @@ function checkRequirements(
 }
 
 // =============================================================================
+// REQUIREMENT FORMATTING (for failure messages)
+// =============================================================================
+
+function formatSingleRequirement(req: DilemmaRequirement): string {
+  const parts: string[] = [];
+
+  if (req.skills && req.skills.length > 0) {
+    const skillCounts: Record<string, number> = {};
+    for (const skill of req.skills) {
+      skillCounts[skill] = (skillCounts[skill] ?? 0) + 1;
+    }
+    for (const [skill, count] of Object.entries(skillCounts)) {
+      parts.push(count > 1 ? `${count} ${skill}` : skill);
+    }
+  }
+
+  if (req.attribute && req.attributeThreshold !== undefined) {
+    parts.push(`${req.attribute}>${req.attributeThreshold}`);
+  }
+
+  const joined = parts.join(" + ");
+  return req.singlePersonnel ? `one personnel with ${joined}` : joined;
+}
+
+function formatRequirements(requirements: DilemmaRequirement[]): string {
+  return requirements.map(formatSingleRequirement).join(" or ");
+}
+
+// =============================================================================
 // TEMPLATE RESOLVERS
 // =============================================================================
 
@@ -318,6 +348,7 @@ function resolveUnlessCheck(
   }
 
   // Requirements not met — apply penalty
+  const failureReason = `Needed: ${formatRequirements(rule.requirements)}`;
   const penalty = rule.penalty;
   const unstopped = getUnstoppedPersonnel(cards);
 
@@ -330,6 +361,7 @@ function resolveUnlessCheck(
           overcome: true,
           returnsToPile: false,
           message: "No personnel to kill. Dilemma overcome.",
+          failureReason,
           requiresSelection: false,
           selectablePersonnel: [],
         };
@@ -341,6 +373,7 @@ function resolveUnlessCheck(
         overcome: true,
         returnsToPile: false,
         message: `Requirements not met. ${killed.name} was randomly killed.`,
+        failureReason,
         requiresSelection: false,
         selectablePersonnel: [],
       };
@@ -357,6 +390,7 @@ function resolveUnlessCheck(
           overcome: true,
           returnsToPile: false,
           message: `No personnel with ${penalty.skill} to kill. Dilemma overcome.`,
+          failureReason,
           requiresSelection: false,
           selectablePersonnel: [],
         };
@@ -368,6 +402,7 @@ function resolveUnlessCheck(
         overcome: true,
         returnsToPile: false,
         message: `Requirements not met. ${killed.name} with ${penalty.skill} was killed.`,
+        failureReason,
         requiresSelection: false,
         selectablePersonnel: [],
       };
@@ -380,6 +415,7 @@ function resolveUnlessCheck(
         overcome: false,
         returnsToPile: true,
         message: "Requirements not met. All personnel stopped.",
+        failureReason,
         requiresSelection: false,
         selectablePersonnel: [],
       };
@@ -398,6 +434,7 @@ function resolveUnlessCheck(
           overcome: false,
           returnsToPile: false,
           message: "Choose a personnel to stop.",
+          failureReason,
           requiresSelection: true,
           selectablePersonnel: matching.map((p) => p.uniqueId!),
         };
@@ -408,6 +445,7 @@ function resolveUnlessCheck(
         overcome: false,
         returnsToPile: true,
         message: "No matching personnel. All stopped and dilemma returns.",
+        failureReason,
         requiresSelection: false,
         selectablePersonnel: [],
       };
@@ -465,6 +503,7 @@ function resolveRandomThenCheck(
     overcome: false,
     returnsToPile: true,
     message: `Skills not met. ${target.name} killed, all others stopped.`,
+    failureReason: `Needed: ${formatRequirements(rule.requirements)}`,
     requiresSelection: false,
     selectablePersonnel: [],
   };

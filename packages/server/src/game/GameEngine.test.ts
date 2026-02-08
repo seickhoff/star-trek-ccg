@@ -168,6 +168,7 @@ function setupEncounterDirectly(
     selectionPrompt: result.selectionPrompt,
     returnsToPile: result.returnsToPile,
     message: result.message,
+    failureReason: result.failureReason,
   };
 }
 
@@ -249,6 +250,7 @@ describe("Rule 1: Draw count", () => {
     ];
 
     // 3 personnel, 1 non-overcome dilemma → drawCount still 3
+    // Plus the placed dilemma is re-encountered (added at no cost) → up to 4 total
     const { engine, missionIndex, groupIndex } = setupEngine({
       dilemmas,
       overcomeOnMission: [placedDilemma],
@@ -264,7 +266,80 @@ describe("Rule 1: Draw count", () => {
 
     const encounter = engine.getState().dilemmaEncounter;
     expect(encounter).not.toBeNull();
-    expect(encounter!.selectedDilemmas.length).toBeLessThanOrEqual(3);
+    // 3 from pool + 1 re-encountered = up to 4
+    expect(encounter!.selectedDilemmas.length).toBeLessThanOrEqual(4);
+  });
+
+  it("re-encounters non-overcome dilemmas placed on mission at no cost", () => {
+    const placedDilemma = mockDilemma({
+      id: "d-placed",
+      uniqueId: "d-placed",
+      name: "Limited Welcome",
+      overcome: false,
+      faceup: true,
+      cost: 2,
+    });
+
+    // Pool has one cheap dilemma
+    const dilemmas = [mockDilemma({ id: "d1", uniqueId: "d1", cost: 1 })];
+
+    const { engine, missionIndex, groupIndex } = setupEngine({
+      dilemmas,
+      overcomeOnMission: [placedDilemma],
+    });
+
+    engine.executeAction(
+      action({
+        type: "ATTEMPT_MISSION",
+        missionIndex,
+        groupIndex,
+      })
+    );
+
+    const encounter = engine.getState().dilemmaEncounter;
+    expect(encounter).not.toBeNull();
+
+    // The placed dilemma should be re-encountered alongside the pool dilemma
+    const ids = encounter!.selectedDilemmas.map((d) => d.uniqueId);
+    expect(ids).toContain("d-placed");
+
+    // It should have been removed from the mission's dilemma list
+    const mission = engine.getState().missions[missionIndex]!;
+    const stillOnMission = mission.dilemmas.find(
+      (d) => d.uniqueId === "d-placed"
+    );
+    expect(stillOnMission).toBeUndefined();
+  });
+
+  it("does not re-encounter overcome dilemmas placed on mission", () => {
+    const overcomeDilemma = mockDilemma({
+      id: "d-overcome",
+      uniqueId: "d-overcome",
+      overcome: true,
+      faceup: true,
+    });
+
+    const dilemmas = [mockDilemma({ id: "d1", uniqueId: "d1", cost: 1 })];
+
+    const { engine, missionIndex, groupIndex } = setupEngine({
+      dilemmas,
+      overcomeOnMission: [overcomeDilemma],
+    });
+
+    engine.executeAction(
+      action({
+        type: "ATTEMPT_MISSION",
+        missionIndex,
+        groupIndex,
+      })
+    );
+
+    const encounter = engine.getState().dilemmaEncounter;
+    expect(encounter).not.toBeNull();
+
+    // Overcome dilemma should NOT be in the encounter
+    const ids = encounter!.selectedDilemmas.map((d) => d.uniqueId);
+    expect(ids).not.toContain("d-overcome");
   });
 });
 
@@ -592,6 +667,222 @@ describe("Rule 9: Return-to-pile dilemma not placed on mission", () => {
     const deployment = engine.getState().missions[missionIndex]!;
     const placed = deployment.dilemmas.find((d) => d.uniqueId === "d-return");
     expect(placed).toBeUndefined();
+  });
+
+  it("returns returnsToPile dilemma to pool face-up", () => {
+    const { engine, missionIndex, groupIndex } = setupEngine({
+      personnel: [
+        mockPersonnel({ uniqueId: "p1", name: "P1", skills: [["Science"]] }),
+      ],
+    });
+
+    const dilemma = mockDilemma({
+      id: "d-return",
+      uniqueId: "d-return",
+      cost: 1,
+      rule: {
+        type: "chooseToStop",
+        skills: ["Engineer", "Programming"],
+        penalty: "stopAllReturnToPile",
+      },
+    });
+
+    setupEncounterDirectly(engine, missionIndex, groupIndex, [dilemma]);
+    engine.executeAction(action({ type: "ADVANCE_DILEMMA" }));
+
+    const pool = engine.getState().dilemmaPool;
+    const returned = pool.find((d) => d.uniqueId === "d-return");
+    expect(returned).toBeDefined();
+    expect(returned!.faceup).toBe(true);
+    expect(returned!.overcome).toBe(false);
+  });
+});
+
+// =============================================================================
+// Rule 6: Face-up reshuffle
+// =============================================================================
+
+describe("Rule 6: Face-up reshuffle", () => {
+  it("reshuffles when all applicable dilemmas are face-up", () => {
+    // All dilemmas face-up — no face-down cards to draw from
+    const dilemmas = [
+      mockDilemma({ id: "d1", uniqueId: "d1", cost: 1, faceup: true }),
+      mockDilemma({ id: "d2", uniqueId: "d2", cost: 1, faceup: true }),
+    ];
+
+    const { engine, missionIndex, groupIndex } = setupEngine({
+      dilemmas,
+      personnel: [
+        mockPersonnel({ uniqueId: "p1", name: "P1", skills: [["Science"]] }),
+      ],
+    });
+
+    engine.executeAction(
+      action({ type: "ATTEMPT_MISSION", missionIndex, groupIndex })
+    );
+
+    // After reshuffle, remaining cards in pool should all be face-down
+    const pool = engine.getState().dilemmaPool;
+    for (const d of pool) {
+      expect(d.faceup).toBe(false);
+    }
+
+    // Verify reshuffle was logged
+    const log = engine.getState().actionLog;
+    const reshuffleLog = log.find((e) => e.message.includes("reshuffled"));
+    expect(reshuffleLog).toBeDefined();
+    expect(reshuffleLog!.details).toContain("Face-up");
+  });
+
+  it("does not reshuffle when face-down cards are still available", () => {
+    // Mix of face-up and face-down — face-down still available
+    const dilemmas = [
+      mockDilemma({ id: "d1", uniqueId: "d1", cost: 1, faceup: false }),
+      mockDilemma({ id: "d2", uniqueId: "d2", cost: 1, faceup: true }),
+    ];
+
+    const { engine, missionIndex, groupIndex } = setupEngine({
+      dilemmas,
+      personnel: [
+        mockPersonnel({ uniqueId: "p1", name: "P1", skills: [["Science"]] }),
+      ],
+    });
+
+    engine.executeAction(
+      action({ type: "ATTEMPT_MISSION", missionIndex, groupIndex })
+    );
+
+    const log = engine.getState().actionLog;
+    const reshuffleLog = log.find((e) => e.message.includes("reshuffled"));
+    expect(reshuffleLog).toBeUndefined();
+  });
+
+  it("skips face-up cards during selection (only draws face-down)", () => {
+    // d1 is face-up (at bottom), d2 is face-down (drawable)
+    const dilemmas = [
+      mockDilemma({ id: "d1", uniqueId: "d1", cost: 1, faceup: true }),
+      mockDilemma({ id: "d2", uniqueId: "d2", cost: 1, faceup: false }),
+    ];
+
+    const { engine, missionIndex, groupIndex } = setupEngine({
+      dilemmas,
+      personnel: [
+        mockPersonnel({ uniqueId: "p1", name: "P1", skills: [["Science"]] }),
+      ],
+    });
+
+    engine.executeAction(
+      action({ type: "ATTEMPT_MISSION", missionIndex, groupIndex })
+    );
+
+    // d1 (face-up) should still be in the pool, untouched
+    const pool = engine.getState().dilemmaPool;
+    const d1 = pool.find((d) => d.uniqueId === "d1");
+    expect(d1).toBeDefined();
+    expect(d1!.faceup).toBe(true);
+  });
+});
+
+// =============================================================================
+// Failure reason in action log
+// =============================================================================
+
+describe("Failure reason in action log", () => {
+  it("includes needed requirements in dilemma_result details for unlessCheck", () => {
+    const { engine, missionIndex, groupIndex } = setupEngine({
+      personnel: [
+        mockPersonnel({ uniqueId: "p1", name: "P1", skills: [["Science"]] }),
+        mockPersonnel({ uniqueId: "p2", name: "P2", skills: [["Medical"]] }),
+      ],
+    });
+
+    const dilemma = mockDilemma({
+      id: "d1",
+      uniqueId: "d1",
+      cost: 1,
+      rule: {
+        type: "unlessCheck",
+        requirements: [
+          { skills: ["Diplomacy", "Medical"] },
+          { skills: ["Security", "Security"] },
+        ],
+        penalty: { type: "randomKill" },
+      },
+    });
+
+    setupEncounterDirectly(engine, missionIndex, groupIndex, [dilemma]);
+    engine.executeAction(action({ type: "ADVANCE_DILEMMA" }));
+
+    const log = engine.getState().actionLog;
+    const resultLog = log.find(
+      (e) => e.type === "dilemma_result" && e.details?.includes("Needed:")
+    );
+    expect(resultLog).toBeDefined();
+    expect(resultLog!.details).toContain("Diplomacy + Medical");
+    expect(resultLog!.details).toContain("2 Security");
+  });
+
+  it("includes needed requirements for randomThenCheck", () => {
+    const { engine, missionIndex, groupIndex } = setupEngine({
+      personnel: [
+        mockPersonnel({ uniqueId: "p1", name: "P1", skills: [["Science"]] }),
+        mockPersonnel({ uniqueId: "p2", name: "P2", skills: [["Engineer"]] }),
+      ],
+    });
+
+    const dilemma = mockDilemma({
+      id: "d1",
+      uniqueId: "d1",
+      cost: 1,
+      rule: {
+        type: "randomThenCheck",
+        requirements: [
+          { skills: ["Diplomacy", "Medical"] },
+          { skills: ["Security", "Security"] },
+        ],
+      },
+    });
+
+    setupEncounterDirectly(engine, missionIndex, groupIndex, [dilemma]);
+    engine.executeAction(action({ type: "ADVANCE_DILEMMA" }));
+
+    const log = engine.getState().actionLog;
+    const resultLog = log.find(
+      (e) => e.type === "dilemma_result" && e.details?.includes("Needed:")
+    );
+    expect(resultLog).toBeDefined();
+  });
+
+  it("does not include failure reason when dilemma is overcome", () => {
+    const { engine, missionIndex, groupIndex } = setupEngine({
+      personnel: [
+        mockPersonnel({
+          uniqueId: "p1",
+          name: "P1",
+          skills: [["Diplomacy"]],
+        }),
+        mockPersonnel({ uniqueId: "p2", name: "P2", skills: [["Medical"]] }),
+      ],
+    });
+
+    const dilemma = mockDilemma({
+      id: "d1",
+      uniqueId: "d1",
+      cost: 1,
+      rule: {
+        type: "unlessCheck",
+        requirements: [{ skills: ["Diplomacy", "Medical"] }],
+        penalty: { type: "randomKill" },
+      },
+    });
+
+    setupEncounterDirectly(engine, missionIndex, groupIndex, [dilemma]);
+    engine.executeAction(action({ type: "ADVANCE_DILEMMA" }));
+
+    const log = engine.getState().actionLog;
+    const resultLog = log.find((e) => e.type === "dilemma_result");
+    expect(resultLog).toBeDefined();
+    expect(resultLog!.details).not.toContain("Needed:");
   });
 });
 

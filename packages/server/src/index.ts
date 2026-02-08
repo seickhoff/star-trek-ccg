@@ -7,7 +7,7 @@ configureShuffle(cryptoShuffle);
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 
-console.log("Starting Star Trek CCG WebSocket Server...");
+console.log("Starting Star Trek CCG 2E WebSocket Server...");
 
 const server = new GameServer({ port: PORT });
 

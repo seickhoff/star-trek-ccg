@@ -14,6 +14,7 @@ import type {
   RangeBoost,
   ActionLogEntry,
   ActionLogType,
+  CardRef,
   SerializableGameState,
   DilemmaResult,
   Ability,
@@ -86,7 +87,8 @@ let logIdCounter = 0;
 function createLogEntry(
   type: ActionLogType,
   message: string,
-  details?: string
+  details?: string,
+  cardRefs?: CardRef[]
 ): ActionLogEntry {
   return {
     id: `log-${++logIdCounter}`,
@@ -94,7 +96,13 @@ function createLogEntry(
     type,
     message,
     details,
+    cardRefs,
   };
+}
+
+/** Build a CardRef from any card (for action log thumbnails) */
+function cardRef(card: Card): CardRef {
+  return { cardId: card.id, name: card.name, type: card.type, jpg: card.jpg };
 }
 
 /**
@@ -423,7 +431,8 @@ export class GameEngine {
       createLogEntry(
         "game_start",
         "Game started",
-        `Drew ${initialHand.length} cards`
+        `Drew ${initialHand.length} cards`,
+        initialHand.map(cardRef)
       )
     );
 
@@ -543,7 +552,8 @@ export class GameEngine {
       createLogEntry(
         "draw",
         `Drew ${count} card(s)`,
-        `${this.state.deck.length} remaining`
+        `${this.state.deck.length} remaining`,
+        drawn.map(cardRef)
       )
     );
 
@@ -634,7 +644,9 @@ export class GameEngine {
     }
 
     this.state.actionLog.push(
-      createLogEntry("deploy", `Deployed ${card.name}`, `Cost: ${cost}`)
+      createLogEntry("deploy", `Deployed ${card.name}`, `Cost: ${cost}`, [
+        cardRef(card),
+      ])
     );
 
     return { success: true };
@@ -663,7 +675,9 @@ export class GameEngine {
     this.state.discard.push(card);
 
     this.state.actionLog.push(
-      createLogEntry("discard", `Discarded ${card.name}`)
+      createLogEntry("discard", `Discarded ${card.name}`, undefined, [
+        cardRef(card),
+      ])
     );
 
     return { success: true };
@@ -746,7 +760,8 @@ export class GameEngine {
       createLogEntry(
         "move_ship",
         `Moved ${ship.name}`,
-        `To ${destDeployment.mission.name}`
+        `To ${destDeployment.mission.name}`,
+        [cardRef(ship)]
       )
     );
 
@@ -795,7 +810,9 @@ export class GameEngine {
     targetGroup.cards.push(personnel);
 
     this.state.actionLog.push(
-      createLogEntry("beam", `Beamed ${personnel.name}`)
+      createLogEntry("beam", `Beamed ${personnel.name}`, undefined, [
+        cardRef(personnel),
+      ])
     );
 
     return { success: true };
@@ -856,7 +873,12 @@ export class GameEngine {
     targetGroup.cards.push(...personnelToMove);
 
     this.state.actionLog.push(
-      createLogEntry("beam", `Beamed ${personnelToMove.length} personnel`)
+      createLogEntry(
+        "beam",
+        `Beamed ${personnelToMove.length} personnel`,
+        undefined,
+        personnelToMove.map(cardRef)
+      )
     );
 
     return { success: true };
@@ -947,25 +969,59 @@ export class GameEngine {
 
     // Filter applicable dilemmas by location
     const missionType = deployment.mission.missionType;
-    const applicableDilemmas = this.state.dilemmaPool.filter((d) => {
+    const filterByLocation = (d: DilemmaCard) => {
       if (d.where === "Dual") return true;
       if (missionType === "Planet" && d.where === "Planet") return true;
       if (missionType === "Space" && d.where === "Space") return true;
       return false;
-    });
+    };
+
+    // Rule 6: Face-up reshuffle
+    // Face-up cards are at the bottom of the pile. Only draw from face-down
+    // cards. If no face-down applicable cards remain but face-up ones do,
+    // we've "reached" the face-up cards — shuffle entire pile face-down.
+    const faceDownApplicable = this.state.dilemmaPool.filter(
+      (d) => !d.faceup && filterByLocation(d)
+    );
+    const faceUpApplicable = this.state.dilemmaPool.filter(
+      (d) => d.faceup && filterByLocation(d)
+    );
+
+    if (faceDownApplicable.length === 0 && faceUpApplicable.length > 0) {
+      for (const d of this.state.dilemmaPool) {
+        d.faceup = false;
+      }
+      this.state.dilemmaPool = shuffle(this.state.dilemmaPool);
+      this.state.actionLog.push(
+        createLogEntry(
+          "dilemma_draw",
+          "Dilemma pile reshuffled",
+          "Face-up cards reached"
+        )
+      );
+    }
+
+    const applicableDilemmas = this.state.dilemmaPool.filter(
+      (d) => !d.faceup && filterByLocation(d)
+    );
 
     // Select dilemmas respecting cost budget (Rule 6.2)
+    // Per rulebook: "Your opponent cannot choose more than one copy of the
+    // same dilemma" — track selected base IDs to enforce this.
     const costBudget = unstoppedPersonnel.length - overcomeCount;
     const selectedDilemmas: DilemmaCard[] = [];
+    const selectedBaseIds = new Set<string>();
     let costSpent = 0;
 
-    // Sort by cost (descending) for solitaire auto-selection
     const sortedDilemmas = shuffle(applicableDilemmas);
 
     for (const dilemma of sortedDilemmas) {
       if (selectedDilemmas.length >= drawCount) break;
+      // Skip if a copy of this dilemma was already selected
+      if (selectedBaseIds.has(dilemma.id)) continue;
       if (costSpent + dilemma.cost <= costBudget) {
         selectedDilemmas.push(dilemma);
+        selectedBaseIds.add(dilemma.id);
         costSpent += dilemma.cost;
         // Remove from pool
         const poolIndex = this.state.dilemmaPool.findIndex(
@@ -975,6 +1031,30 @@ export class GameEngine {
           this.state.dilemmaPool.splice(poolIndex, 1);
         }
       }
+    }
+
+    // Re-encounter: non-overcome dilemmas on the mission (e.g. Limited Welcome)
+    // are automatically added to the encounter at no cost.
+    const reEncounterDilemmas = deployment.dilemmas.filter(
+      (d) => !d.overcome && filterByLocation(d)
+    );
+    for (const dilemma of reEncounterDilemmas) {
+      selectedDilemmas.push(dilemma);
+      // Remove from mission so it doesn't stack up if overcome this time
+      const idx = deployment.dilemmas.indexOf(dilemma);
+      if (idx !== -1) {
+        deployment.dilemmas.splice(idx, 1);
+      }
+    }
+    if (reEncounterDilemmas.length > 0) {
+      this.state.actionLog.push(
+        createLogEntry(
+          "dilemma_draw",
+          `${reEncounterDilemmas.length} dilemma(s) re-encountered from mission`,
+          reEncounterDilemmas.map((d) => d.name).join(", "),
+          reEncounterDilemmas.map((d) => cardRef(d))
+        )
+      );
     }
 
     // Set up encounter
@@ -992,7 +1072,8 @@ export class GameEngine {
       createLogEntry(
         "mission_attempt",
         `Attempting ${deployment.mission.name}`,
-        `${selectedDilemmas.length} dilemmas`
+        `${selectedDilemmas.length} dilemmas`,
+        [cardRef(deployment.mission)]
       )
     );
 
@@ -1102,7 +1183,9 @@ export class GameEngine {
         this.state.actionLog.push(
           createLogEntry(
             "dilemma_result",
-            `${nextDilemma.name} auto-overcome (duplicate)`
+            `${nextDilemma.name} auto-overcome (duplicate)`,
+            "Placed beneath mission",
+            [cardRef(nextDilemma)]
           )
         );
         // Clear pending result so recursive call doesn't re-apply old effects
@@ -1167,13 +1250,15 @@ export class GameEngine {
       selectionPrompt: result.selectionPrompt,
       returnsToPile: result.returnsToPile,
       message: result.message,
+      failureReason: result.failureReason,
     };
 
     this.state.actionLog.push(
       createLogEntry(
         "dilemma_draw",
         `Facing ${dilemma.name}`,
-        `Cost: ${dilemma.cost}`
+        `Cost: ${dilemma.cost}`,
+        [cardRef(dilemma)]
       )
     );
   }
@@ -1208,15 +1293,19 @@ export class GameEngine {
       dilemma.faceup = true;
       dilemma.overcome = true;
       deployment.dilemmas.push(dilemma);
-    } else if (!result.returnsToPile) {
+    } else if (result.returnsToPile) {
+      // Returns to dilemma pile face-up at the bottom
+      dilemma.faceup = true;
+      dilemma.overcome = false;
+      this.state.dilemmaPool.push(dilemma);
+    } else {
       // Stays on mission (e.g. Limited Welcome)
       dilemma.faceup = true;
       dilemma.overcome = false;
       deployment.dilemmas.push(dilemma);
     }
 
-    // Log final result
-    const detail = (result.message || "").replace(/\.$/, "");
+    // Log final result with placement and personnel details
     const placedOnMission = !result.overcome && !result.returnsToPile;
     const logMessage = result.overcome
       ? `${dilemma.name} overcome`
@@ -1224,8 +1313,53 @@ export class GameEngine {
         ? `${dilemma.name} placed on mission`
         : `${dilemma.name} not overcome`;
 
+    const detailParts: string[] = [];
+
+    // Placement info
+    if (result.overcome) {
+      detailParts.push("Placed beneath mission");
+    } else if (result.returnsToPile) {
+      detailParts.push("Returned to dilemma pile (face up)");
+    } else {
+      detailParts.push("Stays on mission");
+    }
+
+    // Failure reason (what was needed)
+    if (result.failureReason) {
+      detailParts.push(result.failureReason);
+    }
+
+    // Personnel effects
+    const personnelByUniqueId = new Map(
+      group.cards.filter(isPersonnel).map((c) => [c.uniqueId!, c.name])
+    );
+    if (result.killedPersonnel.length > 0) {
+      const names = result.killedPersonnel.map(
+        (uid) => personnelByUniqueId.get(uid) ?? uid
+      );
+      detailParts.push(`Killed: ${names.join(", ")}`);
+    }
+    if (result.stoppedPersonnel.length > 0) {
+      const names = result.stoppedPersonnel.map(
+        (uid) => personnelByUniqueId.get(uid) ?? uid
+      );
+      detailParts.push(`Stopped: ${names.join(", ")}`);
+    }
+
+    // Build card refs: dilemma + affected personnel
+    const refs: CardRef[] = [cardRef(dilemma)];
+    for (const card of group.cards) {
+      if (
+        isPersonnel(card) &&
+        (result.killedPersonnel.includes(card.uniqueId!) ||
+          result.stoppedPersonnel.includes(card.uniqueId!))
+      ) {
+        refs.push(cardRef(card));
+      }
+    }
+
     this.state.actionLog.push(
-      createLogEntry("dilemma_result", logMessage, detail || undefined)
+      createLogEntry("dilemma_result", logMessage, detailParts.join(". "), refs)
     );
   }
 
@@ -1263,7 +1397,8 @@ export class GameEngine {
       createLogEntry(
         "mission_complete",
         `Completed ${deployment.mission.name}`,
-        `+${points} points`
+        `+${points} points`,
+        [cardRef(deployment.mission)]
       )
     );
 
@@ -1313,7 +1448,8 @@ export class GameEngine {
         createLogEntry(
           "dilemma_result",
           `${remaining.name} overcome (no personnel remaining)`,
-          "Placed beneath mission"
+          "Placed beneath mission",
+          [cardRef(remaining)]
         )
       );
     }
@@ -1326,7 +1462,12 @@ export class GameEngine {
     }
 
     this.state.actionLog.push(
-      createLogEntry("mission_fail", `Failed ${deployment.mission.name}`)
+      createLogEntry(
+        "mission_fail",
+        `Failed ${deployment.mission.name}`,
+        undefined,
+        [cardRef(deployment.mission)]
+      )
     );
 
     this.state.dilemmaEncounter = null;
@@ -1612,7 +1753,8 @@ export class GameEngine {
       createLogEntry(
         "order_ability",
         `${sourceCard.name}: Order ability`,
-        effectDescriptions.join(", ") || "Activated"
+        effectDescriptions.join(", ") || "Activated",
+        [cardRef(sourceCard)]
       )
     );
 
@@ -1731,7 +1873,8 @@ export class GameEngine {
           createLogEntry(
             "interlink",
             `${sourceCard.name}: Interlink`,
-            `Granted ${grantedSkill} skill`
+            `Granted ${grantedSkill} skill`,
+            [cardRef(sourceCard)]
           )
         );
       }
@@ -1883,7 +2026,8 @@ export class GameEngine {
       createLogEntry(
         "interrupt",
         `Played ${interruptCard.name}`,
-        effectDesc || "Interrupt effect applied"
+        effectDesc || "Interrupt effect applied",
+        [cardRef(interruptCard)]
       )
     );
 
@@ -1936,7 +2080,8 @@ export class GameEngine {
         createLogEntry(
           "event",
           `Played ${eventCard.name}`,
-          `Cost ${eventCard.deploy}`
+          `Cost ${eventCard.deploy}`,
+          [cardRef(eventCard)]
         )
       );
       return { success: true };
@@ -2013,7 +2158,8 @@ export class GameEngine {
           "event",
           `Played ${eventCard.name}`,
           effectDescriptions.join(", ") ||
-            `Cost ${eventCard.deploy}, removed from game`
+            `Cost ${eventCard.deploy}, removed from game`,
+          [cardRef(eventCard)]
         )
       );
     } else {
@@ -2023,7 +2169,8 @@ export class GameEngine {
         createLogEntry(
           "event",
           `Played ${eventCard.name}`,
-          effectDescriptions.join(", ") || `Cost ${eventCard.deploy}`
+          effectDescriptions.join(", ") || `Cost ${eventCard.deploy}`,
+          [cardRef(eventCard)]
         )
       );
     }

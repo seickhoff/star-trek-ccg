@@ -66,6 +66,7 @@ export type {
   RangeBoost,
   GroupStats,
   ActionLogType,
+  CardRef,
   ActionLogEntry,
   DilemmaResult,
   SerializableGameState,

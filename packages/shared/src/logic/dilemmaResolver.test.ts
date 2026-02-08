@@ -720,3 +720,116 @@ describe("resolveSelectionStop", () => {
     expect(result.requiresSelection).toBe(false);
   });
 });
+
+// =============================================================================
+// failureReason formatting
+// =============================================================================
+
+describe("failureReason formatting", () => {
+  it("formats simple skill requirements with OR", () => {
+    const cards: Card[] = [
+      mockPersonnel({ uniqueId: "p1", skills: [["Science"]] }),
+    ];
+    const dilemma = mockDilemma({
+      rule: {
+        type: "unlessCheck",
+        requirements: [
+          { skills: ["Diplomacy", "Medical"] },
+          { skills: ["Security", "Security"] },
+        ],
+        penalty: { type: "randomKill" },
+      },
+    });
+
+    const result = resolveDilemma(dilemma, cards);
+    expect(result.failureReason).toBe(
+      "Needed: Diplomacy + Medical or 2 Security"
+    );
+  });
+
+  it("formats skill + attribute requirements", () => {
+    const cards: Card[] = [
+      mockPersonnel({ uniqueId: "p1", skills: [["Science"]], cunning: 5 }),
+    ];
+    const dilemma = mockDilemma({
+      rule: {
+        type: "unlessCheck",
+        requirements: [
+          {
+            skills: ["Biology", "Physics"],
+            attribute: "Cunning",
+            attributeThreshold: 32,
+          },
+        ],
+        penalty: { type: "randomKill" },
+      },
+    });
+
+    const result = resolveDilemma(dilemma, cards);
+    expect(result.failureReason).toBe("Needed: Biology + Physics + Cunning>32");
+  });
+
+  it("formats singlePersonnel requirements", () => {
+    const cards: Card[] = [
+      mockPersonnel({ uniqueId: "p1", skills: [["Astrometrics"]] }),
+      mockPersonnel({ uniqueId: "p2", skills: [["Astrometrics"]] }),
+    ];
+    const dilemma = mockDilemma({
+      rule: {
+        type: "unlessCheck",
+        requirements: [
+          { skills: ["Astrometrics", "Astrometrics"], singlePersonnel: true },
+          { skills: ["Navigation", "Navigation"], singlePersonnel: true },
+        ],
+        penalty: {
+          type: "chooseMatchingToStopElseStopAll",
+          skills: ["Astrometrics", "Navigation"],
+        },
+      },
+    });
+
+    const result = resolveDilemma(dilemma, cards);
+    expect(result.failureReason).toBe(
+      "Needed: one personnel with 2 Astrometrics or one personnel with 2 Navigation"
+    );
+  });
+
+  it("does not set failureReason when requirements pass", () => {
+    const cards: Card[] = [
+      mockPersonnel({ uniqueId: "p1", skills: [["Diplomacy"]] }),
+      mockPersonnel({ uniqueId: "p2", skills: [["Medical"]] }),
+    ];
+    const dilemma = mockDilemma({
+      rule: {
+        type: "unlessCheck",
+        requirements: [{ skills: ["Diplomacy", "Medical"] }],
+        penalty: { type: "randomKill" },
+      },
+    });
+
+    const result = resolveDilemma(dilemma, cards);
+    expect(result.failureReason).toBeUndefined();
+  });
+
+  it("sets failureReason for randomThenCheck failures", () => {
+    const cards: Card[] = [
+      mockPersonnel({ uniqueId: "p1", skills: [["Science"]] }),
+      mockPersonnel({ uniqueId: "p2", skills: [["Engineer"]] }),
+    ];
+    const dilemma = mockDilemma({
+      rule: {
+        type: "randomThenCheck",
+        requirements: [
+          { skills: ["Diplomacy", "Medical"] },
+          { skills: ["Security", "Security"] },
+        ],
+      },
+    });
+
+    const result = resolveDilemma(dilemma, cards);
+    expect(result.failureReason).toBeDefined();
+    expect(result.failureReason).toContain("Needed:");
+    expect(result.failureReason).toContain("Diplomacy + Medical");
+    expect(result.failureReason).toContain("2 Security");
+  });
+});
