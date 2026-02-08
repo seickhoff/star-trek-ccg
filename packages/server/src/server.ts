@@ -1,5 +1,5 @@
+import { createServer, type IncomingMessage, type ServerResponse } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import type { IncomingMessage } from "http";
 import type { GameAction } from "@stccg/shared";
 import { GameRoom } from "./game/GameRoom.js";
 
@@ -22,17 +22,26 @@ interface ClientInfo {
  * Game WebSocket server
  */
 export class GameServer {
+  private httpServer: ReturnType<typeof createServer>;
   private wss: WebSocketServer;
   private rooms: Map<string, GameRoom> = new Map();
   private clientInfo: WeakMap<WebSocket, ClientInfo> = new WeakMap();
 
   constructor(config: ServerConfig) {
-    this.wss = new WebSocketServer({ port: config.port });
+    this.httpServer = createServer(this.handleHttpRequest);
+    this.wss = new WebSocketServer({ server: this.httpServer });
     this.setupServer();
+    this.httpServer.listen(config.port);
+  }
+
+  private handleHttpRequest(_req: IncomingMessage, res: ServerResponse): void {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("OK");
   }
 
   private setupServer(): void {
-    console.log(`WebSocket server listening on port ${this.wss.options.port}`);
+    console.log(`WebSocket server listening on port ${this.httpServer.address() || "starting..."}`);
+
 
     this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
       this.handleConnection(ws, req);
@@ -173,5 +182,6 @@ export class GameServer {
    */
   close(): void {
     this.wss.close();
+    this.httpServer.close();
   }
 }
