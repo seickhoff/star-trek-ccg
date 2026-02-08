@@ -1,0 +1,6 @@
+{
+  "framework": "vite",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build -w @stccg/shared && npm run build -w @stccg/client",
+  "outputDirectory": "packages/client/dist"
+}
