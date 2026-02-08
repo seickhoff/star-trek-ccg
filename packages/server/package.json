@@ -1,0 +1,29 @@
+{
+  "name": "@stccg/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist",
+    "lint": "eslint src",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@stccg/shared": "*",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/ws": "^8.5.10",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^9.1.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.54.0",
+    "vitest": "^2.1.8"
+  }
+}

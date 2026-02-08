@@ -1,0 +1,289 @@
+/* MissionColumn - Single mission with deployed cards */
+
+.mission-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 140px;
+}
+
+/* Mission card area (red background like original) */
+.mission-column__mission {
+  background: linear-gradient(
+    135deg,
+    rgba(80, 0, 0, 0.7) 0%,
+    rgba(50, 0, 0, 0.8) 100%
+  );
+  border: 1px solid #500000;
+  border-radius: 8px 8px 0 0;
+  padding: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mission-column__mission:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(100, 0, 0, 0.7) 0%,
+    rgba(70, 0, 0, 0.8) 100%
+  );
+}
+
+.mission-column--headquarters .mission-column__mission {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 80, 0, 0.7) 0%,
+    rgba(0, 50, 0, 0.8) 100%
+  );
+  border-color: #005000;
+}
+
+.mission-column--headquarters .mission-column__mission:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 100, 0, 0.7) 0%,
+    rgba(0, 70, 0, 0.8) 100%
+  );
+}
+
+.mission-column--completed .mission-column__mission {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 60, 80, 0.7) 0%,
+    rgba(0, 40, 60, 0.8) 100%
+  );
+  border-color: #006080;
+}
+
+.mission-column__mission-info {
+  margin-top: 6px;
+  text-align: center;
+}
+
+.mission-column__mission-name {
+  display: block;
+  font-size: 10px;
+  color: #ff9900;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mission-column__mission-score {
+  display: block;
+  font-size: 9px;
+  color: #9999ff;
+  margin-top: 2px;
+}
+
+.mission-column__completed-badge {
+  display: inline-block;
+  color: #4caf50;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+/* Overcome dilemma badge */
+.mission-column__dilemma-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 8px;
+  background: rgba(153, 51, 51, 0.4);
+  border: 1px solid #cc6566;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mission-column__dilemma-badge:hover {
+  background: rgba(204, 101, 102, 0.5);
+}
+
+.mission-column__dilemma-badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  background: #cc6566;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 50%;
+}
+
+.mission-column__dilemma-badge-count--placed {
+  background: #cc9933;
+}
+
+.mission-column__dilemma-badge-label {
+  font-size: 9px;
+  color: #cc9999;
+}
+
+/* Personnel deployment area (blue background like original) */
+.mission-column__personnel {
+  flex: 1;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 80, 0.6) 0%,
+    rgba(0, 0, 50, 0.7) 100%
+  );
+  border: 1px solid #000050;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 8px;
+  min-height: 150px;
+}
+
+/* Card group */
+.mission-column__group {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 6px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mission-column__group:last-child {
+  margin-bottom: 0;
+}
+
+.mission-column__group:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.mission-column__group--ship {
+  border-left: 2px solid #ff9900;
+}
+
+.mission-column__group--planet {
+  border-left: 2px solid #9999ff;
+}
+
+.mission-column__group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.mission-column__group-label {
+  font-size: 10px;
+  color: #9999ff;
+  font-weight: bold;
+}
+
+.mission-column__ship-name {
+  font-size: 10px;
+  color: #ff9900;
+  font-weight: bold;
+}
+
+.mission-column__ship-range {
+  color: #b0b0b0;
+  font-weight: normal;
+  font-size: 9px;
+  margin-left: 4px;
+}
+
+.mission-column__group-count {
+  font-size: 9px;
+  color: #b0b0b0;
+}
+
+/* Cards in group */
+.mission-column__cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+.mission-column__empty,
+.mission-column__empty-personnel {
+  color: #666;
+  font-size: 10px;
+  text-align: center;
+  padding: 8px;
+}
+
+/* Stats summary */
+.mission-column__stats {
+  margin-top: 6px;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  font-size: 9px;
+}
+
+.mission-column__stats-attributes {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.mission-column__stat {
+  font-weight: bold;
+}
+
+.mission-column__stat--integrity {
+  color: #66ccff;
+}
+
+.mission-column__stat--cunning {
+  color: #ffcc66;
+}
+
+.mission-column__stat--strength {
+  color: #ff6666;
+}
+
+.mission-column__stats-skills {
+  color: #b0b0b0;
+  text-align: center;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+/* Attempt mission button */
+.mission-column__attempt-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: #ca98cb;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mission-column__attempt-btn:hover {
+  background: #d9a8da;
+}
+
+.mission-column__attempt-btn:active {
+  background: #b888b9;
+}
+
+.mission-column__attempt-btn--disabled,
+.mission-column__attempt-btn:disabled {
+  background: #666;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.mission-column__attempt-btn--disabled:hover,
+.mission-column__attempt-btn:disabled:hover {
+  background: #666;
+}

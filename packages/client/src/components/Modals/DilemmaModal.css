@@ -1,0 +1,486 @@
+/* DilemmaModal - Dilemma encounter UI (draggable panel) */
+
+.dilemma-modal {
+  position: fixed;
+  /* z-index managed dynamically via getNextZIndex() */
+  width: 500px;
+  min-height: 300px;
+  background-color: #1a0a0a;
+  background-image: linear-gradient(
+    135deg,
+    #2a1010 0%,
+    #1a0a0a 50%,
+    #2a1010 100%
+  );
+  border: 6px solid #cc6566;
+  border-radius: 8px;
+  color: #e0e0e0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  cursor: grab;
+}
+
+.dilemma-modal:active {
+  cursor: grabbing;
+}
+
+.dilemma-modal--minimized {
+  min-height: unset;
+}
+
+.dilemma-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border-bottom: 1px solid #cc6566;
+}
+
+.dilemma-modal--minimized .dilemma-modal__header {
+  border-bottom: none;
+}
+
+.dilemma-modal__title {
+  color: #ff9900;
+  font-size: 16px;
+  margin: 0;
+}
+
+.dilemma-modal__close {
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  font-size: 24px;
+  cursor: pointer !important;
+  padding: 0 4px;
+}
+
+.dilemma-modal__close:hover {
+  color: #ff6666;
+}
+
+.dilemma-modal__content {
+  padding: 12px;
+}
+
+/* Progress */
+.dilemma-modal__progress {
+  text-align: center;
+  color: #cc6566;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+/* Real-time stats panel */
+.dilemma-modal__stats-panel {
+  background: rgba(0, 50, 0, 0.4);
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.dilemma-modal__stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.dilemma-modal__stats-title {
+  color: #4caf50;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.dilemma-modal__stats-count {
+  color: #88cc88;
+  font-size: 11px;
+}
+
+.dilemma-modal__stats-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.dilemma-modal__stat {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.dilemma-modal__stat--integrity {
+  color: #66ccff;
+}
+
+.dilemma-modal__stat--cunning {
+  color: #ffcc66;
+}
+
+.dilemma-modal__stat--strength {
+  color: #ff6666;
+}
+
+.dilemma-modal__skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dilemma-modal__skill {
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid #4caf50;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 10px;
+  color: #e0e0e0;
+}
+
+.dilemma-modal__skill-count {
+  color: #ff9900;
+  margin-left: 2px;
+}
+
+/* Current dilemma card */
+.dilemma-modal__card {
+  display: flex;
+  gap: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid #cc6566;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.dilemma-modal__card-info {
+  flex: 1;
+}
+
+.dilemma-modal__card-name {
+  color: #ff9900;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.dilemma-modal__card-type {
+  color: #cc6566;
+  font-size: 11px;
+  margin-bottom: 12px;
+}
+
+.dilemma-modal__requirements {
+  margin-top: 8px;
+}
+
+.dilemma-modal__req-label {
+  color: #9999ff;
+  font-size: 11px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.dilemma-modal__req-skills {
+  color: #e0e0e0;
+  font-size: 12px;
+}
+
+/* Result message */
+.dilemma-modal__message {
+  background: rgba(204, 101, 102, 0.2);
+  border: 1px solid #cc6566;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #e0e0e0;
+}
+
+/* Sections */
+.dilemma-modal__section {
+  margin-bottom: 16px;
+}
+
+.dilemma-modal__section-title {
+  color: #ff9900;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.dilemma-modal__section-title--stopped {
+  color: #ff6666;
+}
+
+/* Personnel grid */
+.dilemma-modal__personnel {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dilemma-modal__personnel--stopped {
+  opacity: 0.7;
+}
+
+/* Selectable personnel (with Select button) */
+.dilemma-modal__person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(153, 153, 255, 0.1);
+  border: 1px solid #9999ff;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.dilemma-modal__person-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(153, 153, 255, 0.1);
+  border: 1px solid #9999ff;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dilemma-modal__person-btn:hover {
+  background: rgba(153, 153, 255, 0.3);
+  border-color: #ff9900;
+}
+
+.dilemma-modal__select-btn {
+  background: #cc6566;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  margin-top: 4px;
+}
+
+.dilemma-modal__select-btn:hover {
+  background: #dd7677;
+}
+
+.dilemma-modal__select-btn:active {
+  background: #bb5556;
+}
+
+.dilemma-modal__stopped-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+}
+
+.dilemma-modal__person-name {
+  font-size: 9px;
+  color: #b0b0b0;
+  max-width: 60px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Actions */
+.dilemma-modal__actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+  border-top: 1px solid rgba(204, 101, 102, 0.3);
+}
+
+.dilemma-modal__continue-btn {
+  background: #cc6566;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dilemma-modal__continue-btn:hover {
+  background: #dd7677;
+}
+
+.dilemma-modal__continue-btn:active {
+  background: #bb5556;
+}
+
+/* Interlink abilities section */
+.dilemma-modal__interlink {
+  background: rgba(100, 50, 0, 0.3);
+  border: 1px solid #ff9900;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.dilemma-modal__interlink-title {
+  color: #ff9900;
+  font-size: 12px;
+  font-weight: bold;
+  margin: 0 0 8px 0;
+}
+
+.dilemma-modal__interlink-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dilemma-modal__interlink-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.dilemma-modal__interlink-name {
+  color: #e0e0e0;
+  font-size: 11px;
+  flex: 1;
+}
+
+.dilemma-modal__interlink-skill {
+  color: #66ccff;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.dilemma-modal__interlink-select {
+  background: #333;
+  color: #66ccff;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  min-width: 100px;
+  cursor: pointer;
+}
+
+.dilemma-modal__interlink-select:disabled {
+  background: #222;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.dilemma-modal__interlink-select:focus {
+  outline: none;
+  border-color: #66ccff;
+}
+
+.dilemma-modal__interlink-btn {
+  background: #ff9900;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dilemma-modal__interlink-btn:hover:not(:disabled) {
+  background: #ffaa33;
+}
+
+.dilemma-modal__interlink-btn:disabled {
+  background: #666;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.dilemma-modal__interlink-cost {
+  color: #999;
+  font-size: 10px;
+  margin-top: 8px;
+  text-align: right;
+  font-style: italic;
+}
+
+/* Interrupt abilities section */
+.dilemma-modal__interrupts {
+  background: rgba(0, 80, 80, 0.3);
+  border: 1px solid #00cccc;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.dilemma-modal__interrupts-title {
+  color: #00cccc;
+  font-size: 12px;
+  font-weight: bold;
+  margin: 0 0 8px 0;
+}
+
+.dilemma-modal__interrupts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dilemma-modal__interrupt-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.dilemma-modal__interrupt-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dilemma-modal__interrupt-name {
+  color: #00cccc;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.dilemma-modal__interrupt-effect {
+  color: #999;
+  font-size: 10px;
+  font-style: italic;
+}
+
+.dilemma-modal__interrupt-btn {
+  background: #00cccc;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dilemma-modal__interrupt-btn:hover {
+  background: #33dddd;
+}
+
+.dilemma-modal__interrupt-btn:active {
+  background: #00aaaa;
+}
