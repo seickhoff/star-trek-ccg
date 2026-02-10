@@ -573,7 +573,6 @@ export class AIPlayer {
         const group = deployment.groups[g]!;
         const ship = group.cards.find(isShip) as ShipCard | undefined;
         if (!ship || ship.rangeRemaining <= 0) continue;
-        if (!checkStaffed(group.cards)) continue;
 
         // Collect all unstopped personnel at this location (ship + planet)
         const shipPersonnel = group.cards.filter(
@@ -584,6 +583,9 @@ export class AIPlayer {
         );
         const allPersonnel = [...shipPersonnel, ...planetPersonnel];
 
+        // Check staffed with combined crew (planet crew will be beamed up)
+        if (!checkStaffed([...group.cards, ...planetPersonnel])) continue;
+
         // Find a completable mission reachable from current location
         const bestTarget = this.findCompletableMission(
           state,
@@ -591,7 +593,12 @@ export class AIPlayer {
           i,
           ship
         );
-        if (!bestTarget) continue;
+
+        // Determine destination: completable mission or HQ fallback
+        const destMission = bestTarget ? bestTarget.missionIndex : hqIndex;
+        const destMissionData = state.missions[destMission]!.mission;
+        const rangeCost = calculateRangeCost(mission, destMissionData);
+        if (ship.rangeRemaining < rangeCost) continue;
 
         // Beam planet personnel to ship before moving
         if (planetPersonnel.length > 0) {
@@ -605,23 +612,25 @@ export class AIPlayer {
           state = engine.getSerializableState();
         }
 
-        // Move ship directly to target mission
+        // Move ship to destination
         await executeAction({
           type: "MOVE_SHIP",
           sourceMission: i,
           groupIndex: g,
-          destMission: bestTarget.missionIndex,
+          destMission,
           requestId: aiRequestId(),
         });
         state = engine.getSerializableState();
 
-        // Beam to planet if needed
-        await this.beamToDestinationPlanet(
-          state,
-          bestTarget.missionIndex,
-          ship.uniqueId!,
-          executeAction
-        );
+        // Beam to planet if going to a mission (not HQ)
+        if (bestTarget) {
+          await this.beamToDestinationPlanet(
+            state,
+            bestTarget.missionIndex,
+            ship.uniqueId!,
+            executeAction
+          );
+        }
 
         return true;
       }
@@ -744,7 +753,12 @@ export class AIPlayer {
         const group = deployment.groups[g]!;
         const ship = group.cards.find(isShip) as ShipCard | undefined;
         if (!ship || ship.rangeRemaining <= 0) continue;
-        if (!checkStaffed(group.cards)) continue;
+
+        // Check staffed with combined crew (planet crew will be beamed up)
+        const planetCrewForStaff = (deployment.groups[0]?.cards ?? []).filter(
+          (c) => isPersonnel(c) && (c as PersonnelCard).status === "Unstopped"
+        );
+        if (!checkStaffed([...group.cards, ...planetCrewForStaff])) continue;
 
         // Decide if this ship should be recalled
         const shouldRecall = this.shouldRecallShip(deployment, mission);
