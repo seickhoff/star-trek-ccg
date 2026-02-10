@@ -1194,3 +1194,69 @@ describe("New turn resets ship range", () => {
     expect(ship.rangeRemaining).toBe(8);
   });
 });
+
+// =============================================================================
+// Cross-quadrant movement uses +2 penalty (not +5)
+// =============================================================================
+
+describe("Cross-quadrant movement penalty", () => {
+  it("allows movement across quadrants with +2 penalty per rulebook", () => {
+    const engine = new GameEngine();
+    const state = engine.getState();
+
+    // Source: span 2, Alpha quadrant
+    // Dest: span 3, Delta quadrant
+    // Cost = 2 + 3 + 2 (quadrant) = 7
+    // Ship has range 7 — should succeed with +2, would fail with +5
+    const personnel = mockPersonnel({
+      uniqueId: "p1",
+      affiliation: ["Federation"],
+      other: ["Command"],
+    });
+    const ship = mockShip({
+      uniqueId: "ship1",
+      range: 7,
+      rangeRemaining: 7,
+      staffing: [["Command"]],
+    });
+
+    state.missions[0] = {
+      mission: mockMission({
+        id: "source",
+        name: "Source Mission",
+        missionType: "Space",
+        quadrant: "Alpha",
+        range: 2,
+      }),
+      groups: [{ cards: [] }, { cards: [ship, personnel] }],
+      dilemmas: [],
+    };
+
+    state.missions[1] = {
+      mission: mockMission({
+        id: "dest",
+        name: "Dest Mission",
+        missionType: "Space",
+        quadrant: "Delta",
+        range: 3,
+      }),
+      groups: [{ cards: [] }],
+      dilemmas: [],
+    };
+
+    state.headquartersIndex = 0;
+    state.phase = "ExecuteOrders";
+
+    const result = engine.executeAction(
+      action({
+        type: "MOVE_SHIP",
+        sourceMission: 0,
+        groupIndex: 1,
+        destMission: 1,
+      })
+    );
+
+    expect(result.success).toBe(true);
+    expect(ship.rangeRemaining).toBe(0); // 7 - 7 = 0
+  });
+});

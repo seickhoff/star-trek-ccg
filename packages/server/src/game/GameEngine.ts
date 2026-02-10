@@ -32,6 +32,7 @@ import type { GameAction } from "@stccg/shared";
 import {
   cardDatabase,
   checkStaffed,
+  calculateRangeCost,
   resolveDilemma,
   resolveSelectionStop,
   checkMission,
@@ -729,14 +730,10 @@ export class GameEngine {
     }
 
     // Calculate range cost
-    const sourceRange = sourceDeployment.mission.range;
-    const destRange = destDeployment.mission.range;
-    let rangeCost = sourceRange + destRange;
-
-    // Add quadrant penalty if different quadrants
-    if (sourceDeployment.mission.quadrant !== destDeployment.mission.quadrant) {
-      rangeCost += 5;
-    }
+    const rangeCost = calculateRangeCost(
+      sourceDeployment.mission,
+      destDeployment.mission
+    );
 
     // Check range
     const rangeBoost = this.state.rangeBoosts

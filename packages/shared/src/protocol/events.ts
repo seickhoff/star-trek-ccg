@@ -1,4 +1,7 @@
-import type { SerializableGameState, ActionLogEntry } from "../types/gameState.js";
+import type {
+  SerializableGameState,
+  ActionLogEntry,
+} from "../types/gameState.js";
 
 /**
  * Base interface for all server-to-client events

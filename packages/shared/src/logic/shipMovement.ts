@@ -1,4 +1,9 @@
-import type { Card, MissionCard, PersonnelCard, ShipCard } from "../types/index.js";
+import type {
+  Card,
+  MissionCard,
+  PersonnelCard,
+  ShipCard,
+} from "../types/index.js";
 import { isPersonnel, isShip } from "../types/index.js";
 
 /**

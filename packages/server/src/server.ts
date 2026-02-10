@@ -40,8 +40,9 @@ export class GameServer {
   }
 
   private setupServer(): void {
-    console.log(`WebSocket server listening on port ${this.httpServer.address() || "starting..."}`);
-
+    console.log(
+      `WebSocket server listening on port ${this.httpServer.address() || "starting..."}`
+    );
 
     this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
       this.handleConnection(ws, req);
