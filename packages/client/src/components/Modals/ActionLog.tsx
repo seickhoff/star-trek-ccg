@@ -13,8 +13,14 @@ interface ActionLogProps {
  * Click anywhere to drag; click without drag to minimize
  */
 export function ActionLog({ entries, onCardClick }: ActionLogProps) {
-  const { position, zIndex, minimized, containerRef, handleMouseDown } =
-    useDraggablePanel({ isOpen: true, initialPosition: { x: 20, y: 80 } });
+  const {
+    position,
+    zIndex,
+    minimized,
+    containerRef,
+    handleMouseDown,
+    handleTouchStart,
+  } = useDraggablePanel({ isOpen: true, initialPosition: { x: 20, y: 80 } });
 
   const logContentRef = useRef<HTMLDivElement>(null);
 
@@ -77,6 +83,7 @@ export function ActionLog({ entries, onCardClick }: ActionLogProps) {
         zIndex,
       }}
       onMouseDown={(e) => handleMouseDown(e, ".action-log__header")}
+      onTouchStart={(e) => handleTouchStart(e, ".action-log__header")}
     >
       <div className="action-log__header">
         <span className="action-log__title">Captain's Log</span>

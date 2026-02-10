@@ -31,11 +31,17 @@ export function DilemmaSelectionModal({
 }: DilemmaSelectionModalProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const { position, zIndex, minimized, containerRef, handleMouseDown } =
-    useDraggablePanel({
-      isOpen: !!request,
-      initialPosition: { x: 50, y: 30 },
-    });
+  const {
+    position,
+    zIndex,
+    minimized,
+    containerRef,
+    handleMouseDown,
+    handleTouchStart,
+  } = useDraggablePanel({
+    isOpen: !!request,
+    initialPosition: { x: 50, y: 30 },
+  });
 
   // Reset selection when a new request comes in
   useEffect(() => {
@@ -114,6 +120,7 @@ export function DilemmaSelectionModal({
         maxHeight: `calc(100vh - ${position.y}px - 20px)`,
       }}
       onMouseDown={(e) => handleMouseDown(e, ".dilemma-select__header")}
+      onTouchStart={(e) => handleTouchStart(e, ".dilemma-select__header")}
     >
       <div className="dilemma-select__header">
         <h2 className="dilemma-select__title">Select Dilemmas</h2>

@@ -28,8 +28,14 @@ export function DraggablePanel({
   children,
   width = "400px",
 }: DraggablePanelProps) {
-  const { position, zIndex, minimized, containerRef, handleMouseDown } =
-    useDraggablePanel({ isOpen, initialPosition: { x: 100, y: 100 } });
+  const {
+    position,
+    zIndex,
+    minimized,
+    containerRef,
+    handleMouseDown,
+    handleTouchStart,
+  } = useDraggablePanel({ isOpen, initialPosition: { x: 100, y: 100 } });
 
   // Handle escape key
   useEffect(() => {
@@ -55,6 +61,7 @@ export function DraggablePanel({
         zIndex,
       }}
       onMouseDown={(e) => handleMouseDown(e, ".draggable-panel__header")}
+      onTouchStart={(e) => handleTouchStart(e, ".draggable-panel__header")}
     >
       <div className="draggable-panel__header">
         {title && <span className="draggable-panel__title">{title}</span>}
