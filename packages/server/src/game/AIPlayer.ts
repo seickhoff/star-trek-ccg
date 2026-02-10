@@ -754,11 +754,8 @@ export class AIPlayer {
         const rangeCost = calculateRangeCost(mission, hqMission);
         if (ship.rangeRemaining < rangeCost) continue;
 
-        // Beam planet survivors to ship before leaving (planet missions)
-        if (
-          mission.missionType === "Planet" ||
-          (mission.missionType === "Headquarters") === false
-        ) {
+        // Beam planet survivors to ship before leaving (non-space missions)
+        if (mission.missionType !== "Space") {
           const planetPersonnel = deployment.groups[0]?.cards.filter(
             (c) => isPersonnel(c) && (c as PersonnelCard).status === "Unstopped"
           );
@@ -845,7 +842,6 @@ export class AIPlayer {
     hqIndex: number,
     shipGroupIndex: number
   ): Promise<void> {
-    const hqMission = state.missions[hqIndex]!.mission;
     const shipGroup = state.missions[hqIndex]!.groups[shipGroupIndex]!;
     const ship = shipGroup.cards.find(isShip) as ShipCard | undefined;
     if (!ship || ship.rangeRemaining <= 0) return;
