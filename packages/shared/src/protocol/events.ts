@@ -129,6 +129,8 @@ export interface DilemmaSelectionRequestEvent extends BaseEvent {
   missionName: string;
   missionType: MissionType;
   aiPersonnelCount: number;
+  /** Non-overcome dilemmas already on the mission that can be optionally re-encountered */
+  reEncounterDilemmas: DilemmaCard[];
 }
 
 // ============================================================================

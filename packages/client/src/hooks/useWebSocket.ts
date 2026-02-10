@@ -104,6 +104,7 @@ export function useWebSocket() {
             missionName: event.missionName,
             missionType: event.missionType,
             aiPersonnelCount: event.aiPersonnelCount,
+            reEncounterDilemmas: event.reEncounterDilemmas,
           });
           break;
 

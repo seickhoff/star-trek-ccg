@@ -1357,6 +1357,17 @@ export class GameEngine {
     this.state.actionLog.push(
       createLogEntry("dilemma_result", logMessage, detailParts.join(". "), refs)
     );
+
+    // Move killed personnel from the group to the discard pile
+    const killedCards = group.cards.filter(
+      (c) => isPersonnel(c) && c.status === "Killed"
+    );
+    if (killedCards.length > 0) {
+      group.cards = group.cards.filter(
+        (c) => !(isPersonnel(c) && c.status === "Killed")
+      );
+      this.state.discard.push(...killedCards);
+    }
   }
 
   private checkMissionCompletion(): void {
@@ -2393,21 +2404,24 @@ export class GameEngine {
       }
     }
 
-    // Add re-encounter dilemmas (non-overcome dilemmas already on the mission)
-    for (const dilemma of reEncounterDilemmas) {
+    // Add only selected re-encounter dilemmas (non-overcome dilemmas already on the mission)
+    const selectedReEncounter = reEncounterDilemmas.filter((d) =>
+      selectedSet.has(d.uniqueId!)
+    );
+    for (const dilemma of selectedReEncounter) {
       selectedDilemmas.push(dilemma);
       const idx = deployment.dilemmas.indexOf(dilemma);
       if (idx !== -1) {
         deployment.dilemmas.splice(idx, 1);
       }
     }
-    if (reEncounterDilemmas.length > 0) {
+    if (selectedReEncounter.length > 0) {
       this.state.actionLog.push(
         createLogEntry(
           "dilemma_draw",
-          `${reEncounterDilemmas.length} dilemma(s) re-encountered from mission`,
-          reEncounterDilemmas.map((d) => d.name).join(", "),
-          reEncounterDilemmas.map((d) => cardRef(d))
+          `${selectedReEncounter.length} dilemma(s) re-encountered from mission`,
+          selectedReEncounter.map((d) => d.name).join(", "),
+          selectedReEncounter.map((d) => cardRef(d))
         )
       );
     }

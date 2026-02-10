@@ -89,6 +89,7 @@ interface ClientGameState {
     missionName: string;
     missionType: MissionType;
     aiPersonnelCount: number;
+    reEncounterDilemmas: DilemmaCard[];
   } | null;
 }
 

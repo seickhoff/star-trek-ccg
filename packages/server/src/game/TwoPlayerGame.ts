@@ -363,6 +363,7 @@ export class TwoPlayerGame {
       missionName: prep.missionName,
       missionType: prep.missionType as "Planet" | "Space",
       aiPersonnelCount: prep.personnelCount,
+      reEncounterDilemmas: prep.reEncounterDilemmas,
     });
 
     // Wait for human's response (with 60s timeout fallback)
@@ -426,17 +427,25 @@ export class TwoPlayerGame {
     const eligibleIds = new Set(
       pending.eligibleDilemmas.map((d) => d.uniqueId)
     );
+    const reEncounterIds = new Set(
+      pending.reEncounterDilemmas.map((d) => d.uniqueId)
+    );
 
-    // Validate: all selected uniqueIds must be in eligible set
+    // Validate: all selected uniqueIds must be in eligible or re-encounter set
     for (const id of selectedUniqueIds) {
-      if (!eligibleIds.has(id)) {
+      if (!eligibleIds.has(id) && !reEncounterIds.has(id)) {
         return { success: false, reason: `Invalid dilemma selection: ${id}` };
       }
     }
 
-    // Validate: no duplicate base IDs
+    // Separate pool selections from re-encounter selections for validation
+    const poolSelections = selectedUniqueIds.filter((id) =>
+      eligibleIds.has(id)
+    );
+
+    // Validate: no duplicate base IDs among pool selections
     const selectedBaseIds = new Set<string>();
-    for (const uid of selectedUniqueIds) {
+    for (const uid of poolSelections) {
       const dilemma = pending.eligibleDilemmas.find((d) => d.uniqueId === uid);
       if (dilemma) {
         if (selectedBaseIds.has(dilemma.id)) {
@@ -449,9 +458,9 @@ export class TwoPlayerGame {
       }
     }
 
-    // Validate: total cost <= budget
+    // Validate: total cost <= budget (re-encounter dilemmas are free)
     let totalCost = 0;
-    for (const uid of selectedUniqueIds) {
+    for (const uid of poolSelections) {
       const dilemma = pending.eligibleDilemmas.find((d) => d.uniqueId === uid);
       if (dilemma) totalCost += dilemma.cost;
     }
@@ -462,8 +471,8 @@ export class TwoPlayerGame {
       };
     }
 
-    // Validate: count <= drawCount
-    if (selectedUniqueIds.length > pending.drawCount) {
+    // Validate: pool selection count <= drawCount (re-encounter dilemmas don't count)
+    if (poolSelections.length > pending.drawCount) {
       return { success: false, reason: "Too many dilemmas selected" };
     }
 

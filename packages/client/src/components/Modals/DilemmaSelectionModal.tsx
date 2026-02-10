@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { DilemmaCard, MissionType, Card } from "@stccg/shared";
 import { CardSlot } from "../GameBoard/CardSlot";
 import { useDraggablePanel } from "../../hooks/useDraggablePanel";
@@ -11,6 +11,7 @@ interface DilemmaSelectionRequest {
   missionName: string;
   missionType: MissionType;
   aiPersonnelCount: number;
+  reEncounterDilemmas: DilemmaCard[];
 }
 
 interface DilemmaSelectionModalProps {
@@ -59,33 +60,60 @@ export function DilemmaSelectionModal({
     missionName,
     missionType,
     aiPersonnelCount,
+    reEncounterDilemmas = [],
   } = request;
 
-  // Calculate current cost
+  // Track which IDs are re-encounter dilemmas
+  const reEncounterIdSet = useMemo(
+    () => new Set(reEncounterDilemmas.map((d) => d.uniqueId)),
+    [reEncounterDilemmas]
+  );
+  const isReEncounter = (uid: string) => reEncounterIdSet.has(uid);
+
+  // Calculate current cost (only pool dilemmas count)
   const currentCost = selectedIds.reduce((sum, uid) => {
+    if (isReEncounter(uid)) return sum; // re-encounter dilemmas are free
     const d = drawnDilemmas.find((d) => d.uniqueId === uid);
     return sum + (d?.cost ?? 0);
   }, 0);
 
-  // Check if a dilemma can be added
-  const canAddDilemma = (dilemma: DilemmaCard): boolean => {
+  // Count of pool dilemmas selected (re-encounter don't count toward limit)
+  const poolSelectedCount = selectedIds.filter(
+    (uid) => !isReEncounter(uid)
+  ).length;
+
+  // Check if a pool dilemma can be added
+  const canAddPoolDilemma = (dilemma: DilemmaCard): boolean => {
     if (selectedIds.includes(dilemma.uniqueId!)) return false;
-    if (selectedIds.length >= drawCount) return false;
+    if (poolSelectedCount >= drawCount) return false;
     if (currentCost + dilemma.cost > costBudget) return false;
     // No duplicate base IDs
     const baseIds = selectedIds.map(
-      (id) => drawnDilemmas.find((d) => d.uniqueId === id)?.id
+      (id) =>
+        drawnDilemmas.find((d) => d.uniqueId === id)?.id ??
+        reEncounterDilemmas.find((d) => d.uniqueId === id)?.id
     );
     if (baseIds.includes(dilemma.id)) return false;
     return true;
   };
 
-  const toggleDilemma = (uniqueId: string) => {
+  // Check if a re-encounter dilemma can be added (always allowed if not already selected)
+  const canAddReEncounter = (dilemma: DilemmaCard): boolean => {
+    return !selectedIds.includes(dilemma.uniqueId!);
+  };
+
+  const toggleDilemma = (uniqueId: string, isReEnc: boolean) => {
     if (selectedIds.includes(uniqueId)) {
       setSelectedIds((prev) => prev.filter((id) => id !== uniqueId));
     } else {
-      const dilemma = drawnDilemmas.find((d) => d.uniqueId === uniqueId);
-      if (dilemma && canAddDilemma(dilemma)) {
+      const canAdd = isReEnc
+        ? canAddReEncounter(
+            reEncounterDilemmas.find((d) => d.uniqueId === uniqueId)!
+          )
+        : canAddPoolDilemma(
+            drawnDilemmas.find((d) => d.uniqueId === uniqueId)!
+          );
+      if (canAdd) {
         setSelectedIds((prev) => [...prev, uniqueId]);
       }
     }
@@ -108,6 +136,11 @@ export function DilemmaSelectionModal({
       return next;
     });
   };
+
+  // Helper to find a dilemma by uniqueId across both lists
+  const findDilemma = (uid: string): DilemmaCard | undefined =>
+    drawnDilemmas.find((d) => d.uniqueId === uid) ??
+    reEncounterDilemmas.find((d) => d.uniqueId === uid);
 
   return (
     <div
@@ -144,69 +177,156 @@ export function DilemmaSelectionModal({
               Cost: {currentCost} / {costBudget}
             </span>
             <span className="dilemma-select__budget-max">
-              Max {drawCount} dilemma{drawCount !== 1 ? "s" : ""}
+              Max {drawCount} dilemma{drawCount !== 1 ? "s" : ""} from pool
             </span>
           </div>
 
-          {/* Available dilemmas */}
-          <div className="dilemma-select__available">
-            {drawnDilemmas.map((dilemma) => {
-              const isSelected = selectedIds.includes(dilemma.uniqueId!);
-              const order = isSelected
-                ? selectedIds.indexOf(dilemma.uniqueId!) + 1
-                : null;
-              const canAdd = !isSelected && canAddDilemma(dilemma);
+          {/* Re-encounter dilemmas (on mission) */}
+          {reEncounterDilemmas.length > 0 && (
+            <>
+              <div className="dilemma-select__section-label">
+                On Mission (free)
+              </div>
+              <div className="dilemma-select__available">
+                {reEncounterDilemmas.map((dilemma) => {
+                  const isSelected = selectedIds.includes(dilemma.uniqueId!);
+                  const order = isSelected
+                    ? selectedIds.indexOf(dilemma.uniqueId!) + 1
+                    : null;
+                  const canAdd = !isSelected && canAddReEncounter(dilemma);
 
-              return (
-                <div
-                  key={dilemma.uniqueId}
-                  className={`dilemma-select__card${
-                    isSelected ? " dilemma-select__card--selected" : ""
-                  }${!isSelected && !canAdd ? " dilemma-select__card--disabled" : ""}`}
-                  onClick={() => {
-                    if (isSelected || canAdd) toggleDilemma(dilemma.uniqueId!);
-                  }}
-                >
-                  {isSelected && (
-                    <div className="dilemma-select__card-order">{order}</div>
-                  )}
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <CardSlot
-                      card={dilemma}
-                      size="thumb"
-                      onClick={() => onCardClick?.(dilemma)}
-                    />
-                  </div>
-                  <div className="dilemma-select__card-info">
-                    <div className="dilemma-select__card-name">
-                      {dilemma.name}
-                    </div>
-                    <div className="dilemma-select__card-meta">
-                      Cost: {dilemma.cost} | {dilemma.where}
-                    </div>
-                    {dilemma.text && (
-                      <div className="dilemma-select__card-text">
-                        {dilemma.text}
+                  return (
+                    <div
+                      key={dilemma.uniqueId}
+                      className={`dilemma-select__card dilemma-select__card--reencounter${
+                        isSelected ? " dilemma-select__card--selected" : ""
+                      }`}
+                      onClick={() => {
+                        if (isSelected || canAdd)
+                          toggleDilemma(dilemma.uniqueId!, true);
+                      }}
+                    >
+                      {isSelected && (
+                        <div className="dilemma-select__card-order">
+                          {order}
+                        </div>
+                      )}
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <CardSlot
+                          card={dilemma}
+                          size="thumb"
+                          onClick={() => onCardClick?.(dilemma)}
+                        />
                       </div>
-                    )}
-                  </div>
-                  <button
-                    className={`dilemma-select__card-toggle${
-                      isSelected ? " dilemma-select__card-toggle--remove" : ""
-                    }`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (isSelected || canAdd)
-                        toggleDilemma(dilemma.uniqueId!);
-                    }}
-                    disabled={!isSelected && !canAdd}
-                  >
-                    {isSelected ? "Remove" : "Select"}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                      <div className="dilemma-select__card-info">
+                        <div className="dilemma-select__card-name">
+                          {dilemma.name}
+                          <span className="dilemma-select__card-tag dilemma-select__card-tag--on-mission">
+                            On Mission
+                          </span>
+                        </div>
+                        <div className="dilemma-select__card-meta">
+                          Free | {dilemma.where}
+                        </div>
+                        {dilemma.text && (
+                          <div className="dilemma-select__card-text">
+                            {dilemma.text}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        className={`dilemma-select__card-toggle${
+                          isSelected
+                            ? " dilemma-select__card-toggle--remove"
+                            : ""
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isSelected || canAdd)
+                            toggleDilemma(dilemma.uniqueId!, true);
+                        }}
+                        disabled={!isSelected && !canAdd}
+                      >
+                        {isSelected ? "Remove" : "Select"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Pool dilemmas */}
+          {drawnDilemmas.length > 0 && (
+            <>
+              {reEncounterDilemmas.length > 0 && (
+                <div className="dilemma-select__section-label">From Pool</div>
+              )}
+              <div className="dilemma-select__available">
+                {drawnDilemmas.map((dilemma) => {
+                  const isSelected = selectedIds.includes(dilemma.uniqueId!);
+                  const order = isSelected
+                    ? selectedIds.indexOf(dilemma.uniqueId!) + 1
+                    : null;
+                  const canAdd = !isSelected && canAddPoolDilemma(dilemma);
+
+                  return (
+                    <div
+                      key={dilemma.uniqueId}
+                      className={`dilemma-select__card${
+                        isSelected ? " dilemma-select__card--selected" : ""
+                      }${!isSelected && !canAdd ? " dilemma-select__card--disabled" : ""}`}
+                      onClick={() => {
+                        if (isSelected || canAdd)
+                          toggleDilemma(dilemma.uniqueId!, false);
+                      }}
+                    >
+                      {isSelected && (
+                        <div className="dilemma-select__card-order">
+                          {order}
+                        </div>
+                      )}
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <CardSlot
+                          card={dilemma}
+                          size="thumb"
+                          onClick={() => onCardClick?.(dilemma)}
+                        />
+                      </div>
+                      <div className="dilemma-select__card-info">
+                        <div className="dilemma-select__card-name">
+                          {dilemma.name}
+                        </div>
+                        <div className="dilemma-select__card-meta">
+                          Cost: {dilemma.cost} | {dilemma.where}
+                        </div>
+                        {dilemma.text && (
+                          <div className="dilemma-select__card-text">
+                            {dilemma.text}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        className={`dilemma-select__card-toggle${
+                          isSelected
+                            ? " dilemma-select__card-toggle--remove"
+                            : ""
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isSelected || canAdd)
+                            toggleDilemma(dilemma.uniqueId!, false);
+                        }}
+                        disabled={!isSelected && !canAdd}
+                      >
+                        {isSelected ? "Remove" : "Select"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           {/* Selected order */}
           {selectedIds.length > 1 && (
@@ -216,7 +336,8 @@ export function DilemmaSelectionModal({
               </h4>
               <div className="dilemma-select__order-list">
                 {selectedIds.map((uid, i) => {
-                  const d = drawnDilemmas.find((d) => d.uniqueId === uid);
+                  const d = findDilemma(uid);
+                  const isReEnc = isReEncounter(uid);
                   return (
                     <div key={uid} className="dilemma-select__order-item">
                       <span className="dilemma-select__order-num">
@@ -224,6 +345,11 @@ export function DilemmaSelectionModal({
                       </span>
                       <span className="dilemma-select__order-name">
                         {d?.name}
+                        {isReEnc && (
+                          <span className="dilemma-select__order-tag">
+                            On Mission
+                          </span>
+                        )}
                       </span>
                       <button
                         className="dilemma-select__order-btn"

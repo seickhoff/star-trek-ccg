@@ -101,9 +101,24 @@ export function OpponentBoard({
                 </div>
               )}
 
-              {overcomeCount > 0 && (
+              {deployment.dilemmas.length > 0 && (
                 <div className="opponent-mission__dilemmas">
-                  {overcomeCount} dilemma{overcomeCount > 1 ? "s" : ""} overcome
+                  {overcomeCount > 0 && (
+                    <span className="opponent-mission__dilemmas-overcome">
+                      {overcomeCount} beneath
+                    </span>
+                  )}
+                  {overcomeCount > 0 &&
+                    deployment.dilemmas.length - overcomeCount > 0 && (
+                      <span className="opponent-mission__dilemmas-sep">
+                        {" / "}
+                      </span>
+                    )}
+                  {deployment.dilemmas.length - overcomeCount > 0 && (
+                    <span className="opponent-mission__dilemmas-placed">
+                      {deployment.dilemmas.length - overcomeCount} on mission
+                    </span>
+                  )}
                 </div>
               )}
               {mission.completed && (

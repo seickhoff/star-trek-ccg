@@ -162,8 +162,20 @@
 }
 
 .opponent-mission__dilemmas {
-  color: #ff9900;
   font-size: 10px;
+  margin-top: 2px;
+}
+
+.opponent-mission__dilemmas-overcome {
+  color: #88aa88;
+}
+
+.opponent-mission__dilemmas-sep {
+  color: #555;
+}
+
+.opponent-mission__dilemmas-placed {
+  color: #ff9900;
 }
 
 .opponent-mission__complete-badge {

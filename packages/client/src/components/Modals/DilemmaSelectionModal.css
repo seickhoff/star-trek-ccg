@@ -83,6 +83,64 @@
   font-size: 11px;
 }
 
+/* Section labels */
+.dilemma-select__section-label {
+  color: #cc99ff;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  padding-left: 2px;
+}
+
+/* Card tags (On Mission, etc.) */
+.dilemma-select__card-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: bold;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.dilemma-select__card-tag--on-mission {
+  background: rgba(255, 153, 0, 0.25);
+  color: #ff9900;
+  border: 1px solid rgba(255, 153, 0, 0.5);
+}
+
+/* Re-encounter card border accent */
+.dilemma-select__card--reencounter {
+  border-color: rgba(255, 153, 0, 0.3);
+}
+
+.dilemma-select__card--reencounter:hover {
+  border-color: rgba(255, 153, 0, 0.5);
+  background: rgba(255, 153, 0, 0.1);
+}
+
+.dilemma-select__card--reencounter.dilemma-select__card--selected {
+  border-color: #ff9900;
+  background: rgba(255, 153, 0, 0.15);
+}
+
+/* Order list tag */
+.dilemma-select__order-tag {
+  display: inline-block;
+  font-size: 8px;
+  font-weight: bold;
+  padding: 1px 4px;
+  border-radius: 2px;
+  margin-left: 6px;
+  background: rgba(255, 153, 0, 0.25);
+  color: #ff9900;
+  vertical-align: middle;
+}
+
 /* Available dilemmas grid */
 .dilemma-select__available {
   display: flex;
