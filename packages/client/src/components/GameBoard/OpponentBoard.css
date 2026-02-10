@@ -1,0 +1,178 @@
+/* OpponentBoard - AI opponent's mission display */
+
+.opponent-board {
+  background: rgba(80, 0, 0, 0.3);
+  border-bottom: 2px solid rgba(255, 60, 60, 0.3);
+  padding: 8px 16px;
+  transition: background 0.3s ease;
+}
+
+.opponent-board--active {
+  background: rgba(80, 0, 0, 0.5);
+  border-bottom-color: rgba(255, 60, 60, 0.6);
+}
+
+.opponent-board__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.opponent-board__label {
+  color: #ff6666;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.opponent-board__thinking {
+  color: #ffaa00;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.opponent-board__stats {
+  display: flex;
+  gap: 16px;
+}
+
+.opponent-board__stat {
+  color: #aaa;
+  font-size: 12px;
+}
+
+.opponent-board__stat strong {
+  color: #ff9900;
+}
+
+.opponent-board__missions {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.opponent-mission {
+  flex: 1;
+  min-width: 120px;
+  max-width: 200px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.opponent-mission--completed {
+  border-color: rgba(76, 175, 80, 0.5);
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.opponent-mission--hq {
+  border-color: rgba(153, 153, 255, 0.3);
+}
+
+.opponent-mission__name {
+  color: #ddd;
+  font-weight: bold;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.opponent-mission__type {
+  color: #888;
+  font-size: 10px;
+}
+
+/* Card thumbnails */
+.opponent-mission__cards {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+}
+
+.opponent-mission__card {
+  width: 28px;
+  height: 40px;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.opponent-mission__card--ship {
+  object-fit: cover;
+  width: 28px;
+  height: 40px;
+  border-color: rgba(153, 153, 255, 0.4);
+}
+
+.opponent-mission__card--personnel {
+  position: relative;
+}
+
+.opponent-mission__card--stopped {
+  opacity: 0.5;
+}
+
+.opponent-mission__card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.opponent-mission__stopped-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #cc0000;
+  color: #fff;
+  font-size: 7px;
+  font-weight: bold;
+  width: 10px;
+  height: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px 0 0 0;
+}
+
+/* Crew info */
+.opponent-mission__crew {
+  margin-top: 2px;
+}
+
+.opponent-mission__stopped {
+  color: #cc6666;
+  font-size: 9px;
+  display: block;
+  margin-top: 1px;
+}
+
+.opponent-mission__dilemmas {
+  color: #ff9900;
+  font-size: 10px;
+}
+
+.opponent-mission__complete-badge {
+  display: inline-block;
+  background: #4caf50;
+  color: #fff;
+  font-size: 9px;
+  font-weight: bold;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-top: 2px;
+}

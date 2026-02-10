@@ -100,6 +100,7 @@ export interface BaseCard {
   unique: boolean;
   jpg: string;
   ownerId?: string; // Player who started the game with this card (for multiplayer)
+  concealed?: boolean; // True when card is face-down to opponent (personnel/equipment)
 }
 
 // Mission card

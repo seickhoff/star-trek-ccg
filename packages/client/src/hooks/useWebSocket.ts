@@ -3,8 +3,10 @@ import type {
   GameAction,
   GameEvent,
   SerializableGameState,
+  TwoPlayerGameState,
 } from "@stccg/shared";
 import { useConnectionStore } from "../store/connectionStore";
+import { useClientGameStore } from "../store/clientGameStore";
 
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8080";
 
@@ -24,6 +26,13 @@ export function useWebSocket() {
   const maxReconnectAttempts = 5;
   const [gameState, setGameState] = useState<SerializableGameState | null>(
     null
+  );
+  const [twoPlayerState, setTwoPlayerState] =
+    useState<TwoPlayerGameState | null>(null);
+  const syncTwoPlayerState = useClientGameStore((s) => s.syncTwoPlayerState);
+  const addAILogEntry = useClientGameStore((s) => s.addAILogEntry);
+  const setDilemmaSelectionRequest = useClientGameStore(
+    (s) => s.setDilemmaSelectionRequest
   );
 
   const {
@@ -63,6 +72,45 @@ export function useWebSocket() {
           setGameState(event.state);
           break;
 
+        case "TWO_PLAYER_STATE_SYNC":
+          console.log("Two-player state sync received");
+          setTwoPlayerState(event.state);
+          setGameState(event.state.myState);
+          syncTwoPlayerState(event.state);
+          break;
+
+        case "TWO_PLAYER_STATE_UPDATE":
+          console.log(
+            "Two-player state update received",
+            event.isAIAction ? "(AI)" : ""
+          );
+          setTwoPlayerState(event.state);
+          setGameState(event.state.myState);
+          syncTwoPlayerState(event.state);
+          // Add AI log entries (human entries are in myState.actionLog)
+          if (event.newLogEntries) {
+            for (const entry of event.newLogEntries) {
+              addAILogEntry(entry);
+            }
+          }
+          break;
+
+        case "DILEMMA_SELECTION_REQUEST":
+          console.log("Dilemma selection request received");
+          setDilemmaSelectionRequest({
+            drawnDilemmas: event.drawnDilemmas,
+            costBudget: event.costBudget,
+            drawCount: event.drawCount,
+            missionName: event.missionName,
+            missionType: event.missionType,
+            aiPersonnelCount: event.aiPersonnelCount,
+          });
+          break;
+
+        case "TURN_CHANGE":
+          console.log("Turn changed to player", event.activePlayer);
+          break;
+
         case "ACTION_REJECTED":
           console.warn("Action rejected:", event.reason);
           setError(event.reason);
@@ -89,7 +137,13 @@ export function useWebSocket() {
           console.log("Unknown event:", event);
       }
     },
-    [setConnected, setError]
+    [
+      setConnected,
+      setError,
+      syncTwoPlayerState,
+      addAILogEntry,
+      setDilemmaSelectionRequest,
+    ]
   );
 
   /**
@@ -228,6 +282,7 @@ export function useWebSocket() {
     disconnect,
     sendAction,
     gameState,
+    twoPlayerState,
     isConnected: wsRef.current?.readyState === WebSocket.OPEN,
   };
 }

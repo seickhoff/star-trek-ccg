@@ -150,7 +150,12 @@ export function DilemmaModal({
     <div
       ref={containerRef}
       className={`dilemma-modal${minimized ? " dilemma-modal--minimized" : ""}`}
-      style={{ left: position.x, top: position.y, zIndex }}
+      style={{
+        left: position.x,
+        top: position.y,
+        zIndex,
+        maxHeight: `calc(100vh - ${position.y}px - 20px)`,
+      }}
       onMouseDown={(e) => handleMouseDown(e, ".dilemma-modal__header")}
     >
       <div className="dilemma-modal__header">

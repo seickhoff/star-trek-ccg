@@ -387,7 +387,12 @@ export function OrdersModal({
     <div
       ref={containerRef}
       className={`orders-modal${minimized ? " orders-modal--minimized" : ""}`}
-      style={{ left: position.x, top: position.y, zIndex }}
+      style={{
+        left: position.x,
+        top: position.y,
+        zIndex,
+        maxHeight: `calc(100vh - ${position.y}px - 20px)`,
+      }}
       onMouseDown={(e) => handleMouseDown(e, ".orders-modal__header")}
     >
       <div className="orders-modal__header">

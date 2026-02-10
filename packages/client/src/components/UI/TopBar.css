@@ -95,6 +95,10 @@
   color: #4caf50;
 }
 
+.top-bar__stat-value--opponent {
+  color: #ff6666;
+}
+
 /* Actions section */
 .top-bar__actions {
   display: flex;

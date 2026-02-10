@@ -3,7 +3,9 @@ import type {
   Card,
   InterruptCard,
   PersonnelCard,
+  DilemmaCard,
   GamePhase,
+  MissionType,
   MissionDeployment,
   DilemmaEncounter,
   GrantedSkill,
@@ -13,6 +15,8 @@ import type {
   DilemmaResult,
   Ability,
   AbilityCondition,
+  OpponentPublicState,
+  TwoPlayerGameState,
 } from "@stccg/shared";
 import { isInterrupt, isPersonnel } from "@stccg/shared";
 
@@ -68,11 +72,35 @@ interface ClientGameState {
 
   // Action log
   actionLog: ActionLogEntry[];
+  aiActionLog: ActionLogEntry[];
+
+  // Two-player state
+  opponentState: OpponentPublicState | null;
+  activePlayer: 1 | 2;
+  myPlayerNumber: 1 | 2;
+  winner: 1 | 2 | null;
+  isAITurnInProgress: boolean;
+
+  // Dilemma selection (when AI attempts a mission)
+  dilemmaSelectionRequest: {
+    drawnDilemmas: DilemmaCard[];
+    costBudget: number;
+    drawCount: number;
+    missionName: string;
+    missionType: MissionType;
+    aiPersonnelCount: number;
+  } | null;
 }
 
 interface ClientGameActions {
   syncState: (serverState: SerializableGameState) => void;
+  syncTwoPlayerState: (twoPlayerState: TwoPlayerGameState) => void;
+  setAITurnInProgress: (inProgress: boolean) => void;
   addLogEntry: (entry: ActionLogEntry) => void;
+  addAILogEntry: (entry: ActionLogEntry) => void;
+  setDilemmaSelectionRequest: (
+    request: ClientGameState["dilemmaSelectionRequest"]
+  ) => void;
   reset: () => void;
 }
 
@@ -100,6 +128,13 @@ const createInitialState = (): ClientGameState => ({
   victory: false,
   headquartersIndex: -1,
   actionLog: [],
+  aiActionLog: [],
+  opponentState: null,
+  activePlayer: 1,
+  myPlayerNumber: 1,
+  winner: null,
+  isAITurnInProgress: false,
+  dilemmaSelectionRequest: null,
 });
 
 export const useClientGameStore = create<ClientGameStore>((set) => ({
@@ -131,8 +166,50 @@ export const useClientGameStore = create<ClientGameStore>((set) => ({
     });
   },
 
+  syncTwoPlayerState: (twoPlayerState: TwoPlayerGameState) => {
+    const s = twoPlayerState.myState;
+    set((prev) => ({
+      deck: s.deck,
+      hand: s.hand,
+      discard: s.discard,
+      removedFromGame: s.removedFromGame,
+      missions: s.missions,
+      uniquesInPlay: s.uniquesInPlay,
+      turn: s.turn,
+      phase: s.phase,
+      counters: s.counters,
+      score: s.score,
+      completedPlanetMissions: s.completedPlanetMissions,
+      completedSpaceMissions: s.completedSpaceMissions,
+      dilemmaEncounter: s.dilemmaEncounter,
+      dilemmaResult: s.dilemmaResult,
+      usedOrderAbilities: s.usedOrderAbilities,
+      grantedSkills: s.grantedSkills,
+      rangeBoosts: s.rangeBoosts,
+      gameOver: s.gameOver,
+      victory: s.victory,
+      headquartersIndex: s.headquartersIndex,
+      actionLog: s.actionLog,
+      // Reset AI log on new game (human log resets to 1 entry = game start)
+      aiActionLog: s.actionLog.length <= 1 ? [] : prev.aiActionLog,
+      opponentState: twoPlayerState.opponentState,
+      activePlayer: twoPlayerState.activePlayer,
+      myPlayerNumber: twoPlayerState.myPlayerNumber,
+      winner: twoPlayerState.winner,
+    }));
+  },
+
+  setAITurnInProgress: (inProgress: boolean) =>
+    set({ isAITurnInProgress: inProgress }),
+
   addLogEntry: (entry: ActionLogEntry) =>
     set((state) => ({ actionLog: [...state.actionLog, entry] })),
+
+  addAILogEntry: (entry: ActionLogEntry) =>
+    set((state) => ({ aiActionLog: [...state.aiActionLog, entry] })),
+
+  setDilemmaSelectionRequest: (request) =>
+    set({ dilemmaSelectionRequest: request }),
 
   reset: () => set(createInitialState()),
 }));
@@ -231,4 +308,20 @@ export const selectPlayableInterrupts = (
   return playable;
 };
 
-export const selectActionLog = (state: ClientGameStore) => state.actionLog;
+export const selectActionLog = (state: ClientGameStore) => {
+  if (state.aiActionLog.length === 0) return state.actionLog;
+  return [...state.actionLog, ...state.aiActionLog].sort(
+    (a, b) => a.timestamp - b.timestamp
+  );
+};
+
+export const selectIsMyTurn = (state: ClientGameStore) =>
+  state.activePlayer === state.myPlayerNumber;
+
+export const selectOpponentState = (state: ClientGameStore) =>
+  state.opponentState;
+
+export const selectWinner = (state: ClientGameStore) => state.winner;
+
+export const selectDilemmaSelectionRequest = (state: ClientGameStore) =>
+  state.dilemmaSelectionRequest;

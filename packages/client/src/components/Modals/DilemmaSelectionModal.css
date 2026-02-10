@@ -1,0 +1,296 @@
+/* DilemmaSelectionModal - Human picks dilemmas for AI mission attempt */
+
+.dilemma-select {
+  position: fixed;
+  width: 540px;
+  /* max-height set dynamically via inline style based on position */
+  background-color: #0a0a1a;
+  background-image: linear-gradient(
+    135deg,
+    #101030 0%,
+    #0a0a1a 50%,
+    #101030 100%
+  );
+  border: 6px solid #9966ff;
+  border-radius: 8px;
+  color: #e0e0e0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+}
+
+.dilemma-select:active {
+  cursor: grabbing;
+}
+
+.dilemma-select--minimized {
+  max-height: unset;
+}
+
+.dilemma-select__header {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border-bottom: 1px solid #9966ff;
+}
+
+.dilemma-select--minimized .dilemma-select__header {
+  border-bottom: none;
+}
+
+.dilemma-select__title {
+  color: #cc99ff;
+  font-size: 16px;
+  margin: 0 0 4px 0;
+}
+
+.dilemma-select__info {
+  color: #aaa;
+  font-size: 12px;
+}
+
+.dilemma-select__content {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Budget tracker */
+.dilemma-select__budget {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(153, 102, 255, 0.15);
+  border: 1px solid rgba(153, 102, 255, 0.4);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.dilemma-select__budget-cost {
+  color: #cc99ff;
+  font-weight: bold;
+}
+
+.dilemma-select__budget-cost--over {
+  color: #ff4444;
+}
+
+.dilemma-select__budget-max {
+  color: #888;
+  font-size: 11px;
+}
+
+/* Available dilemmas grid */
+.dilemma-select__available {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.dilemma-select__card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dilemma-select__card:hover {
+  background: rgba(153, 102, 255, 0.15);
+  border-color: rgba(153, 102, 255, 0.4);
+}
+
+.dilemma-select__card--selected {
+  border-color: #cc99ff;
+  background: rgba(153, 102, 255, 0.2);
+}
+
+.dilemma-select__card--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dilemma-select__card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dilemma-select__card-name {
+  color: #e0e0e0;
+  font-size: 13px;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dilemma-select__card-meta {
+  color: #888;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.dilemma-select__card-text {
+  color: #aaa;
+  font-size: 10px;
+  margin-top: 4px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dilemma-select__card-order {
+  background: #9966ff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dilemma-select__card-toggle {
+  background: rgba(153, 102, 255, 0.3);
+  color: #cc99ff;
+  border: 1px solid #9966ff;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.dilemma-select__card-toggle:hover {
+  background: rgba(153, 102, 255, 0.5);
+}
+
+.dilemma-select__card-toggle--remove {
+  background: rgba(255, 50, 50, 0.2);
+  color: #ff6666;
+  border-color: #ff4444;
+}
+
+.dilemma-select__card-toggle--remove:hover {
+  background: rgba(255, 50, 50, 0.4);
+}
+
+/* Selected order section */
+.dilemma-select__order {
+  background: rgba(153, 102, 255, 0.1);
+  border: 1px solid rgba(153, 102, 255, 0.3);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.dilemma-select__order-title {
+  color: #cc99ff;
+  font-size: 12px;
+  font-weight: bold;
+  margin: 0 0 8px 0;
+}
+
+.dilemma-select__order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dilemma-select__order-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+.dilemma-select__order-num {
+  color: #9966ff;
+  font-weight: bold;
+  font-size: 13px;
+  width: 20px;
+}
+
+.dilemma-select__order-name {
+  flex: 1;
+  font-size: 12px;
+  color: #e0e0e0;
+}
+
+.dilemma-select__order-btn {
+  background: none;
+  border: 1px solid #555;
+  color: #aaa;
+  border-radius: 3px;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.dilemma-select__order-btn:hover:not(:disabled) {
+  border-color: #9966ff;
+  color: #cc99ff;
+}
+
+.dilemma-select__order-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Submit actions */
+.dilemma-select__actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+  border-top: 1px solid rgba(153, 102, 255, 0.3);
+}
+
+.dilemma-select__submit-btn {
+  background: #9966ff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dilemma-select__submit-btn:hover {
+  background: #aa77ff;
+}
+
+.dilemma-select__submit-btn:active {
+  background: #8855ee;
+}
+
+.dilemma-select__submit-btn--skip {
+  background: #555;
+}
+
+.dilemma-select__submit-btn--skip:hover {
+  background: #666;
+}

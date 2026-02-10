@@ -2173,4 +2173,339 @@ export class GameEngine {
 
     return { success: true };
   }
+
+  // =========================================================================
+  // Two-Player Support Methods
+  // =========================================================================
+
+  /**
+   * Get the dilemma pool (mutable reference for cross-player use)
+   */
+  getDilemmaPool(): DilemmaCard[] {
+    return this.state.dilemmaPool;
+  }
+
+  /**
+   * Set the dilemma pool (for restoring after external consumption)
+   */
+  setDilemmaPool(pool: DilemmaCard[]): void {
+    this.state.dilemmaPool = pool;
+  }
+
+  /**
+   * Attempt a mission using an externally-provided dilemma pool
+   * (opponent's dilemmas). Consumed dilemmas are removed from the provided pool.
+   */
+  attemptMissionWithExternalDilemmas(
+    missionIndex: number,
+    groupIndex: number,
+    externalDilemmaPool: DilemmaCard[]
+  ): ActionResult {
+    // Temporarily swap the dilemma pool
+    const ownPool = this.state.dilemmaPool;
+    this.state.dilemmaPool = externalDilemmaPool;
+
+    const result = this.attemptMission(missionIndex, groupIndex);
+
+    // The attemptMission method modifies this.state.dilemmaPool in place
+    // (splicing out selected dilemmas). Since we pointed it at externalDilemmaPool,
+    // those removals happened on the external pool. Now restore our own pool.
+    // But if returnsToPile dilemmas get added back, they'd go to the external pool
+    // — we need to keep the reference for the duration of the encounter.
+    // So we DON'T restore yet; we store the own pool for later restoration.
+    this._ownDilemmaPool = ownPool;
+
+    return result;
+  }
+
+  /**
+   * Stored own dilemma pool while using external pool during an encounter.
+   * Restored when the encounter ends.
+   */
+  private _ownDilemmaPool: DilemmaCard[] | null = null;
+
+  /**
+   * Restore the engine's own dilemma pool after an external-dilemma encounter ends.
+   * Should be called by the orchestrator after encounter resolution completes.
+   */
+  restoreOwnDilemmaPool(): void {
+    if (this._ownDilemmaPool !== null) {
+      this.state.dilemmaPool = this._ownDilemmaPool;
+      this._ownDilemmaPool = null;
+    }
+  }
+
+  /**
+   * Check if an external dilemma pool is currently in use
+   */
+  isUsingExternalDilemmaPool(): boolean {
+    return this._ownDilemmaPool !== null;
+  }
+
+  /**
+   * Prepare a mission attempt: validate, calculate draw parameters, filter
+   * eligible dilemmas by location, handle face-up reshuffle.
+   * Does NOT select dilemmas or create an encounter.
+   * Used by TwoPlayerGame to send eligible dilemmas to the human for selection.
+   */
+  prepareMissionAttempt(
+    missionIndex: number,
+    groupIndex: number
+  ):
+    | {
+        eligibleDilemmas: DilemmaCard[];
+        drawCount: number;
+        costBudget: number;
+        missionName: string;
+        missionType: "Headquarters" | "Planet" | "Space";
+        personnelCount: number;
+        reEncounterDilemmas: DilemmaCard[];
+      }
+    | { error: string } {
+    if (this.state.phase !== "ExecuteOrders") {
+      return { error: "Can only attempt during Execute Orders phase" };
+    }
+    if (this.state.dilemmaEncounter) {
+      return {
+        error: "Cannot attempt a mission while a dilemma encounter is active",
+      };
+    }
+
+    const deployment = this.state.missions[missionIndex];
+    if (!deployment) return { error: "Invalid mission index" };
+    if (deployment.mission.completed)
+      return { error: "Mission already completed" };
+    if (deployment.mission.missionType === "Headquarters") {
+      return { error: "Cannot attempt headquarters" };
+    }
+
+    const group = deployment.groups[groupIndex];
+    if (!group) return { error: "Invalid group index" };
+
+    const unstoppedPersonnel = group.cards.filter(
+      (c): c is PersonnelCard => isPersonnel(c) && c.status === "Unstopped"
+    );
+    if (unstoppedPersonnel.length === 0) {
+      return { error: "No unstopped personnel" };
+    }
+
+    const missionAffiliations = deployment.mission.affiliation || [];
+    if (missionAffiliations.length > 0) {
+      const hasMatchingAffiliation = unstoppedPersonnel.some((p) =>
+        p.affiliation.some((aff) => missionAffiliations.includes(aff))
+      );
+      if (!hasMatchingAffiliation) {
+        return { error: "No personnel with matching affiliation" };
+      }
+    }
+
+    const overcomeCount = deployment.dilemmas.filter((d) => d.overcome).length;
+    const drawCount = Math.max(0, unstoppedPersonnel.length - overcomeCount);
+    const costBudget = unstoppedPersonnel.length - overcomeCount;
+
+    const missionType = deployment.mission.missionType;
+    const filterByLocation = (d: DilemmaCard) => {
+      if (d.where === "Dual") return true;
+      if (missionType === "Planet" && d.where === "Planet") return true;
+      if (missionType === "Space" && d.where === "Space") return true;
+      return false;
+    };
+
+    // Face-up reshuffle
+    const faceDownApplicable = this.state.dilemmaPool.filter(
+      (d) => !d.faceup && filterByLocation(d)
+    );
+    const faceUpApplicable = this.state.dilemmaPool.filter(
+      (d) => d.faceup && filterByLocation(d)
+    );
+    if (faceDownApplicable.length === 0 && faceUpApplicable.length > 0) {
+      for (const d of this.state.dilemmaPool) {
+        d.faceup = false;
+      }
+      this.state.dilemmaPool = shuffle(this.state.dilemmaPool);
+    }
+
+    const eligibleDilemmas = this.state.dilemmaPool.filter(
+      (d) => !d.faceup && filterByLocation(d)
+    );
+
+    const reEncounterDilemmas = deployment.dilemmas.filter(
+      (d) => !d.overcome && filterByLocation(d)
+    );
+
+    return {
+      eligibleDilemmas,
+      drawCount,
+      costBudget,
+      missionName: deployment.mission.name,
+      missionType: deployment.mission.missionType,
+      personnelCount: unstoppedPersonnel.length,
+      reEncounterDilemmas,
+    };
+  }
+
+  /**
+   * Start a mission encounter using pre-selected dilemmas (chosen by the human opponent).
+   * Removes selected dilemmas from pool, marks unchosen as face-up (returned to pool bottom),
+   * adds re-encounter dilemmas, creates DilemmaEncounter, resolves first dilemma.
+   */
+  startMissionEncounterWithSelectedDilemmas(
+    missionIndex: number,
+    groupIndex: number,
+    selectedUniqueIds: string[],
+    eligibleDilemmas: DilemmaCard[],
+    reEncounterDilemmas: DilemmaCard[],
+    costBudget: number
+  ): ActionResult {
+    const deployment = this.state.missions[missionIndex];
+    if (!deployment) return { success: false, reason: "Invalid mission index" };
+
+    // Build the selected dilemmas array in the order provided
+    const selectedDilemmas: DilemmaCard[] = [];
+
+    for (const uid of selectedUniqueIds) {
+      const dilemma = eligibleDilemmas.find((d) => d.uniqueId === uid);
+      if (dilemma) {
+        selectedDilemmas.push(dilemma);
+        // Remove from pool
+        const poolIndex = this.state.dilemmaPool.findIndex(
+          (d) => d.uniqueId === uid
+        );
+        if (poolIndex !== -1) {
+          this.state.dilemmaPool.splice(poolIndex, 1);
+        }
+      }
+    }
+
+    // Unchosen eligible dilemmas return face-up to bottom of pile (per rulebook)
+    const selectedSet = new Set(selectedUniqueIds);
+    for (const dilemma of eligibleDilemmas) {
+      if (!selectedSet.has(dilemma.uniqueId!)) {
+        dilemma.faceup = true;
+        // Move to bottom of pool (remove from current position, push to end)
+        const poolIndex = this.state.dilemmaPool.findIndex(
+          (d) => d.uniqueId === dilemma.uniqueId
+        );
+        if (poolIndex !== -1) {
+          this.state.dilemmaPool.splice(poolIndex, 1);
+        }
+        this.state.dilemmaPool.push(dilemma);
+      }
+    }
+
+    // Add re-encounter dilemmas (non-overcome dilemmas already on the mission)
+    for (const dilemma of reEncounterDilemmas) {
+      selectedDilemmas.push(dilemma);
+      const idx = deployment.dilemmas.indexOf(dilemma);
+      if (idx !== -1) {
+        deployment.dilemmas.splice(idx, 1);
+      }
+    }
+    if (reEncounterDilemmas.length > 0) {
+      this.state.actionLog.push(
+        createLogEntry(
+          "dilemma_draw",
+          `${reEncounterDilemmas.length} dilemma(s) re-encountered from mission`,
+          reEncounterDilemmas.map((d) => d.name).join(", "),
+          reEncounterDilemmas.map((d) => cardRef(d))
+        )
+      );
+    }
+
+    // Set up encounter
+    this.state.dilemmaEncounter = {
+      missionIndex,
+      groupIndex,
+      selectedDilemmas,
+      currentDilemmaIndex: 0,
+      costBudget,
+      costSpent: 0,
+      facedDilemmaIds: [],
+    };
+
+    this.state.actionLog.push(
+      createLogEntry(
+        "mission_attempt",
+        `Attempting ${deployment.mission.name}`,
+        `${selectedDilemmas.length} dilemmas`,
+        [cardRef(deployment.mission)]
+      )
+    );
+
+    if (selectedDilemmas.length > 0) {
+      this.resolveCurrentDilemma();
+    } else {
+      this.checkMissionCompletion();
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Get a public-safe view of state for the opponent to see.
+   * Hides hand contents, deck order, and dilemma pool details.
+   */
+  getPublicState(): {
+    missions: MissionDeployment[];
+    score: number;
+    deckCount: number;
+    handCount: number;
+    discardCount: number;
+    dilemmaPoolCount: number;
+    turn: number;
+    phase: GamePhase;
+    completedPlanetMissions: number;
+    completedSpaceMissions: number;
+    gameOver: boolean;
+    victory: boolean;
+    headquartersIndex: number;
+    actionLog: ActionLogEntry[];
+  } {
+    // Conceal personnel cards (face-down per rulebook).
+    // Ships, missions, and dilemmas remain visible.
+    const concealedMissions = this.state.missions.map((deployment) => ({
+      ...deployment,
+      groups: deployment.groups.map((group) => ({
+        cards: group.cards.map((card) => {
+          if (!isPersonnel(card)) return card;
+          return {
+            id: card.id,
+            uniqueId: card.uniqueId,
+            name: card.name,
+            type: "Personnel" as const,
+            unique: card.unique,
+            jpg: "images/card-back.jpg",
+            concealed: true,
+            // Preserve status (Unstopped/Stopped matters for opponent display)
+            affiliation: [],
+            deploy: 0,
+            species: [],
+            status: (card as PersonnelCard).status,
+            other: [],
+            skills: [],
+            integrity: 0,
+            cunning: 0,
+            strength: 0,
+          } satisfies PersonnelCard;
+        }),
+      })),
+    }));
+
+    return {
+      missions: concealedMissions,
+      score: this.state.score,
+      deckCount: this.state.deck.length,
+      handCount: this.state.hand.length,
+      discardCount: this.state.discard.length,
+      dilemmaPoolCount: this.state.dilemmaPool.length,
+      turn: this.state.turn,
+      phase: this.state.phase,
+      completedPlanetMissions: this.state.completedPlanetMissions,
+      completedSpaceMissions: this.state.completedSpaceMissions,
+      gameOver: this.state.gameOver,
+      victory: this.state.victory,
+      headquartersIndex: this.state.headquartersIndex,
+      actionLog: this.state.actionLog,
+    };
+  }
 }
