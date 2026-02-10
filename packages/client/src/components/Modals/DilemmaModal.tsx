@@ -263,6 +263,11 @@ export function DilemmaModal({
                       skillEffect?.type === "skillGrant"
                         ? skillEffect.skill
                         : null;
+                    const excludedAffiliations =
+                      skillEffect?.type === "skillGrant"
+                        ? skillEffect.skillSource?.excludeAffiliations
+                        : undefined;
+                    const excludedLabel = excludedAffiliations?.join("/") ?? "";
                     const needsSkillSelection =
                       !fixedSkill &&
                       availableSkills &&
@@ -302,10 +307,15 @@ export function DilemmaModal({
                               </option>
                             ))}
                           </select>
-                        ) : (
+                        ) : fixedSkill ? (
                           // Fixed skill display
                           <span className="dilemma-modal__interlink-skill">
-                            → {fixedSkill || "?"}
+                            → {fixedSkill}
+                          </span>
+                        ) : (
+                          // No skills available (no matching personnel present)
+                          <span className="dilemma-modal__interlink-skill dilemma-modal__interlink-skill--unavailable">
+                            No non-{excludedLabel} skills available
                           </span>
                         )}
                         <button
@@ -321,7 +331,11 @@ export function DilemmaModal({
                           }}
                           title={
                             !canUse
-                              ? "Not enough cards in deck"
+                              ? !fixedSkill &&
+                                (!availableSkills ||
+                                  availableSkills.length === 0)
+                                ? `No non-${excludedLabel} personnel present`
+                                : "Not enough cards in deck"
                               : needsSkillSelection && !selectedSkill
                                 ? "Select a skill first"
                                 : `Discard 1 card to grant ${fixedSkill || selectedSkill} to all Borg`

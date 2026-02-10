@@ -385,6 +385,12 @@
   border-color: #66ccff;
 }
 
+.dilemma-modal__interlink-skill--unavailable {
+  color: #777;
+  font-style: italic;
+  font-weight: normal;
+}
+
 .dilemma-modal__interlink-btn {
   background: #ff9900;
   color: #000;
