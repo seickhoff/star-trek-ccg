@@ -64,11 +64,17 @@ export function DilemmaModal({
   onExecuteInterlink,
   onPlayInterrupt,
 }: DilemmaModalProps) {
-  const { position, zIndex, minimized, containerRef, handleMouseDown } =
-    useDraggablePanel({
-      isOpen: !!encounter,
-      initialPosition: { x: 50, y: 50 },
-    });
+  const {
+    position,
+    zIndex,
+    minimized,
+    containerRef,
+    handleMouseDown,
+    handleTouchStart,
+  } = useDraggablePanel({
+    isOpen: !!encounter,
+    initialPosition: { x: 50, y: 50 },
+  });
 
   // Track selected skills for interlink abilities that require skill selection
   // Key format: "personnelId:abilityId"
@@ -150,8 +156,14 @@ export function DilemmaModal({
     <div
       ref={containerRef}
       className={`dilemma-modal${minimized ? " dilemma-modal--minimized" : ""}`}
-      style={{ left: position.x, top: position.y, zIndex }}
+      style={{
+        left: position.x,
+        top: position.y,
+        zIndex,
+        maxHeight: `calc(100vh - ${position.y}px - 20px)`,
+      }}
       onMouseDown={(e) => handleMouseDown(e, ".dilemma-modal__header")}
+      onTouchStart={(e) => handleTouchStart(e, ".dilemma-modal__header")}
     >
       <div className="dilemma-modal__header">
         <h2 className="dilemma-modal__title">Dilemma Encounter</h2>

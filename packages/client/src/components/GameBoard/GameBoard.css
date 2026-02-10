@@ -58,6 +58,29 @@
   transform: scale(1.02);
 }
 
+/* AI turn overlay */
+.game-board__ai-overlay {
+  text-align: center;
+  padding: 6px;
+  background: rgba(255, 170, 0, 0.15);
+  border-bottom: 1px solid rgba(255, 170, 0, 0.3);
+  color: #ffaa00;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  animation: pulse-ai 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-ai {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 /* Mission columns */
 .game-board__missions {
   flex: 1;

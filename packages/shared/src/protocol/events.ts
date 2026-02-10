@@ -2,6 +2,8 @@ import type {
   SerializableGameState,
   ActionLogEntry,
 } from "../types/gameState.js";
+import type { TwoPlayerGameState } from "../types/twoPlayerState.js";
+import type { DilemmaCard, MissionType } from "../types/card.js";
 
 /**
  * Base interface for all server-to-client events
@@ -81,6 +83,52 @@ export interface GameOverEvent extends BaseEvent {
   type: "GAME_OVER";
   victory: boolean;
   finalScore: number;
+  winner?: 1 | 2;
+}
+
+// ============================================================================
+// Two-player events
+// ============================================================================
+
+/**
+ * Full two-player state sync - sent on join/reconnection in 2P mode
+ */
+export interface TwoPlayerStateSyncEvent extends BaseEvent {
+  type: "TWO_PLAYER_STATE_SYNC";
+  state: TwoPlayerGameState;
+}
+
+/**
+ * Two-player state update - sent after each action in 2P mode
+ */
+export interface TwoPlayerStateUpdateEvent extends BaseEvent {
+  type: "TWO_PLAYER_STATE_UPDATE";
+  state: TwoPlayerGameState;
+  requestId: string;
+  newLogEntries: ActionLogEntry[];
+  isAIAction?: boolean;
+}
+
+/**
+ * Turn changed to a different player
+ */
+export interface TurnChangeEvent extends BaseEvent {
+  type: "TURN_CHANGE";
+  activePlayer: 1 | 2;
+}
+
+/**
+ * Request for human to select dilemmas when AI attempts a mission.
+ * Human picks which dilemmas to use and their order.
+ */
+export interface DilemmaSelectionRequestEvent extends BaseEvent {
+  type: "DILEMMA_SELECTION_REQUEST";
+  drawnDilemmas: DilemmaCard[];
+  costBudget: number;
+  drawCount: number;
+  missionName: string;
+  missionType: MissionType;
+  aiPersonnelCount: number;
 }
 
 // ============================================================================
@@ -106,7 +154,11 @@ export type GameEvent =
   | ActionRejectedEvent
   | GameStartedEvent
   | GameOverEvent
-  | ErrorEvent;
+  | ErrorEvent
+  | TwoPlayerStateSyncEvent
+  | TwoPlayerStateUpdateEvent
+  | TurnChangeEvent
+  | DilemmaSelectionRequestEvent;
 
 /**
  * Extract event type from event object

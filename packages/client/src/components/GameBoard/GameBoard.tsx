@@ -14,8 +14,13 @@ import {
   selectDilemmaResult,
   selectPlayableInterrupts,
   selectActionLog,
+  selectIsMyTurn,
+  selectOpponentState,
+  selectWinner,
+  selectDilemmaSelectionRequest,
 } from "../../store/clientGameStore";
 import { MissionColumn } from "./MissionColumn";
+import { OpponentBoard } from "./OpponentBoard";
 import { TopBar } from "../UI/TopBar";
 import { HandContainer } from "../Hand/HandContainer";
 import {
@@ -25,6 +30,7 @@ import {
   DilemmaModal,
   DiscardPicker,
   ActionLog,
+  DilemmaSelectionModal,
 } from "../Modals";
 import { useConnectionStore } from "../../store/connectionStore";
 import { defaultDeck } from "@stccg/shared";
@@ -65,6 +71,17 @@ export function GameBoard({ sendAction }: GameBoardProps) {
   const dilemmaResult = useClientGameStore(selectDilemmaResult);
   const playableInterrupts = useClientGameStore(selectPlayableInterrupts);
   const actionLog = useClientGameStore(selectActionLog);
+  const isMyTurn = useClientGameStore(selectIsMyTurn);
+  const opponentState = useClientGameStore(selectOpponentState);
+  const winner = useClientGameStore(selectWinner);
+  const dilemmaSelectionRequest = useClientGameStore(
+    selectDilemmaSelectionRequest
+  );
+
+  // Dilemma selection clear action
+  const setDilemmaSelectionRequest = useClientGameStore(
+    (s) => s.setDilemmaSelectionRequest
+  );
 
   // Add rejected actions to the action log
   const addLogEntry = useClientGameStore((s) => s.addLogEntry);
@@ -470,6 +487,17 @@ export function GameBoard({ sendAction }: GameBoardProps) {
     [sendAction]
   );
 
+  const handleSelectDilemmas = useCallback(
+    (selectedUniqueIds: string[]) => {
+      sendAction({
+        type: "SELECT_DILEMMAS",
+        selectedDilemmaUniqueIds: selectedUniqueIds,
+      });
+      setDilemmaSelectionRequest(null);
+    },
+    [sendAction, setDilemmaSelectionRequest]
+  );
+
   // Get personnel for dilemma encounter
   const dilemmaPersonnel: PersonnelCard[] = dilemmaEncounter
     ? (missions[dilemmaEncounter.missionIndex]?.groups[
@@ -483,7 +511,7 @@ export function GameBoard({ sendAction }: GameBoardProps) {
       <div className="game-board game-board--start">
         <div className="game-board__start-screen">
           <h1 className="game-board__title">Star Trek CCG 2E</h1>
-          <p className="game-board__subtitle">Solitaire Edition</p>
+          <p className="game-board__subtitle">vs AI Opponent</p>
           <button className="game-board__start-btn" onClick={handleNewGame}>
             Start New Game
           </button>
@@ -491,6 +519,14 @@ export function GameBoard({ sendAction }: GameBoardProps) {
       </div>
     );
   }
+
+  const gameOverMessage = winner
+    ? winner === 1
+      ? "VICTORY!"
+      : "DEFEAT - AI Wins"
+    : victory
+      ? "VICTORY!"
+      : "DEFEAT";
 
   return (
     <div className="game-board">
@@ -501,16 +537,32 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         counters={counters}
         score={score}
         deckCount={deck.length}
-        canDraw={canDraw}
-        canAdvancePhase={canAdvancePhase}
+        canDraw={canDraw && isMyTurn}
+        canAdvancePhase={canAdvancePhase && isMyTurn}
         gameOver={gameOver}
-        victory={victory}
+        victory={winner ? winner === 1 : victory}
+        gameOverMessage={gameOverMessage}
+        opponentScore={opponentState?.score ?? 0}
+        isMyTurn={isMyTurn}
         onDraw={handleDraw}
         onAdvancePhase={() => sendAction({ type: "NEXT_PHASE" })}
         onNewGame={handleNewGame}
       />
 
-      {/* Mission columns */}
+      {/* Opponent board (top) */}
+      {opponentState && (
+        <OpponentBoard
+          opponentState={opponentState}
+          isOpponentTurn={!isMyTurn}
+        />
+      )}
+
+      {/* AI turn overlay (hidden when human needs to select dilemmas) */}
+      {!isMyTurn && !gameOver && !dilemmaSelectionRequest && (
+        <div className="game-board__ai-overlay">AI is playing...</div>
+      )}
+
+      {/* Player's mission columns */}
       <div className="game-board__missions">
         {missions.map((deployment, index) => (
           <MissionColumn
@@ -592,6 +644,12 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         maxSelections={discardPickerState.maxSelections}
         allowedTypes={discardPickerState.allowedTypes}
         eventCard={discardPickerState.eventCard}
+      />
+
+      <DilemmaSelectionModal
+        request={dilemmaSelectionRequest}
+        onSubmit={handleSelectDilemmas}
+        onCardClick={handleViewCard}
       />
 
       {/* Captain's Log */}

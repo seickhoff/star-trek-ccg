@@ -73,3 +73,9 @@ export type {
 } from "./gameState.js";
 
 export { PHASE_INDEX, PHASE_FROM_INDEX, GAME_CONSTANTS } from "./gameState.js";
+
+// Two-player state types
+export type {
+  OpponentPublicState,
+  TwoPlayerGameState,
+} from "./twoPlayerState.js";

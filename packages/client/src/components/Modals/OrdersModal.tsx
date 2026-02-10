@@ -89,8 +89,14 @@ export function OrdersModal({
   deckSize = 0,
   onExecuteOrderAbility,
 }: OrdersModalProps) {
-  const { position, zIndex, minimized, containerRef, handleMouseDown } =
-    useDraggablePanel({ isOpen, initialPosition: { x: 50, y: 50 } });
+  const {
+    position,
+    zIndex,
+    minimized,
+    containerRef,
+    handleMouseDown,
+    handleTouchStart,
+  } = useDraggablePanel({ isOpen, initialPosition: { x: 50, y: 50 } });
 
   // State for skill picker
   const [skillPickerState, setSkillPickerState] = useState<{
@@ -387,8 +393,14 @@ export function OrdersModal({
     <div
       ref={containerRef}
       className={`orders-modal${minimized ? " orders-modal--minimized" : ""}`}
-      style={{ left: position.x, top: position.y, zIndex }}
+      style={{
+        left: position.x,
+        top: position.y,
+        zIndex,
+        maxHeight: `calc(100vh - ${position.y}px - 20px)`,
+      }}
       onMouseDown={(e) => handleMouseDown(e, ".orders-modal__header")}
+      onTouchStart={(e) => handleTouchStart(e, ".orders-modal__header")}
     >
       <div className="orders-modal__header">
         <h2 className="orders-modal__title">Execute Orders</h2>

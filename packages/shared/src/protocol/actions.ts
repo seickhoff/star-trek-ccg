@@ -147,6 +147,15 @@ export interface PlayInterruptAction extends BaseAction {
   abilityId: string;
 }
 
+/**
+ * Human selects which dilemmas to use against the AI during its mission attempt.
+ * selectedDilemmaUniqueIds is ordered (first = top of stack, faced first).
+ */
+export interface SelectDilemmasAction extends BaseAction {
+  type: "SELECT_DILEMMAS";
+  selectedDilemmaUniqueIds: string[];
+}
+
 // ============================================================================
 // Discard Excess phase actions
 // ============================================================================
@@ -180,7 +189,8 @@ export type GameAction =
   | ClearDilemmaEncounterAction
   | ExecuteInterlinkAbilityAction
   | PlayInterruptAction
-  | DiscardCardAction;
+  | DiscardCardAction
+  | SelectDilemmasAction;
 
 /**
  * Extract action type from action object

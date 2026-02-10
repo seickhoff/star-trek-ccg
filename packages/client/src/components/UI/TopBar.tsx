@@ -11,6 +11,9 @@ interface TopBarProps {
   canAdvancePhase: boolean;
   gameOver: boolean;
   victory: boolean;
+  gameOverMessage?: string;
+  opponentScore?: number;
+  isMyTurn?: boolean;
   onDraw: () => void;
   onAdvancePhase: () => void;
   onNewGame: () => void;
@@ -41,6 +44,9 @@ export function TopBar({
   canAdvancePhase,
   gameOver,
   victory,
+  gameOverMessage,
+  opponentScore,
+  isMyTurn = true,
   onDraw,
   onAdvancePhase,
   onNewGame,
@@ -55,9 +61,13 @@ export function TopBar({
         </div>
 
         <div className="top-bar__phase">
-          <span className="top-bar__phase-name">{PHASE_LABELS[phase]}</span>
+          <span className="top-bar__phase-name">
+            {isMyTurn ? PHASE_LABELS[phase] : "AI's Turn"}
+          </span>
           <span className="top-bar__phase-desc">
-            {PHASE_DESCRIPTIONS[phase]}
+            {isMyTurn
+              ? PHASE_DESCRIPTIONS[phase]
+              : "Waiting for AI opponent..."}
           </span>
         </div>
       </div>
@@ -72,11 +82,20 @@ export function TopBar({
         </div>
 
         <div className="top-bar__stat">
-          <span className="top-bar__stat-label">Score</span>
+          <span className="top-bar__stat-label">You</span>
           <span className="top-bar__stat-value top-bar__stat-value--score">
             {score}
           </span>
         </div>
+
+        {opponentScore !== undefined && (
+          <div className="top-bar__stat">
+            <span className="top-bar__stat-label">AI</span>
+            <span className="top-bar__stat-value top-bar__stat-value--opponent">
+              {opponentScore}
+            </span>
+          </div>
+        )}
 
         <div className="top-bar__stat">
           <span className="top-bar__stat-label">Deck</span>
@@ -91,7 +110,7 @@ export function TopBar({
             <div
               className={`top-bar__game-over ${victory ? "top-bar__game-over--victory" : "top-bar__game-over--defeat"}`}
             >
-              {victory ? "VICTORY!" : "DEFEAT"}
+              {gameOverMessage || (victory ? "VICTORY!" : "DEFEAT")}
             </div>
             <button
               className="top-bar__btn top-bar__btn--new"
@@ -108,9 +127,11 @@ export function TopBar({
                 onClick={onDraw}
                 disabled={!canDraw}
                 title={
-                  canDraw
-                    ? "Draw a card (costs 1 counter)"
-                    : "Cannot draw - need counters and cards in deck"
+                  !isMyTurn
+                    ? "Wait for AI's turn to finish"
+                    : canDraw
+                      ? "Draw a card (costs 1 counter)"
+                      : "Cannot draw - need counters and cards in deck"
                 }
               >
                 Draw Card
@@ -122,11 +143,13 @@ export function TopBar({
               onClick={onAdvancePhase}
               disabled={!canAdvancePhase}
               title={
-                canAdvancePhase
-                  ? `Advance to ${phase === "PlayAndDraw" ? "Execute Orders" : phase === "ExecuteOrders" ? "Discard Excess" : "Next Turn"}`
-                  : phase === "DiscardExcess"
-                    ? "Must discard down to 7 cards first"
-                    : "Cannot advance phase yet"
+                !isMyTurn
+                  ? "Wait for AI's turn to finish"
+                  : canAdvancePhase
+                    ? `Advance to ${phase === "PlayAndDraw" ? "Execute Orders" : phase === "ExecuteOrders" ? "Discard Excess" : "Next Turn"}`
+                    : phase === "DiscardExcess"
+                      ? "Must discard down to 7 cards first"
+                      : "Cannot advance phase yet"
               }
             >
               {phase === "DiscardExcess" ? "End Turn" : "Next Phase"}

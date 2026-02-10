@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
 import type { GameAction, GameEvent } from "@stccg/shared";
-import { GameEngine } from "./GameEngine.js";
+import { TwoPlayerGame } from "./TwoPlayerGame.js";
 
 /**
  * Player connection info
@@ -13,24 +13,40 @@ interface PlayerConnection {
 }
 
 /**
- * Manages a single game instance with connected players
+ * Manages a single game instance with connected players.
+ * Now uses TwoPlayerGame for human vs AI gameplay.
  */
 export class GameRoom {
   readonly gameId: string;
   private players: Map<string, PlayerConnection> = new Map();
-  private engine: GameEngine;
-  private lastLogIndex: number = 0;
+  private game: TwoPlayerGame;
+  private aiLogIndex = 0;
 
   constructor(gameId: string) {
     this.gameId = gameId;
-    this.engine = new GameEngine();
+    this.game = new TwoPlayerGame();
+
+    // Wire up state change callback for AI actions
+    this.game.onStateChange = (isAIAction: boolean) => {
+      this.broadcastTwoPlayerState(isAIAction);
+    };
+
+    // Wire up direct event delivery to human player
+    this.game.onSendToHuman = (event: GameEvent) => {
+      for (const player of this.players.values()) {
+        if (player.ws.readyState === WebSocket.OPEN) {
+          player.ws.send(JSON.stringify(event));
+        }
+      }
+    };
   }
 
   /**
    * Add a player to the room
    */
   addPlayer(playerId: string, playerName: string, ws: WebSocket): boolean {
-    if (this.players.size >= 2) {
+    if (this.players.size >= 1) {
+      // Only 1 human player — AI is player 2
       this.sendToSocket(ws, {
         type: "ERROR",
         timestamp: Date.now(),
@@ -40,7 +56,7 @@ export class GameRoom {
       return false;
     }
 
-    const playerNumber = (this.players.size + 1) as 1 | 2;
+    const playerNumber = 1 as const; // Human is always player 1
     this.players.set(playerId, { playerId, playerName, ws, playerNumber });
 
     console.log(
@@ -55,7 +71,7 @@ export class GameRoom {
       gameId: this.gameId,
     });
 
-    // Notify all players of new player
+    // Notify player joined
     this.broadcast({
       type: "PLAYER_JOINED",
       timestamp: Date.now(),
@@ -64,12 +80,17 @@ export class GameRoom {
       playerNumber,
     });
 
-    // Send current state to new player
-    this.sendToPlayer(playerId, {
-      type: "STATE_SYNC",
+    // Also notify that AI player 2 is ready
+    this.broadcast({
+      type: "PLAYER_JOINED",
       timestamp: Date.now(),
-      state: this.engine.getSerializableState(),
+      playerId: "ai-player",
+      playerName: "AI Opponent",
+      playerNumber: 2,
     });
+
+    // Send initial two-player state
+    this.sendTwoPlayerStateSync(playerId);
 
     return true;
   }
@@ -105,41 +126,79 @@ export class GameRoom {
 
     console.log(`[${this.gameId}] Player ${playerId} action: ${action.type}`);
 
-    // Execute action on engine
-    const result = this.engine.executeAction(action);
+    // Reset log indices on new game setup
+    if (action.type === "SETUP_GAME" || action.type === "RESET_GAME") {
+      this.aiLogIndex = 0;
+    }
 
-    if (result.success) {
-      // Get new log entries since last update
-      const currentLog = this.engine.getState().actionLog;
-      const newLogEntries = currentLog.slice(this.lastLogIndex);
-      this.lastLogIndex = currentLog.length;
+    // Human is always player index 0
+    const playerIndex = 0 as const;
 
-      // Broadcast state update to all players
-      this.broadcast({
-        type: "STATE_UPDATE",
-        timestamp: Date.now(),
-        state: this.engine.getSerializableState(),
-        requestId: action.requestId,
-        newLogEntries,
-      });
+    // Execute action through TwoPlayerGame
+    const result = this.game.handleAction(playerIndex, action);
 
-      // Check for game over
-      const state = this.engine.getState();
-      if (state.gameOver) {
-        this.broadcast({
-          type: "GAME_OVER",
-          timestamp: Date.now(),
-          victory: state.victory,
-          finalScore: state.score,
-        });
-      }
-    } else {
+    if (!result.success) {
       // Send rejection only to the requesting player
       this.sendToPlayer(playerId, {
         type: "ACTION_REJECTED",
         timestamp: Date.now(),
         requestId: action.requestId,
         reason: result.reason || "Action failed",
+      });
+    }
+    // Success state is broadcast via the onStateChange callback
+  }
+
+  /**
+   * Send full two-player state sync to a player
+   */
+  private sendTwoPlayerStateSync(playerId: string): void {
+    const state = this.game.getStateForPlayer(0);
+
+    this.sendToPlayer(playerId, {
+      type: "TWO_PLAYER_STATE_SYNC",
+      timestamp: Date.now(),
+      state,
+    });
+  }
+
+  /**
+   * Broadcast two-player state update to all connected players
+   */
+  private broadcastTwoPlayerState(isAIAction: boolean): void {
+    // Get state from human's perspective
+    const state = this.game.getStateForPlayer(0);
+
+    // Human log entries are already in state.myState.actionLog,
+    // so only send AI entries as newLogEntries to avoid duplicates.
+    const aiLog = this.game.engines[1].getState().actionLog;
+    const aiNewEntries = aiLog.slice(this.aiLogIndex);
+    this.aiLogIndex = aiLog.length;
+
+    // Prefix AI entries with [AI] and unique IDs
+    const allNewEntries = aiNewEntries.map((e) => ({
+      ...e,
+      id: `ai-${e.id}`,
+      message: `[AI] ${e.message}`,
+    }));
+
+    this.broadcast({
+      type: "TWO_PLAYER_STATE_UPDATE",
+      timestamp: Date.now(),
+      state,
+      requestId: "",
+      newLogEntries: allNewEntries,
+      isAIAction,
+    });
+
+    // Check for game over
+    if (state.winner) {
+      this.broadcast({
+        type: "GAME_OVER",
+        timestamp: Date.now(),
+        victory: state.winner === 1,
+        finalScore: state.myState.score,
+        winner: state.winner,
       });
     }
   }

@@ -28,18 +28,24 @@ export function useDraggablePanel({
     }
   }, [isOpen]);
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent, headerSelector: string) => {
+  // Shared drag logic for both mouse and touch
+  const startDrag = useCallback(
+    (
+      startX: number,
+      startY: number,
+      target: HTMLElement,
+      headerSelector: string
+    ) => {
       setZIndex(getNextZIndex());
 
-      const target = e.target as HTMLElement;
-
       // Don't initiate drag from interactive elements
-      if (target.closest("button") || target.closest(".card-slot")) return;
+      if (
+        target.closest("button") ||
+        target.closest(".card-slot") ||
+        target.closest("select")
+      )
+        return null;
 
-      e.preventDefault();
-      const startMouseX = e.clientX;
-      const startMouseY = e.clientY;
       const startPosX = position.x;
       const startPosY = position.y;
       let didDrag = false;
@@ -53,14 +59,13 @@ export function useDraggablePanel({
           40)
         : 40;
 
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        const dx = moveEvent.clientX - startMouseX;
-        const dy = moveEvent.clientY - startMouseY;
+      const onMove = (clientX: number, clientY: number) => {
+        const dx = clientX - startX;
+        const dy = clientY - startY;
         if (!didDrag && Math.abs(dx) + Math.abs(dy) >= DRAG_THRESHOLD) {
           didDrag = true;
         }
         if (didDrag) {
-          // Clamp so header stays in viewport
           const rawX = startPosX + dx;
           const rawY = startPosY + dy;
           setPosition({
@@ -73,27 +78,84 @@ export function useDraggablePanel({
         }
       };
 
-      const handleMouseUp = () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-
+      const onEnd = () => {
         if (!didDrag) {
           setMinimized((prev) => {
             if (prev) {
-              // When minimized, only expand if clicking header
               return target.closest(headerSelector) ? false : prev;
             } else {
-              // When expanded, minimize on click in empty area
               return true;
             }
           });
         }
       };
 
+      return { onMove, onEnd, getDidDrag: () => didDrag };
+    },
+    [position]
+  );
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent, headerSelector: string) => {
+      const result = startDrag(
+        e.clientX,
+        e.clientY,
+        e.target as HTMLElement,
+        headerSelector
+      );
+      if (!result) return;
+
+      e.preventDefault();
+      const { onMove, onEnd } = result;
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        onMove(moveEvent.clientX, moveEvent.clientY);
+      };
+      const handleMouseUp = () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        onEnd();
+      };
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
-    [position]
+    [startDrag]
+  );
+
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent, headerSelector: string) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+
+      const result = startDrag(
+        touch.clientX,
+        touch.clientY,
+        e.target as HTMLElement,
+        headerSelector
+      );
+      if (!result) return;
+
+      const { onMove, onEnd, getDidDrag } = result;
+
+      const handleTouchMove = (moveEvent: TouchEvent) => {
+        const t = moveEvent.touches[0];
+        if (!t) return;
+        if (getDidDrag()) {
+          moveEvent.preventDefault();
+        }
+        onMove(t.clientX, t.clientY);
+      };
+      const handleTouchEnd = () => {
+        document.removeEventListener("touchmove", handleTouchMove);
+        document.removeEventListener("touchend", handleTouchEnd);
+        onEnd();
+      };
+      document.addEventListener("touchmove", handleTouchMove, {
+        passive: false,
+      });
+      document.addEventListener("touchend", handleTouchEnd);
+    },
+    [startDrag]
   );
 
   return {
@@ -103,5 +165,6 @@ export function useDraggablePanel({
     setMinimized,
     containerRef,
     handleMouseDown,
+    handleTouchStart,
   };
 }

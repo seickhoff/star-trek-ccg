@@ -37,6 +37,9 @@ export type {
   GameStartedEvent,
   GameOverEvent,
   ErrorEvent,
+  TwoPlayerStateSyncEvent,
+  TwoPlayerStateUpdateEvent,
+  TurnChangeEvent,
   GameEvent,
   EventType,
 } from "./events.js";
