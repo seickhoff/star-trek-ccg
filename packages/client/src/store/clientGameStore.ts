@@ -192,7 +192,13 @@ export const useClientGameStore = create<ClientGameStore>((set) => ({
       headquartersIndex: s.headquartersIndex,
       actionLog: s.actionLog,
       // Reset AI log on new game (human log resets to 1 entry = game start)
-      aiActionLog: s.actionLog.length <= 1 ? [] : prev.aiActionLog,
+      // Preserve reference if already empty to avoid unnecessary re-renders
+      aiActionLog:
+        s.actionLog.length <= 1
+          ? prev.aiActionLog.length === 0
+            ? prev.aiActionLog
+            : []
+          : prev.aiActionLog,
       opponentState: twoPlayerState.opponentState,
       activePlayer: twoPlayerState.activePlayer,
       myPlayerNumber: twoPlayerState.myPlayerNumber,
@@ -281,11 +287,13 @@ function checkInterruptConditions(
   return true;
 }
 
+const EMPTY_INTERRUPTS: PlayableInterrupt[] = [];
+
 export const selectPlayableInterrupts = (
   state: ClientGameStore
 ): PlayableInterrupt[] => {
   // Interrupts can only be played during dilemma encounters
-  if (!state.dilemmaEncounter) return [];
+  if (!state.dilemmaEncounter) return EMPTY_INTERRUPTS;
 
   const playable: PlayableInterrupt[] = [];
 
@@ -306,14 +314,25 @@ export const selectPlayableInterrupts = (
     }
   }
 
-  return playable;
+  return playable.length > 0 ? playable : EMPTY_INTERRUPTS;
 };
+
+// Memoize merged log to avoid creating new arrays on every selector call
+let _lastActionLog: ActionLogEntry[] = [];
+let _lastAiLog: ActionLogEntry[] = [];
+let _lastMergedLog: ActionLogEntry[] = [];
 
 export const selectActionLog = (state: ClientGameStore) => {
   if (state.aiActionLog.length === 0) return state.actionLog;
-  return [...state.actionLog, ...state.aiActionLog].sort(
+  if (state.actionLog === _lastActionLog && state.aiActionLog === _lastAiLog) {
+    return _lastMergedLog;
+  }
+  _lastActionLog = state.actionLog;
+  _lastAiLog = state.aiActionLog;
+  _lastMergedLog = [...state.actionLog, ...state.aiActionLog].sort(
     (a, b) => a.timestamp - b.timestamp
   );
+  return _lastMergedLog;
 };
 
 export const selectIsMyTurn = (state: ClientGameStore) =>

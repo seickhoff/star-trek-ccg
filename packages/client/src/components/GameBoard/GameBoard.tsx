@@ -7,6 +7,7 @@ import type {
   GameAction,
 } from "@stccg/shared";
 import { isPersonnel } from "@stccg/shared";
+import { useShallow } from "zustand/react/shallow";
 import {
   useClientGameStore,
   selectCanDraw,
@@ -47,6 +48,8 @@ interface GameBoardProps {
  */
 export function GameBoard({ sendAction }: GameBoardProps) {
   // Game state from client store (synced from server)
+  // useShallow ensures re-renders only when individual field references change,
+  // not on every store update (which caused infinite re-render loops with useSyncExternalStore)
   const {
     missions,
     hand,
@@ -63,7 +66,25 @@ export function GameBoard({ sendAction }: GameBoardProps) {
     uniquesInPlay,
     grantedSkills,
     usedOrderAbilities,
-  } = useClientGameStore();
+  } = useClientGameStore(
+    useShallow((s) => ({
+      missions: s.missions,
+      hand: s.hand,
+      turn: s.turn,
+      phase: s.phase,
+      counters: s.counters,
+      score: s.score,
+      deck: s.deck,
+      discard: s.discard,
+      dilemmaEncounter: s.dilemmaEncounter,
+      gameOver: s.gameOver,
+      victory: s.victory,
+      headquartersIndex: s.headquartersIndex,
+      uniquesInPlay: s.uniquesInPlay,
+      grantedSkills: s.grantedSkills,
+      usedOrderAbilities: s.usedOrderAbilities,
+    }))
+  );
 
   // Derived selectors
   const canDraw = useClientGameStore(selectCanDraw);

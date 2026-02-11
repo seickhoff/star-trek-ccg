@@ -44,6 +44,14 @@ export function DilemmaSelectionModal({
     initialPosition: { x: 50, y: 30 },
   });
 
+  // Track which IDs are re-encounter dilemmas (must be before early return)
+  const reEncounterDilemmas = request?.reEncounterDilemmas ?? [];
+  const reEncounterIdSet = useMemo(
+    () => new Set(reEncounterDilemmas.map((d) => d.uniqueId)),
+    [reEncounterDilemmas]
+  );
+  const isReEncounter = (uid: string) => reEncounterIdSet.has(uid);
+
   // Reset selection when a new request comes in
   useEffect(() => {
     if (request) {
@@ -60,15 +68,7 @@ export function DilemmaSelectionModal({
     missionName,
     missionType,
     aiPersonnelCount,
-    reEncounterDilemmas = [],
   } = request;
-
-  // Track which IDs are re-encounter dilemmas
-  const reEncounterIdSet = useMemo(
-    () => new Set(reEncounterDilemmas.map((d) => d.uniqueId)),
-    [reEncounterDilemmas]
-  );
-  const isReEncounter = (uid: string) => reEncounterIdSet.has(uid);
 
   // Calculate current cost (only pool dilemmas count)
   const currentCost = selectedIds.reduce((sum, uid) => {
