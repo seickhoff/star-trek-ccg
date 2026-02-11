@@ -295,13 +295,14 @@ export class TwoPlayerGame {
           return result;
         }
       );
-
-      // After AI finishes all phases, switch to human
+    } catch (err) {
+      console.error("AI turn error:", err);
+    } finally {
+      // Always hand control back to human, even if AI errored
       if (!this._winner) {
-        this.switchActivePlayer();
+        this._activePlayer = 0;
         this.onStateChange?.(true);
       }
-    } finally {
       this._isAITurnInProgress = false;
     }
   }

@@ -234,7 +234,7 @@ export const selectCanAdvancePhase = (state: ClientGameStore) => {
   }
   if (phase === "ExecuteOrders") return true;
   if (phase === "DiscardExcess") {
-    return hand.length <= 7 && counters === 0;
+    return hand.length <= 7;
   }
   return false;
 };

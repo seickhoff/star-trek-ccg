@@ -22,6 +22,18 @@ import type { GameEngine, ActionResult } from "./GameEngine.js";
 
 type ActionCallback = (action: GameAction) => Promise<ActionResult>;
 
+/** Tunable AI strategy thresholds. */
+const AI_CONFIG = {
+  /** Min personnel at HQ before departing (when deck is healthy). */
+  minCrewToDepart: 8,
+  /** Min personnel at HQ when deck is running low. */
+  lowDeckMinCrew: 4,
+  /** Deck size at or below which lowDeckMinCrew kicks in. */
+  lowDeckThreshold: 10,
+  /** Max execute-orders loop iterations per turn. */
+  maxExecuteOrdersRounds: 5,
+};
+
 let requestCounter = 0;
 function aiRequestId(): string {
   return `ai-${++requestCounter}`;
@@ -366,9 +378,7 @@ export class AIPlayer {
     engine: GameEngine,
     executeAction: ActionCallback
   ): Promise<void> {
-    const MAX_ROUNDS = 5;
-
-    for (let round = 0; round < MAX_ROUNDS; round++) {
+    for (let round = 0; round < AI_CONFIG.maxExecuteOrdersRounds; round++) {
       let state = engine.getSerializableState();
       if (state.gameOver) return;
 
@@ -694,14 +704,9 @@ export class AIPlayer {
 
     const allHQPersonnel = [...hqPlanetPersonnel, ...shipPersonnel];
 
-    // Wait until we have enough crew before departing (9-10 ideal)
-    // Lower threshold if deck is running low to avoid getting stuck
-    const minCrew = state.deck.length > 10 ? 8 : 4;
-    if (allHQPersonnel.length < minCrew) {
-      return false;
-    }
-
-    // Find the best mission we can complete with HQ crew (+ destination crew)
+    // Find the best mission we can complete with HQ crew (+ destination crew).
+    // findCompletableMission combines with existing crew at the destination,
+    // so reinforcing a stranded crew is handled automatically.
     const bestTarget = this.findCompletableMission(
       state,
       allHQPersonnel,
@@ -710,6 +715,23 @@ export class AIPlayer {
     );
 
     if (!bestTarget) return false;
+
+    // If no stranded crew at the destination, enforce minCrew threshold —
+    // don't send a small crew alone to face dilemmas.
+    const destPersonnel = state.missions[
+      bestTarget.missionIndex
+    ]!.groups.flatMap((g) => g.cards).filter(
+      (c) => isPersonnel(c) && (c as PersonnelCard).status === "Unstopped"
+    );
+    if (destPersonnel.length === 0) {
+      const minCrew =
+        state.deck.length > AI_CONFIG.lowDeckThreshold
+          ? AI_CONFIG.minCrewToDepart
+          : AI_CONFIG.lowDeckMinCrew;
+      if (allHQPersonnel.length < minCrew) {
+        return false;
+      }
+    }
 
     // Beam planet personnel to ship
     if (hqPlanetPersonnel.length > 0) {
@@ -752,11 +774,11 @@ export class AIPlayer {
   }
 
   /**
-   * Recall a ship from a non-HQ mission back to HQ when:
-   *  - The mission is completed (nothing left to do there)
-   *  - The crew can't complete the mission (need reinforcements)
-   * After recalling, load HQ personnel and optionally redeploy
-   * to any completable mission if range allows.
+   * Recall a ship from a non-HQ mission when it can't make progress.
+   * Compares two options and picks the quickest:
+   *  A) Recall stranded ship to HQ → pick up crew → redeploy
+   *  B) Leave crew in place, let HQ send a second ship with reinforcements
+   * Option B wins when HQ has (or will soon have) a ship that can reinforce.
    */
   private async tryRecallStrandedShip(
     state: SerializableGameState,
@@ -765,6 +787,11 @@ export class AIPlayer {
     hqIndex: number
   ): Promise<boolean> {
     const hqMission = state.missions[hqIndex]!.mission;
+
+    // Check if HQ has a second ship that could deliver reinforcements
+    const hqHasShip = state.missions[hqIndex]!.groups.some(
+      (g, idx) => idx > 0 && g.cards.some(isShip)
+    );
 
     // Find a ship at a non-HQ mission that should be recalled
     for (let i = 0; i < state.missions.length; i++) {
@@ -787,6 +814,14 @@ export class AIPlayer {
         // Decide if this ship should be recalled
         const shouldRecall = this.shouldRecallShip(deployment, mission);
         if (!shouldRecall) continue;
+
+        // For INCOMPLETE missions: if HQ has a ship that could bring
+        // reinforcements, leave this crew in place (option B is faster —
+        // one trip vs round trip). trySendShipFromHQ already combines
+        // ship crew with existing destination crew via findCompletableMission.
+        if (!mission.completed && hqHasShip && planetCrewForStaff.length > 0) {
+          continue; // skip recall — let HQ reinforce instead
+        }
 
         // Calculate range for recall
         const rangeCost = calculateRangeCost(mission, hqMission);
@@ -822,7 +857,7 @@ export class AIPlayer {
         // Now at HQ: beam HQ planet personnel aboard
         const updatedHQ = state.missions[hqIndex]!;
         const newShipGroup = this.findShipGroup(updatedHQ, ship.uniqueId!);
-        if (newShipGroup < 0) return true; // ship moved even if group not found
+        if (newShipGroup < 0) return true;
 
         const hqPlanet = updatedHQ.groups[0]?.cards.filter(
           (c) => isPersonnel(c) && (c as PersonnelCard).status === "Unstopped"

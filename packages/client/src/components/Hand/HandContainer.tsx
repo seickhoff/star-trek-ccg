@@ -10,6 +10,7 @@ interface HandContainerProps {
   uniquesInPlay: Set<string>;
   onDeploy?: (card: Card) => void;
   onPlayEvent?: (card: Card) => void;
+  onDiscard?: (card: Card) => void;
   onView?: (card: Card) => void;
 }
 
@@ -24,6 +25,7 @@ export function HandContainer({
   uniquesInPlay,
   onDeploy,
   onPlayEvent,
+  onDiscard,
   onView,
 }: HandContainerProps) {
   const canDeployCard = (card: Card): boolean => {
@@ -53,6 +55,8 @@ export function HandContainer({
     return counters >= playCost;
   };
 
+  const mustDiscard = phase === "DiscardExcess" && cards.length > 7;
+
   return (
     <div className="hand-container">
       <div className="hand-container__header">
@@ -70,8 +74,10 @@ export function HandContainer({
               card={card}
               canDeploy={canDeployCard(card)}
               canPlay={canPlayEvent(card)}
+              mustDiscard={mustDiscard}
               onDeploy={onDeploy}
               onPlayEvent={onPlayEvent}
+              onDiscard={onDiscard}
               onView={onView}
             />
           ))

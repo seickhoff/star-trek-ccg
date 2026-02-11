@@ -280,6 +280,15 @@ export function GameBoard({ sendAction }: GameBoardProps) {
     });
   }, []);
 
+  const handleDiscard = useCallback(
+    (card: Card) => {
+      if (card.uniqueId) {
+        sendAction({ type: "DISCARD_CARD", cardUniqueId: card.uniqueId });
+      }
+    },
+    [sendAction]
+  );
+
   const handleViewCard = useCallback(
     (card: Card) => {
       // In DiscardExcess phase, clicking a hand card discards it
@@ -605,10 +614,11 @@ export function GameBoard({ sendAction }: GameBoardProps) {
       <HandContainer
         cards={hand}
         counters={counters}
-        phase={phase}
+        phase={gameOver ? "" : phase}
         uniquesInPlay={new Set(uniquesInPlay)}
-        onDeploy={handleDeploy}
-        onPlayEvent={handlePlayEvent}
+        onDeploy={gameOver ? undefined : handleDeploy}
+        onPlayEvent={gameOver ? undefined : handlePlayEvent}
+        onDiscard={gameOver ? undefined : handleDiscard}
         onView={handleViewCard}
       />
 

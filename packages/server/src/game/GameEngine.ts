@@ -459,6 +459,10 @@ export class GameEngine {
           reason: "Must spend all counters before advancing phase",
         };
       }
+      // Zero out unspendable counters (e.g., deck empty)
+      if (counters > 0) {
+        this.state.counters = 0;
+      }
       this.state.phase = "ExecuteOrders";
       this.state.actionLog.push(
         createLogEntry("phase_change", "Execute Orders phase")

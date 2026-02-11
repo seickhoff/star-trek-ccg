@@ -470,6 +470,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (counters > 0 && deck.length > 0) return;
       set((state) => ({
         phase: "ExecuteOrders",
+        counters: 0,
         actionLog: [
           ...state.actionLog,
           createLogEntry("phase_change", "Execute Orders phase"),
@@ -485,7 +486,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }));
     } else if (phase === "DiscardExcess") {
       // Can only end turn if hand size is valid
-      if (hand.length <= GAME_CONSTANTS.MAX_HAND_SIZE && counters === 0) {
+      if (hand.length <= GAME_CONSTANTS.MAX_HAND_SIZE) {
         get().newTurn();
       }
     }
@@ -2465,8 +2466,7 @@ export const selectCanAdvancePhase = (state: GameStore) => {
   }
 
   if (phase === "DiscardExcess") {
-    // Can only start new turn if hand is valid and counters are spent
-    return hand.length <= GAME_CONSTANTS.MAX_HAND_SIZE && counters === 0;
+    return hand.length <= GAME_CONSTANTS.MAX_HAND_SIZE;
   }
 
   return false;

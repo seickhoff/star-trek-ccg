@@ -73,6 +73,26 @@
   background: #666;
 }
 
+.hand-card--discard {
+  border: 1px solid rgba(244, 67, 54, 0.5);
+}
+
+.hand-card--discard:hover {
+  border-color: #f44336;
+}
+
+.hand-card__discard-btn {
+  background: #d32f2f !important;
+}
+
+.hand-card__discard-btn:hover {
+  background: #c62828 !important;
+}
+
+.hand-card__discard-btn:active {
+  background: #b71c1c !important;
+}
+
 /* Card name */
 .hand-card__name {
   margin-top: 4px;

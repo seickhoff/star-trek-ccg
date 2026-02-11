@@ -7,8 +7,10 @@ interface HandCardProps {
   card: Card;
   canDeploy: boolean;
   canPlay: boolean;
+  mustDiscard: boolean;
   onDeploy?: (card: Card) => void;
   onPlayEvent?: (card: Card) => void;
+  onDiscard?: (card: Card) => void;
   onView?: (card: Card) => void;
 }
 
@@ -20,8 +22,10 @@ export function HandCard({
   card,
   canDeploy,
   canPlay,
+  mustDiscard,
   onDeploy,
   onPlayEvent,
+  onDiscard,
   onView,
 }: HandCardProps) {
   // Get deploy cost for personnel/ships
@@ -55,13 +59,22 @@ export function HandCard({
     }
   };
 
+  const handleDiscard = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDiscard) {
+      onDiscard(card);
+    }
+  };
+
   // Show cost badge for deployable cards or playable events
   const costToShow = deployCost ?? playCost;
   const isPlayable = canDeploy || canPlay;
 
   return (
-    <div className={`hand-card ${isPlayable ? "hand-card--deployable" : ""}`}>
-      {costToShow !== null && (
+    <div
+      className={`hand-card ${isPlayable ? "hand-card--deployable" : ""} ${mustDiscard ? "hand-card--discard" : ""}`}
+    >
+      {costToShow !== null && !mustDiscard && (
         <div className="hand-card__cost">
           <span className="hand-card__cost-value">{costToShow}</span>
         </div>
@@ -73,26 +86,38 @@ export function HandCard({
         {card.name}
       </div>
 
-      {deployCost !== null && onDeploy && (
+      {mustDiscard ? (
         <button
-          className={`hand-card__deploy-btn ${!canDeploy ? "hand-card__deploy-btn--disabled" : ""}`}
-          onClick={handleDeploy}
-          disabled={!canDeploy}
-          title={`Deploy ${card.name}`}
+          className="hand-card__deploy-btn hand-card__discard-btn"
+          onClick={handleDiscard}
+          title={`Discard ${card.name}`}
         >
-          Deploy
+          Discard
         </button>
-      )}
+      ) : (
+        <>
+          {deployCost !== null && onDeploy && (
+            <button
+              className={`hand-card__deploy-btn ${!canDeploy ? "hand-card__deploy-btn--disabled" : ""}`}
+              onClick={handleDeploy}
+              disabled={!canDeploy}
+              title={`Deploy ${card.name}`}
+            >
+              Deploy
+            </button>
+          )}
 
-      {playCost !== null && onPlayEvent && (
-        <button
-          className={`hand-card__deploy-btn hand-card__play-btn ${!canPlay ? "hand-card__deploy-btn--disabled" : ""}`}
-          onClick={handlePlay}
-          disabled={!canPlay}
-          title={`Play ${card.name}`}
-        >
-          Play
-        </button>
+          {playCost !== null && onPlayEvent && (
+            <button
+              className={`hand-card__deploy-btn hand-card__play-btn ${!canPlay ? "hand-card__deploy-btn--disabled" : ""}`}
+              onClick={handlePlay}
+              disabled={!canPlay}
+              title={`Play ${card.name}`}
+            >
+              Play
+            </button>
+          )}
+        </>
       )}
     </div>
   );
