@@ -237,14 +237,31 @@ export class AIPlayer {
     }
 
     if (isShip(card)) {
-      // Deploy ships if we have personnel at HQ that need transport
       const hqIndex = state.headquartersIndex;
+      const shipsInPlay = this.countShipsInPlay(state);
+
+      if (shipsInPlay === 0) {
+        // No ships yet — deploy first ship if we have personnel
+        if (hqIndex >= 0) {
+          const hqCards = state.missions[hqIndex]!.groups[0]?.cards ?? [];
+          const personnelAtHQ = hqCards.filter(isPersonnel).length;
+          return personnelAtHQ > 0 ? 3 : 0.5;
+        }
+        return 1;
+      }
+
+      // Already have a ship — only deploy another if first ship is out on missions
+      if (!this.hasShipAwayFromHQ(state, hqIndex)) {
+        return 0; // First ship still at HQ, don't deploy another yet
+      }
+
+      // First ship is out — deploy 2nd ship if HQ has waiting personnel
       if (hqIndex >= 0) {
         const hqCards = state.missions[hqIndex]!.groups[0]?.cards ?? [];
         const personnelAtHQ = hqCards.filter(isPersonnel).length;
-        return personnelAtHQ > 0 ? 3 : 0.5;
+        return personnelAtHQ >= 3 ? 2 : 0.1;
       }
-      return 1;
+      return 0.1;
     }
 
     if (isEvent(card)) {
@@ -677,6 +694,13 @@ export class AIPlayer {
 
     const allHQPersonnel = [...hqPlanetPersonnel, ...shipPersonnel];
 
+    // Wait until we have enough crew before departing (9-10 ideal)
+    // Lower threshold if deck is running low to avoid getting stuck
+    const minCrew = state.deck.length > 10 ? 8 : 4;
+    if (allHQPersonnel.length < minCrew) {
+      return false;
+    }
+
     // Find the best mission we can complete with HQ crew (+ destination crew)
     const bestTarget = this.findCompletableMission(
       state,
@@ -955,6 +979,33 @@ export class AIPlayer {
       }
     }
     return -1;
+  }
+
+  /** Count how many ships the AI currently has in play (across all missions). */
+  private countShipsInPlay(state: SerializableGameState): number {
+    let count = 0;
+    for (const deployment of state.missions) {
+      for (const group of deployment.groups) {
+        count += group.cards.filter(isShip).length;
+      }
+    }
+    return count;
+  }
+
+  /** Check if any ship is stationed away from HQ (i.e., actively on missions). */
+  private hasShipAwayFromHQ(
+    state: SerializableGameState,
+    hqIndex: number
+  ): boolean {
+    for (let i = 0; i < state.missions.length; i++) {
+      if (i === hqIndex) continue;
+      const deployment = state.missions[i]!;
+      if (deployment.mission.missionType === "Headquarters") continue;
+      for (const group of deployment.groups) {
+        if (group.cards.some(isShip)) return true;
+      }
+    }
+    return false;
   }
 
   /** Beam all personnel from a ship to planet at a mission (if it's a planet mission). */

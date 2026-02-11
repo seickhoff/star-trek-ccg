@@ -6,6 +6,7 @@ import "./OpponentBoard.css";
 interface OpponentBoardProps {
   opponentState: OpponentPublicState;
   isOpponentTurn: boolean;
+  onDilemmasClick?: (missionIndex: number) => void;
 }
 
 /**
@@ -16,6 +17,7 @@ interface OpponentBoardProps {
 export function OpponentBoard({
   opponentState,
   isOpponentTurn,
+  onDilemmasClick,
 }: OpponentBoardProps) {
   return (
     <div
@@ -63,6 +65,9 @@ export function OpponentBoard({
               className={`opponent-mission ${mission.completed ? "opponent-mission--completed" : ""} ${mission.missionType === "Headquarters" ? "opponent-mission--hq" : ""}`}
             >
               <div className="opponent-mission__name" title={mission.name}>
+                {mission.completed && (
+                  <span className="opponent-mission__complete-badge">Done</span>
+                )}
                 {mission.name}
               </div>
               <div className="opponent-mission__type">
@@ -102,10 +107,14 @@ export function OpponentBoard({
               )}
 
               {deployment.dilemmas.length > 0 && (
-                <div className="opponent-mission__dilemmas">
+                <div
+                  className="opponent-mission__dilemmas"
+                  onClick={() => onDilemmasClick?.(index)}
+                  title="Click to view dilemmas"
+                >
                   {overcomeCount > 0 && (
                     <span className="opponent-mission__dilemmas-overcome">
-                      {overcomeCount} beneath
+                      {overcomeCount} overcome
                     </span>
                   )}
                   {overcomeCount > 0 &&
@@ -116,13 +125,10 @@ export function OpponentBoard({
                     )}
                   {deployment.dilemmas.length - overcomeCount > 0 && (
                     <span className="opponent-mission__dilemmas-placed">
-                      {deployment.dilemmas.length - overcomeCount} on mission
+                      {deployment.dilemmas.length - overcomeCount} placed
                     </span>
                   )}
                 </div>
-              )}
-              {mission.completed && (
-                <div className="opponent-mission__complete-badge">Done</div>
               )}
             </div>
           );

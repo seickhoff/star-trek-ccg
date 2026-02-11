@@ -124,6 +124,16 @@
   background: #800000;
 }
 
+.group-viewer__card-status--overcome {
+  color: #fff;
+  background: #4caf50;
+}
+
+.group-viewer__card-status--placed {
+  color: #fff;
+  background: #cc9933;
+}
+
 .group-viewer__card-type {
   font-size: 9px;
   color: #ff9900;

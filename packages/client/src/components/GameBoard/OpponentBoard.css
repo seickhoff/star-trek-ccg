@@ -163,6 +163,11 @@
 .opponent-mission__dilemmas {
   font-size: 10px;
   margin-top: 2px;
+  cursor: pointer;
+}
+
+.opponent-mission__dilemmas:hover {
+  text-decoration: underline;
 }
 
 .opponent-mission__dilemmas-overcome {
@@ -181,9 +186,10 @@
   display: inline-block;
   background: #4caf50;
   color: #fff;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: bold;
-  padding: 1px 6px;
+  padding: 1px 4px;
   border-radius: 3px;
-  margin-top: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
 }

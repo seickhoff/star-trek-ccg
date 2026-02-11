@@ -1,5 +1,10 @@
-import type { Card, PersonnelCard, GrantedSkill } from "@stccg/shared";
-import { isPersonnel, isShip } from "@stccg/shared";
+import type {
+  Card,
+  PersonnelCard,
+  DilemmaCard,
+  GrantedSkill,
+} from "@stccg/shared";
+import { isPersonnel, isShip, isDilemma } from "@stccg/shared";
 import { DraggablePanel } from "./DraggablePanel";
 import { CardSlot } from "../GameBoard/CardSlot";
 import { calculateGroupStats } from "@stccg/shared";
@@ -25,6 +30,8 @@ export function GroupViewer({
   onCardClick,
   grantedSkills = [],
 }: GroupViewerProps) {
+  const isDilemmaView = cards.length > 0 && cards.every(isDilemma);
+
   const stats = calculateGroupStats(cards, grantedSkills);
 
   // Get unstopped personnel count
@@ -45,53 +52,67 @@ export function GroupViewer({
       width="400px"
     >
       <div className="group-viewer">
-        {/* Stats summary */}
-        <div className="group-viewer__stats">
-          <div className="group-viewer__stat-row">
-            <span className="group-viewer__stat-label">Personnel:</span>
-            <span className="group-viewer__stat-value">
-              {unstopped} ready{stopped > 0 && `, ${stopped} stopped`}
-            </span>
-          </div>
-
-          <div className="group-viewer__stat-row">
-            <span className="group-viewer__stat-label">Integrity:</span>
-            <span className="group-viewer__stat-value">{stats.integrity}</span>
-          </div>
-
-          <div className="group-viewer__stat-row">
-            <span className="group-viewer__stat-label">Cunning:</span>
-            <span className="group-viewer__stat-value">{stats.cunning}</span>
-          </div>
-
-          <div className="group-viewer__stat-row">
-            <span className="group-viewer__stat-label">Strength:</span>
-            <span className="group-viewer__stat-value">{stats.strength}</span>
-          </div>
-        </div>
-
-        {/* Skills */}
-        <div className="group-viewer__skills">
-          <div className="group-viewer__skills-title">Skills:</div>
-          <div className="group-viewer__skills-list">
-            {skillEntries.length === 0 ? (
-              <span className="group-viewer__no-skills">No skills</span>
-            ) : (
-              skillEntries.map(([skill, count]) => (
-                <span key={skill} className="group-viewer__skill">
-                  {skill}
-                  {count > 1 && (
-                    <span className="group-viewer__skill-count">×{count}</span>
-                  )}
+        {!isDilemmaView && (
+          <>
+            {/* Stats summary */}
+            <div className="group-viewer__stats">
+              <div className="group-viewer__stat-row">
+                <span className="group-viewer__stat-label">Personnel:</span>
+                <span className="group-viewer__stat-value">
+                  {unstopped} ready{stopped > 0 && `, ${stopped} stopped`}
                 </span>
-              ))
-            )}
-          </div>
-        </div>
+              </div>
+
+              <div className="group-viewer__stat-row">
+                <span className="group-viewer__stat-label">Integrity:</span>
+                <span className="group-viewer__stat-value">
+                  {stats.integrity}
+                </span>
+              </div>
+
+              <div className="group-viewer__stat-row">
+                <span className="group-viewer__stat-label">Cunning:</span>
+                <span className="group-viewer__stat-value">
+                  {stats.cunning}
+                </span>
+              </div>
+
+              <div className="group-viewer__stat-row">
+                <span className="group-viewer__stat-label">Strength:</span>
+                <span className="group-viewer__stat-value">
+                  {stats.strength}
+                </span>
+              </div>
+            </div>
+
+            {/* Skills */}
+            <div className="group-viewer__skills">
+              <div className="group-viewer__skills-title">Skills:</div>
+              <div className="group-viewer__skills-list">
+                {skillEntries.length === 0 ? (
+                  <span className="group-viewer__no-skills">No skills</span>
+                ) : (
+                  skillEntries.map(([skill, count]) => (
+                    <span key={skill} className="group-viewer__skill">
+                      {skill}
+                      {count > 1 && (
+                        <span className="group-viewer__skill-count">
+                          ×{count}
+                        </span>
+                      )}
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Cards */}
         <div className="group-viewer__cards">
-          <div className="group-viewer__cards-title">Cards:</div>
+          <div className="group-viewer__cards-title">
+            {isDilemmaView ? "Dilemmas:" : "Cards:"}
+          </div>
           <div className="group-viewer__cards-grid">
             {cards.map((card) => (
               <div key={card.uniqueId} className="group-viewer__card">
@@ -102,6 +123,13 @@ export function GroupViewer({
                 />
                 <div className="group-viewer__card-info">
                   <span className="group-viewer__card-name">{card.name}</span>
+                  {isDilemma(card) && (
+                    <span
+                      className={`group-viewer__card-status ${(card as DilemmaCard).overcome ? "group-viewer__card-status--overcome" : "group-viewer__card-status--placed"}`}
+                    >
+                      {(card as DilemmaCard).overcome ? "Overcome" : "Placed"}
+                    </span>
+                  )}
                   {isPersonnel(card) && (
                     <span
                       className={`group-viewer__card-status group-viewer__card-status--${(card as PersonnelCard).status.toLowerCase()}`}

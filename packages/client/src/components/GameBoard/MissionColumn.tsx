@@ -107,7 +107,7 @@ export function MissionColumn({
                       {placedCount}
                     </span>
                     <span className="mission-column__dilemma-badge-label">
-                      on mission
+                      placed
                     </span>
                   </>
                 )}
