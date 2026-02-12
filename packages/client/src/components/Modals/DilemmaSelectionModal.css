@@ -51,12 +51,13 @@
 }
 
 .dilemma-select__content {
-  padding: 12px;
+  padding: 0 12px 12px;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
 }
 
-/* Budget tracker */
+/* Budget tracker - pinned above scrollable content */
 .dilemma-select__budget {
   display: flex;
   justify-content: space-between;
@@ -65,8 +66,9 @@
   border: 1px solid rgba(153, 102, 255, 0.4);
   border-radius: 6px;
   padding: 8px 12px;
-  margin-bottom: 12px;
+  margin: 12px 12px 12px;
   font-size: 13px;
+  flex-shrink: 0;
 }
 
 .dilemma-select__budget-cost {
@@ -317,12 +319,13 @@
   cursor: not-allowed;
 }
 
-/* Submit actions */
+/* Submit actions - pinned at bottom */
 .dilemma-select__actions {
   display: flex;
   justify-content: center;
-  padding-top: 12px;
+  padding: 12px;
   border-top: 1px solid rgba(153, 102, 255, 0.3);
+  flex-shrink: 0;
 }
 
 .dilemma-select__submit-btn {

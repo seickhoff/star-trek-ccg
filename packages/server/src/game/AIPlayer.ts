@@ -1,6 +1,8 @@
 import type {
+  AbilityCondition,
   Card,
   DilemmaCard,
+  InterruptCard,
   PersonnelCard,
   ShipCard,
   MissionDeployment,
@@ -12,6 +14,7 @@ import {
   isPersonnel,
   isShip,
   isEvent,
+  isInterrupt,
   checkMission,
   checkStaffed,
   calculateRangeCost,
@@ -490,11 +493,23 @@ export class AIPlayer {
         }
       }
 
-      // Check for playable interrupts (e.g., Adapt)
+      // Check for playable interrupts (e.g., Adapt) before advancing
       state = engine.getSerializableState();
       if (state.dilemmaResult && !state.dilemmaResult.requiresSelection) {
-        // Could check for Adapt interrupt here in future
-        // For now, just advance
+        const playable = this.findPlayableInterrupts(state);
+        for (const { cardUniqueId, abilityId } of playable) {
+          await executeAction({
+            type: "PLAY_INTERRUPT",
+            cardUniqueId,
+            abilityId,
+            requestId: aiRequestId(),
+          });
+          state = engine.getSerializableState();
+          // After playing an interrupt, the dilemma result may have changed
+          // (e.g., Adapt prevents and overcomes it) — no need to play more
+          break;
+        }
+
         await executeAction({
           type: "ADVANCE_DILEMMA",
           requestId: aiRequestId(),
@@ -537,6 +552,99 @@ export class AIPlayer {
     }
 
     return leastValuable;
+  }
+
+  /**
+   * Find playable interrupt cards in the AI's hand during a dilemma encounter.
+   * Mirrors the client's selectPlayableInterrupts logic.
+   */
+  private findPlayableInterrupts(
+    state: SerializableGameState
+  ): Array<{ cardUniqueId: string; abilityId: string }> {
+    if (!state.dilemmaEncounter) return [];
+
+    const { missionIndex, groupIndex, selectedDilemmas, currentDilemmaIndex } =
+      state.dilemmaEncounter;
+    const deployment = state.missions[missionIndex];
+    if (!deployment) return [];
+    const group = deployment.groups[groupIndex];
+    if (!group) return [];
+
+    const playable: Array<{ cardUniqueId: string; abilityId: string }> = [];
+
+    for (const card of state.hand) {
+      if (!isInterrupt(card)) continue;
+      const interruptCard = card as InterruptCard;
+      if (!interruptCard.abilities) continue;
+
+      for (const ability of interruptCard.abilities) {
+        if (
+          ability.trigger !== "interrupt" ||
+          ability.interruptTiming !== "whenFacingDilemma"
+        ) {
+          continue;
+        }
+
+        // Check all conditions
+        if (
+          !this.checkInterruptConditions(
+            ability.conditions,
+            state,
+            group,
+            selectedDilemmas,
+            currentDilemmaIndex
+          )
+        ) {
+          continue;
+        }
+
+        playable.push({
+          cardUniqueId: interruptCard.uniqueId!,
+          abilityId: ability.id,
+        });
+      }
+    }
+
+    return playable;
+  }
+
+  /**
+   * Check whether an interrupt's conditions are met.
+   */
+  private checkInterruptConditions(
+    conditions: AbilityCondition[] | undefined,
+    state: SerializableGameState,
+    group: { cards: Card[] },
+    selectedDilemmas: DilemmaCard[],
+    currentDilemmaIndex: number
+  ): boolean {
+    if (!conditions || conditions.length === 0) return true;
+
+    for (const condition of conditions) {
+      if (condition.type === "borgPersonnelFacing") {
+        const hasBorg = group.cards.some(
+          (c) =>
+            isPersonnel(c) &&
+            (c as PersonnelCard).species.includes("Borg") &&
+            (c as PersonnelCard).status === "Unstopped"
+        );
+        if (!hasBorg) return false;
+      }
+
+      if (condition.type === "dilemmaOvercomeAtAnyMission") {
+        const currentDilemma = selectedDilemmas[currentDilemmaIndex];
+        if (!currentDilemma) return false;
+
+        const hasOvercomeCopy = state.missions.some((d) =>
+          d.dilemmas.some(
+            (dilemma) => dilemma.id === currentDilemma.id && dilemma.overcome
+          )
+        );
+        if (!hasOvercomeCopy) return false;
+      }
+    }
+
+    return true;
   }
 
   /**

@@ -616,6 +616,7 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         counters={counters}
         phase={gameOver ? "" : phase}
         uniquesInPlay={new Set(uniquesInPlay)}
+        isMyTurn={isMyTurn}
         onDeploy={gameOver ? undefined : handleDeploy}
         onPlayEvent={gameOver ? undefined : handlePlayEvent}
         onDiscard={gameOver ? undefined : handleDiscard}

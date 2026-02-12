@@ -8,6 +8,7 @@ interface HandContainerProps {
   counters: number;
   phase: string;
   uniquesInPlay: Set<string>;
+  isMyTurn: boolean;
   onDeploy?: (card: Card) => void;
   onPlayEvent?: (card: Card) => void;
   onDiscard?: (card: Card) => void;
@@ -23,12 +24,16 @@ export function HandContainer({
   counters,
   phase,
   uniquesInPlay,
+  isMyTurn,
   onDeploy,
   onPlayEvent,
   onDiscard,
   onView,
 }: HandContainerProps) {
   const canDeployCard = (card: Card): boolean => {
+    // Can only deploy during your own turn
+    if (!isMyTurn) return false;
+
     // Can only deploy during PlayAndDraw
     if (phase !== "PlayAndDraw") return false;
 
@@ -44,6 +49,9 @@ export function HandContainer({
   };
 
   const canPlayEvent = (card: Card): boolean => {
+    // Can only play during your own turn
+    if (!isMyTurn) return false;
+
     // Can only play during PlayAndDraw
     if (phase !== "PlayAndDraw") return false;
 

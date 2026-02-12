@@ -32,7 +32,6 @@ export class TwoPlayerGame {
     drawCount: number;
     costBudget: number;
   } | null = null;
-  private _dilemmaSelectionTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Callback fired after each AI action so the GameRoom can broadcast state.
@@ -367,31 +366,10 @@ export class TwoPlayerGame {
       reEncounterDilemmas: prep.reEncounterDilemmas,
     });
 
-    // Wait for human's response (with 60s timeout fallback)
+    // Wait for human's response (no time limit)
     const selectedUniqueIds = await new Promise<string[]>((resolve) => {
       this._dilemmaSelectionResolver = resolve;
-
-      this._dilemmaSelectionTimeout = setTimeout(() => {
-        if (this._pendingDilemmaSelection) {
-          // Auto-select randomly on timeout
-          resolve(
-            this.autoSelectDilemmas(
-              this._pendingDilemmaSelection.eligibleDilemmas,
-              this._pendingDilemmaSelection.drawCount,
-              this._pendingDilemmaSelection.costBudget
-            )
-          );
-          this._dilemmaSelectionResolver = null;
-          this._pendingDilemmaSelection = null;
-        }
-      }, 60000);
     });
-
-    // Clear timeout
-    if (this._dilemmaSelectionTimeout) {
-      clearTimeout(this._dilemmaSelectionTimeout);
-      this._dilemmaSelectionTimeout = null;
-    }
 
     // Now create the encounter with human-selected dilemmas
     // Swap pool again for the encounter duration
@@ -493,33 +471,6 @@ export class TwoPlayerGame {
       this._dilemmaSelectionResolver = null;
     }
     this._pendingDilemmaSelection = null;
-    if (this._dilemmaSelectionTimeout) {
-      clearTimeout(this._dilemmaSelectionTimeout);
-      this._dilemmaSelectionTimeout = null;
-    }
-  }
-
-  /**
-   * Fallback: auto-select dilemmas randomly (greedy by cost).
-   */
-  private autoSelectDilemmas(
-    eligible: DilemmaCard[],
-    drawCount: number,
-    costBudget: number
-  ): string[] {
-    const selected: string[] = [];
-    const usedBaseIds = new Set<string>();
-    let costSpent = 0;
-    for (const d of eligible) {
-      if (selected.length >= drawCount) break;
-      if (usedBaseIds.has(d.id)) continue;
-      if (costSpent + d.cost <= costBudget) {
-        selected.push(d.uniqueId!);
-        usedBaseIds.add(d.id);
-        costSpent += d.cost;
-      }
-    }
-    return selected;
   }
 
   get isAwaitingDilemmaSelection(): boolean {
