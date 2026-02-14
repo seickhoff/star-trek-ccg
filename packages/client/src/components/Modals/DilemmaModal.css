@@ -4,6 +4,7 @@
   position: fixed;
   /* z-index managed dynamically via getNextZIndex() */
   width: 500px;
+  max-width: calc(100vw - 16px);
   min-height: 300px;
   /* max-height set dynamically via inline style based on position */
   background-color: #1a0a0a;

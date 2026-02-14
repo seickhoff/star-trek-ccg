@@ -3,6 +3,7 @@
 .dilemma-select {
   position: fixed;
   width: 540px;
+  max-width: calc(100vw - 16px);
   /* max-height set dynamically via inline style based on position */
   background-color: #0a0a1a;
   background-image: linear-gradient(
