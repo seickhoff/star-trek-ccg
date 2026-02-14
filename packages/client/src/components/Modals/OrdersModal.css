@@ -573,3 +573,120 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Scroll indicator wrapper - only functional on mobile */
+.orders-modal__scroll-wrapper {
+  position: relative;
+}
+
+.orders-modal__scroll-hint {
+  display: none;
+}
+
+/* Mobile: full screen, no drag, dimmed background image */
+@media (max-width: 600px) {
+  .orders-modal {
+    left: 0 !important;
+    top: 0 !important;
+    width: 100vw;
+    max-height: 100dvh !important;
+    height: 100dvh;
+    min-height: unset;
+    border: none;
+    border-radius: 0;
+    cursor: default;
+    background-image: none;
+  }
+
+  .orders-modal:active {
+    cursor: default;
+  }
+
+  .orders-modal__header {
+    border-radius: 0;
+  }
+
+  .orders-modal__close {
+    display: none;
+  }
+
+  .orders-modal__content {
+    padding-left: 12px;
+    flex: 1;
+  }
+
+  /* Beam personnel: horizontal scroll, one row */
+  .orders-modal__beam-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 8px;
+  }
+
+  .orders-modal__beam-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .orders-modal__beam-row {
+    flex-shrink: 0;
+    width: calc((100vw - 72px) / 2.75);
+  }
+
+  /* Order abilities: horizontal scroll, one row */
+  .orders-modal__ability-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 8px;
+  }
+
+  .orders-modal__ability-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .orders-modal__ability-row {
+    flex-shrink: 0;
+    width: calc((100vw - 64px) / 2);
+  }
+
+  /* Text wrapping inside card sections */
+  .orders-modal__person-name {
+    white-space: normal;
+    word-wrap: break-word;
+  }
+
+  .orders-modal__ability-desc {
+    white-space: normal;
+    word-wrap: break-word;
+  }
+
+  /* Scroll indicators */
+  .orders-modal__scroll-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 28px;
+    z-index: 2;
+    color: #fff;
+    font-size: 22px;
+    font-weight: bold;
+    pointer-events: none;
+  }
+
+  .orders-modal__scroll-hint--left {
+    left: 0;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.7), transparent);
+  }
+
+  .orders-modal__scroll-hint--right {
+    right: 0;
+    background: linear-gradient(to left, rgba(0, 0, 0, 0.7), transparent);
+  }
+}

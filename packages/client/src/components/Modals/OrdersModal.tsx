@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type {
   Card,
   ShipCard,
@@ -93,10 +93,58 @@ export function OrdersModal({
     position,
     zIndex,
     minimized,
+    setMinimized,
     containerRef,
     handleMouseDown,
     handleTouchStart,
   } = useDraggablePanel({ isOpen, initialPosition: { x: 50, y: 50 } });
+
+  // On mobile, clicking non-interactive areas closes instead of minimizing
+  useEffect(() => {
+    if (minimized) {
+      setMinimized(false);
+      onClose();
+    }
+  }, [minimized, setMinimized, onClose]);
+
+  // Scroll indicators for beam-grid and ability-grid (mobile)
+  const beamGridRef = useRef<HTMLDivElement>(null);
+  const abilityGridRef = useRef<HTMLDivElement>(null);
+  const [beamCanScrollLeft, setBeamCanScrollLeft] = useState(false);
+  const [beamCanScrollRight, setBeamCanScrollRight] = useState(false);
+  const [abilityCanScrollLeft, setAbilityCanScrollLeft] = useState(false);
+  const [abilityCanScrollRight, setAbilityCanScrollRight] = useState(false);
+
+  const updateBeamScroll = useCallback(() => {
+    const el = beamGridRef.current;
+    if (!el) return;
+    setBeamCanScrollLeft(el.scrollLeft > 1);
+    setBeamCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+  }, []);
+
+  const updateAbilityScroll = useCallback(() => {
+    const el = abilityGridRef.current;
+    if (!el) return;
+    setAbilityCanScrollLeft(el.scrollLeft > 1);
+    setAbilityCanScrollRight(
+      el.scrollLeft < el.scrollWidth - el.clientWidth - 1
+    );
+  }, []);
+
+  useEffect(() => {
+    // Delay check so DOM has rendered the conditionally-shown grids
+    const frame = requestAnimationFrame(() => {
+      updateBeamScroll();
+      updateAbilityScroll();
+    });
+    window.addEventListener("resize", updateBeamScroll);
+    window.addEventListener("resize", updateAbilityScroll);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updateBeamScroll);
+      window.removeEventListener("resize", updateAbilityScroll);
+    };
+  }, [isOpen, updateBeamScroll, updateAbilityScroll]);
 
   // State for skill picker
   const [skillPickerState, setSkillPickerState] = useState<{
@@ -583,67 +631,86 @@ export function OrdersModal({
                 </div>
               )}
 
-              <div className="orders-modal__beam-grid">
-                {unstoppedPersonnel.map((person) => (
-                  <div key={person.uniqueId} className="orders-modal__beam-row">
-                    <div className="orders-modal__beam-person">
-                      <CardSlot
-                        card={person}
-                        size="thumb"
-                        onClick={() => onCardClick?.(person)}
-                      />
-                      <span className="orders-modal__person-name">
-                        {person.name}
-                      </span>
-                    </div>
+              <div className="orders-modal__scroll-wrapper">
+                {beamCanScrollLeft && (
+                  <div className="orders-modal__scroll-hint orders-modal__scroll-hint--left">
+                    ‹
+                  </div>
+                )}
+                <div
+                  ref={beamGridRef}
+                  className="orders-modal__beam-grid"
+                  onScroll={updateBeamScroll}
+                >
+                  {unstoppedPersonnel.map((person) => (
+                    <div
+                      key={person.uniqueId}
+                      className="orders-modal__beam-row"
+                    >
+                      <div className="orders-modal__beam-person">
+                        <CardSlot
+                          card={person}
+                          size="thumb"
+                          onClick={() => onCardClick?.(person)}
+                        />
+                        <span className="orders-modal__person-name">
+                          {person.name}
+                        </span>
+                      </div>
 
-                    <div className="orders-modal__beam-targets">
-                      {currentGroupIndex !== 0 &&
-                        mission.mission.missionType !== "Space" && (
-                          <button
-                            className="orders-modal__beam-btn"
-                            onClick={() => {
-                              onBeamToPlanet?.(
-                                person.uniqueId!,
-                                currentMissionIndex,
-                                currentGroupIndex
-                              );
-                            }}
-                          >
-                            →{" "}
-                            {mission.mission.missionType === "Headquarters"
-                              ? mission.mission.name
-                              : "Planet"}
-                          </button>
-                        )}
-
-                      {otherGroups
-                        .filter(({ index }) => index > 0)
-                        .map(({ group: targetGroup, index }) => {
-                          const targetShip = targetGroup.cards.find(isShip);
-                          const personnelCount =
-                            targetGroup.cards.filter(isPersonnel).length;
-                          return (
+                      <div className="orders-modal__beam-targets">
+                        {currentGroupIndex !== 0 &&
+                          mission.mission.missionType !== "Space" && (
                             <button
-                              key={index}
                               className="orders-modal__beam-btn"
                               onClick={() => {
-                                onBeamToShip?.(
+                                onBeamToPlanet?.(
                                   person.uniqueId!,
                                   currentMissionIndex,
-                                  currentGroupIndex,
-                                  index
+                                  currentGroupIndex
                                 );
                               }}
                             >
-                              → {targetShip?.name || `Group ${index}`} (
-                              {personnelCount})
+                              →{" "}
+                              {mission.mission.missionType === "Headquarters"
+                                ? mission.mission.name
+                                : "Planet"}
                             </button>
-                          );
-                        })}
+                          )}
+
+                        {otherGroups
+                          .filter(({ index }) => index > 0)
+                          .map(({ group: targetGroup, index }) => {
+                            const targetShip = targetGroup.cards.find(isShip);
+                            const personnelCount =
+                              targetGroup.cards.filter(isPersonnel).length;
+                            return (
+                              <button
+                                key={index}
+                                className="orders-modal__beam-btn"
+                                onClick={() => {
+                                  onBeamToShip?.(
+                                    person.uniqueId!,
+                                    currentMissionIndex,
+                                    currentGroupIndex,
+                                    index
+                                  );
+                                }}
+                              >
+                                → {targetShip?.name || `Group ${index}`} (
+                                {personnelCount})
+                              </button>
+                            );
+                          })}
+                      </div>
                     </div>
+                  ))}
+                </div>
+                {beamCanScrollRight && (
+                  <div className="orders-modal__scroll-hint orders-modal__scroll-hint--right">
+                    ›
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
@@ -659,70 +726,89 @@ export function OrdersModal({
             <div className="orders-modal__section">
               <h4 className="orders-modal__section-title">Order Abilities</h4>
 
-              <div className="orders-modal__ability-grid">
-                {personnelWithOrderAbilities.map((person) => {
-                  const orderAbilities =
-                    person.abilities?.filter(
-                      (a: Ability) => a.trigger === "order"
-                    ) || [];
+              <div className="orders-modal__scroll-wrapper">
+                {abilityCanScrollLeft && (
+                  <div className="orders-modal__scroll-hint orders-modal__scroll-hint--left">
+                    ‹
+                  </div>
+                )}
+                <div
+                  ref={abilityGridRef}
+                  className="orders-modal__ability-grid"
+                  onScroll={updateAbilityScroll}
+                >
+                  {personnelWithOrderAbilities.map((person) => {
+                    const orderAbilities =
+                      person.abilities?.filter(
+                        (a: Ability) => a.trigger === "order"
+                      ) || [];
 
-                  return (
-                    <div
-                      key={person.uniqueId}
-                      className="orders-modal__ability-row"
-                    >
-                      <div className="orders-modal__ability-person">
-                        <CardSlot
-                          card={person}
-                          size="thumb"
-                          onClick={() => onCardClick?.(person)}
-                        />
-                        <span className="orders-modal__person-name">
-                          {person.name}
-                        </span>
-                      </div>
+                    return (
+                      <div
+                        key={person.uniqueId}
+                        className="orders-modal__ability-row"
+                      >
+                        <div className="orders-modal__ability-person">
+                          <CardSlot
+                            card={person}
+                            size="thumb"
+                            onClick={() => onCardClick?.(person)}
+                          />
+                          <span className="orders-modal__person-name">
+                            {person.name}
+                          </span>
+                        </div>
 
-                      <div className="orders-modal__abilities">
-                        {orderAbilities.map((ability: Ability) => {
-                          const isUsable = canUseAbility(
-                            person.uniqueId!,
-                            ability
-                          );
-                          const usageKey = `${person.uniqueId}:${ability.id}`;
-                          const isUsed = usedOrderAbilities?.includes(usageKey);
+                        <div className="orders-modal__abilities">
+                          {orderAbilities.map((ability: Ability) => {
+                            const isUsable = canUseAbility(
+                              person.uniqueId!,
+                              ability
+                            );
+                            const usageKey = `${person.uniqueId}:${ability.id}`;
+                            const isUsed =
+                              usedOrderAbilities?.includes(usageKey);
 
-                          return (
-                            <button
-                              key={ability.id}
-                              className={`orders-modal__ability-btn ${
-                                isUsed ? "orders-modal__ability-btn--used" : ""
-                              } ${!isUsable ? "orders-modal__ability-btn--disabled" : ""}`}
-                              disabled={!isUsable}
-                              onClick={() =>
-                                handleExecuteOrderAbility(
-                                  person.uniqueId!,
-                                  ability
-                                )
-                              }
-                            >
-                              <span className="orders-modal__ability-name">
-                                Order
-                              </span>
-                              <span className="orders-modal__ability-desc">
-                                {getAbilityDescription(ability)}
-                              </span>
-                              {isUsed && (
-                                <span className="orders-modal__ability-used">
-                                  (Used)
+                            return (
+                              <button
+                                key={ability.id}
+                                className={`orders-modal__ability-btn ${
+                                  isUsed
+                                    ? "orders-modal__ability-btn--used"
+                                    : ""
+                                } ${!isUsable ? "orders-modal__ability-btn--disabled" : ""}`}
+                                disabled={!isUsable}
+                                onClick={() =>
+                                  handleExecuteOrderAbility(
+                                    person.uniqueId!,
+                                    ability
+                                  )
+                                }
+                              >
+                                <span className="orders-modal__ability-name">
+                                  Order
                                 </span>
-                              )}
-                            </button>
-                          );
-                        })}
+                                <span className="orders-modal__ability-desc">
+                                  {getAbilityDescription(ability)}
+                                </span>
+                                {isUsed && (
+                                  <span className="orders-modal__ability-used">
+                                    (Used)
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+                {abilityCanScrollRight && (
+                  <div className="orders-modal__scroll-hint orders-modal__scroll-hint--right">
+                    ›
+                  </div>
+                )}
               </div>
             </div>
           )}

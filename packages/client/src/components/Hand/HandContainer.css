@@ -69,3 +69,58 @@
 .hand-container__cards::-webkit-scrollbar-thumb:hover {
   background: #aaaaf0;
 }
+
+/* Scroll indicator wrapper - only functional on mobile */
+.hand-container__cards-wrapper {
+  position: relative;
+}
+
+.hand-container__scroll-hint {
+  display: none;
+}
+
+/* Mobile: horizontal swipe for hand cards */
+@media (max-width: 600px) {
+  .hand-container__cards {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-height: unset;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .hand-container__cards::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hand-card {
+    flex-shrink: 0;
+  }
+
+  .hand-container__scroll-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 28px;
+    z-index: 2;
+    color: #fff;
+    font-size: 22px;
+    font-weight: bold;
+    pointer-events: none;
+  }
+
+  .hand-container__scroll-hint--left {
+    left: 0;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.7), transparent);
+  }
+
+  .hand-container__scroll-hint--right {
+    right: 0;
+    background: linear-gradient(to left, rgba(0, 0, 0, 0.7), transparent);
+  }
+}

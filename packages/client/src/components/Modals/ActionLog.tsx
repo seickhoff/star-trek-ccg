@@ -20,7 +20,11 @@ export function ActionLog({ entries, onCardClick }: ActionLogProps) {
     containerRef,
     handleMouseDown,
     handleTouchStart,
-  } = useDraggablePanel({ isOpen: true, initialPosition: { x: 20, y: 80 } });
+  } = useDraggablePanel({
+    isOpen: true,
+    initialPosition: { x: 20, y: 80 },
+    initialMinimized: window.matchMedia("(max-width: 600px)").matches,
+  });
 
   const logContentRef = useRef<HTMLDivElement>(null);
 

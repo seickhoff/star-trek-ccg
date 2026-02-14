@@ -356,3 +356,32 @@
 .dilemma-select__submit-btn--skip:hover {
   background: #666;
 }
+
+/* Mobile: full screen, no drag */
+@media (max-width: 600px) {
+  .dilemma-select {
+    left: 0 !important;
+    top: 0 !important;
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 100dvh !important;
+    height: 100dvh;
+    border: none;
+    border-radius: 0;
+    cursor: default;
+  }
+
+  .dilemma-select:active {
+    cursor: default;
+  }
+
+  .dilemma-select__header {
+    border-radius: 0;
+  }
+
+  .dilemma-select__actions {
+    position: sticky;
+    bottom: 0;
+    background: #0a0a1a;
+  }
+}

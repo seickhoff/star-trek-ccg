@@ -214,3 +214,58 @@
 .action-log__content::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* Mobile: full screen when open, compact "Log" button when minimized */
+@media (max-width: 600px) {
+  .action-log {
+    left: 0 !important;
+    top: 0 !important;
+    width: 100vw;
+    max-height: 100dvh;
+    height: 100dvh;
+    border: none;
+    border-radius: 0;
+    cursor: default;
+  }
+
+  .action-log:active {
+    cursor: default;
+  }
+
+  .action-log__header {
+    border-radius: 0;
+  }
+
+  .action-log__content {
+    max-height: unset;
+    flex: 1;
+  }
+
+  /* Minimized: compact "Log" button in upper right */
+  .action-log--minimized {
+    left: auto !important;
+    right: 8px;
+    top: 8px !important;
+    width: auto;
+    height: auto;
+    max-height: unset;
+    background: transparent;
+    border: 2px solid #4a90d9;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+
+  .action-log--minimized .action-log__header {
+    border-radius: 6px;
+    padding: 6px 12px;
+  }
+
+  .action-log--minimized .action-log__title {
+    font-size: 0;
+  }
+
+  .action-log--minimized .action-log__title::after {
+    content: "Log";
+    font-size: 12px;
+  }
+}

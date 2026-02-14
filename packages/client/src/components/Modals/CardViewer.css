@@ -24,3 +24,18 @@
 .card-viewer .card-slot__image {
   display: block;
 }
+
+/* Mobile: center card viewer instead of fixed top-left position */
+@media (max-width: 600px) {
+  .card-viewer {
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    z-index: 10000 !important;
+  }
+
+  .card-viewer:active {
+    cursor: pointer;
+  }
+}

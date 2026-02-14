@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect, useCallback } from "react";
 import type { Card, EventCard } from "@stccg/shared";
 import { isPersonnel, isShip, isEvent } from "@stccg/shared";
 import { HandCard } from "./HandCard";
@@ -65,6 +66,24 @@ export function HandContainer({
 
   const mustDiscard = phase === "DiscardExcess" && cards.length > 7;
 
+  // Horizontal scroll indicators for mobile
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollIndicators = useCallback(() => {
+    const el = cardsRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 1);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    updateScrollIndicators();
+    window.addEventListener("resize", updateScrollIndicators);
+    return () => window.removeEventListener("resize", updateScrollIndicators);
+  }, [cards.length, updateScrollIndicators]);
+
   return (
     <div className="hand-container">
       <div className="hand-container__header">
@@ -72,23 +91,39 @@ export function HandContainer({
         <span className="hand-container__count">{cards.length} / 7</span>
       </div>
 
-      <div className="hand-container__cards">
-        {cards.length === 0 ? (
-          <div className="hand-container__empty">No cards in hand</div>
-        ) : (
-          cards.map((card) => (
-            <HandCard
-              key={card.uniqueId}
-              card={card}
-              canDeploy={canDeployCard(card)}
-              canPlay={canPlayEvent(card)}
-              mustDiscard={mustDiscard}
-              onDeploy={onDeploy}
-              onPlayEvent={onPlayEvent}
-              onDiscard={onDiscard}
-              onView={onView}
-            />
-          ))
+      <div className="hand-container__cards-wrapper">
+        {canScrollLeft && (
+          <div className="hand-container__scroll-hint hand-container__scroll-hint--left">
+            ‹
+          </div>
+        )}
+        <div
+          ref={cardsRef}
+          className="hand-container__cards"
+          onScroll={updateScrollIndicators}
+        >
+          {cards.length === 0 ? (
+            <div className="hand-container__empty">No cards in hand</div>
+          ) : (
+            cards.map((card) => (
+              <HandCard
+                key={card.uniqueId}
+                card={card}
+                canDeploy={canDeployCard(card)}
+                canPlay={canPlayEvent(card)}
+                mustDiscard={mustDiscard}
+                onDeploy={onDeploy}
+                onPlayEvent={onPlayEvent}
+                onDiscard={onDiscard}
+                onView={onView}
+              />
+            ))
+          )}
+        </div>
+        {canScrollRight && (
+          <div className="hand-container__scroll-hint hand-container__scroll-hint--right">
+            ›
+          </div>
         )}
       </div>
     </div>

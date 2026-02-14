@@ -4,6 +4,7 @@ import { getNextZIndex } from "../components/Modals/DraggablePanel";
 interface UseDraggablePanelOptions {
   isOpen: boolean;
   initialPosition?: { x: number; y: number };
+  initialMinimized?: boolean;
 }
 
 /**
@@ -15,10 +16,11 @@ interface UseDraggablePanelOptions {
 export function useDraggablePanel({
   isOpen,
   initialPosition = { x: 100, y: 100 },
+  initialMinimized = false,
 }: UseDraggablePanelOptions) {
   const [position, setPosition] = useState(initialPosition);
   const [zIndex, setZIndex] = useState(getNextZIndex);
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(initialMinimized);
   const containerRef = useRef<HTMLDivElement>(null);
   // Guard against synthetic mouse events after touch
   const recentTouchRef = useRef(false);

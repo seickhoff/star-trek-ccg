@@ -50,6 +50,7 @@ export function GroupViewer({
       onClose={onClose}
       title={title}
       width="400px"
+      closeOnClick
     >
       <div className="group-viewer">
         {!isDilemmaView && (

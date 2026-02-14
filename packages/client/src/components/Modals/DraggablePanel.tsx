@@ -14,6 +14,8 @@ interface DraggablePanelProps {
   title?: string;
   children: React.ReactNode;
   width?: string;
+  /** When true, clicking non-interactive areas closes the panel instead of minimizing */
+  closeOnClick?: boolean;
 }
 
 /**
@@ -27,15 +29,25 @@ export function DraggablePanel({
   title,
   children,
   width = "400px",
+  closeOnClick = false,
 }: DraggablePanelProps) {
   const {
     position,
     zIndex,
     minimized,
+    setMinimized,
     containerRef,
     handleMouseDown,
     handleTouchStart,
   } = useDraggablePanel({ isOpen, initialPosition: { x: 100, y: 100 } });
+
+  // When closeOnClick is set, intercept minimize toggle and close instead
+  useEffect(() => {
+    if (closeOnClick && minimized) {
+      setMinimized(false);
+      onClose();
+    }
+  }, [closeOnClick, minimized, setMinimized, onClose]);
 
   // Handle escape key
   useEffect(() => {

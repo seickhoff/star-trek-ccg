@@ -64,3 +64,34 @@
   overflow-y: auto;
   flex: 1;
 }
+
+/* Mobile: full screen, no drag, hide close button */
+@media (max-width: 600px) {
+  .draggable-panel {
+    left: 0 !important;
+    top: 0 !important;
+    width: 100vw !important;
+    max-height: 100dvh;
+    height: 100dvh;
+    border: none;
+    border-radius: 0;
+    cursor: default;
+  }
+
+  .draggable-panel:active {
+    cursor: default;
+  }
+
+  .draggable-panel__header {
+    border-radius: 0;
+  }
+
+  .draggable-panel__close {
+    display: none;
+  }
+
+  .draggable-panel__content {
+    flex: 1;
+    max-height: unset;
+  }
+}

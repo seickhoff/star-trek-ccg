@@ -36,6 +36,7 @@ export function DilemmaSelectionModal({
     position,
     zIndex,
     minimized,
+    setMinimized,
     containerRef,
     handleMouseDown,
     handleTouchStart,
@@ -43,6 +44,13 @@ export function DilemmaSelectionModal({
     isOpen: !!request,
     initialPosition: { x: 50, y: 30 },
   });
+
+  // On mobile, prevent minimizing (no close action — user must submit)
+  useEffect(() => {
+    if (minimized && window.matchMedia("(max-width: 600px)").matches) {
+      setMinimized(false);
+    }
+  }, [minimized, setMinimized]);
 
   // Track which IDs are re-encounter dilemmas (must be before early return)
   const reEncounterDilemmas = request?.reEncounterDilemmas ?? [];
