@@ -36,4 +36,6 @@ export interface TwoPlayerGameState {
   activePlayer: 1 | 2;
   myPlayerNumber: 1 | 2;
   winner: 1 | 2 | null;
+  /** Unmasked opponent missions for AI debug view (only populated when AI_DEBUG is enabled) */
+  debugOpponentMissions?: MissionDeployment[];
 }

@@ -3,6 +3,7 @@ import type {
   Card,
   CardRef,
   PersonnelCard,
+  OpponentPublicState,
   Skill,
   GameAction,
 } from "@stccg/shared";
@@ -37,6 +38,9 @@ import { useConnectionStore } from "../../store/connectionStore";
 import { defaultDeck } from "@stccg/shared";
 import { useAudio, GAME_SOUNDS } from "../../hooks";
 import "./GameBoard.css";
+
+/** Debug flag: when true, AI perspective shows all cards and attributes for both players (view-only) */
+const AI_DEBUG = true;
 
 interface GameBoardProps {
   sendAction: <T extends Omit<GameAction, "requestId">>(action: T) => string;
@@ -94,6 +98,9 @@ export function GameBoard({ sendAction }: GameBoardProps) {
   const actionLog = useClientGameStore(selectActionLog);
   const isMyTurn = useClientGameStore(selectIsMyTurn);
   const opponentState = useClientGameStore(selectOpponentState);
+  const debugOpponentMissions = useClientGameStore(
+    (s) => s.debugOpponentMissions
+  );
   const winner = useClientGameStore(selectWinner);
   const dilemmaSelectionRequest = useClientGameStore(
     selectDilemmaSelectionRequest
@@ -174,6 +181,9 @@ export function GameBoard({ sendAction }: GameBoardProps) {
       setGroupViewerState((s) => ({ ...s, isOpen: false }));
     }
   }, [phase]);
+
+  // Perspective toggle: view the board as the AI sees it
+  const [viewAsAI, setViewAsAI] = useState(false);
 
   // Modal state
   const [viewingCard, setViewingCard] = useState<Card | null>(null);
@@ -574,54 +584,132 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         gameOverMessage={gameOverMessage}
         opponentScore={opponentState?.score ?? 0}
         isMyTurn={isMyTurn}
+        viewAsAI={viewAsAI}
+        onToggleView={opponentState ? () => setViewAsAI((v) => !v) : undefined}
         onDraw={handleDraw}
         onAdvancePhase={() => sendAction({ type: "NEXT_PHASE" })}
         onNewGame={handleNewGame}
       />
 
-      {/* Opponent board (top) */}
-      {opponentState && (
-        <OpponentBoard
-          opponentState={opponentState}
-          isOpponentTurn={!isMyTurn}
-        />
-      )}
+      {viewAsAI && opponentState ? (
+        <>
+          {/* Player's board from AI's perspective */}
+          {AI_DEBUG ? (
+            <>
+              <div className="game-board__section-label game-board__section-label--opponent">
+                Your Board (as seen by AI)
+              </div>
+              <div className="game-board__missions game-board__missions--debug">
+                {missions.map((deployment, index) => (
+                  <MissionColumn
+                    key={deployment.mission.uniqueId || `player-${index}`}
+                    deployment={deployment}
+                    missionIndex={index}
+                    isHeadquarters={index === headquartersIndex}
+                    onCardClick={handleViewCard}
+                    canAttempt={false}
+                    grantedSkills={grantedSkills}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <OpponentBoard
+              opponentState={
+                {
+                  missions,
+                  score,
+                  deckCount: deck.length,
+                  handCount: hand.length,
+                  discardCount: discard.length,
+                  dilemmaPoolCount: 0,
+                  turn,
+                  phase,
+                  completedPlanetMissions: 0,
+                  completedSpaceMissions: 0,
+                  gameOver,
+                  victory,
+                  headquartersIndex,
+                  actionLog: [],
+                } satisfies OpponentPublicState
+              }
+              isOpponentTurn={isMyTurn}
+            />
+          )}
 
-      {/* AI turn overlay (hidden when human needs to select dilemmas) */}
-      {!isMyTurn && !gameOver && !dilemmaSelectionRequest && (
-        <div className="game-board__ai-overlay">AI is playing...</div>
-      )}
+          {/* AI's board shown in detail (read-only) */}
+          <div className="game-board__section-label game-board__section-label--ai">
+            AI's Board{AI_DEBUG && debugOpponentMissions ? " (DEBUG)" : ""}
+          </div>
+          <div className="game-board__missions">
+            {(AI_DEBUG && debugOpponentMissions
+              ? debugOpponentMissions
+              : opponentState.missions
+            ).map((deployment, index) => (
+              <MissionColumn
+                key={deployment.mission.uniqueId || index}
+                deployment={deployment}
+                missionIndex={index}
+                isHeadquarters={index === opponentState.headquartersIndex}
+                onCardClick={handleViewCard}
+                canAttempt={false}
+                grantedSkills={[]}
+              />
+            ))}
+          </div>
 
-      {/* Player's mission columns */}
-      <div className="game-board__missions">
-        {missions.map((deployment, index) => (
-          <MissionColumn
-            key={deployment.mission.uniqueId || index}
-            deployment={deployment}
-            missionIndex={index}
-            isHeadquarters={index === headquartersIndex}
-            onCardClick={handleViewCard}
-            onGroupClick={handleGroupClick}
-            onAttemptMission={handleAttemptMission}
-            onDilemmasClick={handleDilemmasClick}
-            canAttempt={phase === "ExecuteOrders" && !dilemmaEncounter}
-            grantedSkills={grantedSkills}
+          {/* No hand when viewing as AI */}
+          <div className="game-board__ai-perspective-footer">
+            AI Debug — all cards visible, view only
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Normal view: opponent board (top) */}
+          {opponentState && (
+            <OpponentBoard
+              opponentState={opponentState}
+              isOpponentTurn={!isMyTurn}
+            />
+          )}
+
+          {/* AI turn overlay (hidden when human needs to select dilemmas) */}
+          {!isMyTurn && !gameOver && !dilemmaSelectionRequest && (
+            <div className="game-board__ai-overlay">AI is playing...</div>
+          )}
+
+          {/* Player's mission columns */}
+          <div className="game-board__missions">
+            {missions.map((deployment, index) => (
+              <MissionColumn
+                key={deployment.mission.uniqueId || index}
+                deployment={deployment}
+                missionIndex={index}
+                isHeadquarters={index === headquartersIndex}
+                onCardClick={handleViewCard}
+                onGroupClick={handleGroupClick}
+                onAttemptMission={handleAttemptMission}
+                onDilemmasClick={handleDilemmasClick}
+                canAttempt={phase === "ExecuteOrders" && !dilemmaEncounter}
+                grantedSkills={grantedSkills}
+              />
+            ))}
+          </div>
+
+          {/* Hand */}
+          <HandContainer
+            cards={hand}
+            counters={counters}
+            phase={gameOver ? "" : phase}
+            uniquesInPlay={new Set(uniquesInPlay)}
+            isMyTurn={isMyTurn}
+            onDeploy={gameOver ? undefined : handleDeploy}
+            onPlayEvent={gameOver ? undefined : handlePlayEvent}
+            onDiscard={gameOver ? undefined : handleDiscard}
+            onView={handleViewCard}
           />
-        ))}
-      </div>
-
-      {/* Hand */}
-      <HandContainer
-        cards={hand}
-        counters={counters}
-        phase={gameOver ? "" : phase}
-        uniquesInPlay={new Set(uniquesInPlay)}
-        isMyTurn={isMyTurn}
-        onDeploy={gameOver ? undefined : handleDeploy}
-        onPlayEvent={gameOver ? undefined : handlePlayEvent}
-        onDiscard={gameOver ? undefined : handleDiscard}
-        onView={handleViewCard}
-      />
+        </>
+      )}
 
       {/* Modals */}
       <CardViewer card={viewingCard} onClose={() => setViewingCard(null)} />

@@ -81,6 +81,9 @@ interface ClientGameState {
   winner: 1 | 2 | null;
   isAITurnInProgress: boolean;
 
+  // AI debug: unmasked opponent missions (full card data)
+  debugOpponentMissions: MissionDeployment[] | null;
+
   // Dilemma selection (when AI attempts a mission)
   dilemmaSelectionRequest: {
     drawnDilemmas: DilemmaCard[];
@@ -135,6 +138,7 @@ const createInitialState = (): ClientGameState => ({
   myPlayerNumber: 1,
   winner: null,
   isAITurnInProgress: false,
+  debugOpponentMissions: null,
   dilemmaSelectionRequest: null,
 });
 
@@ -203,6 +207,7 @@ export const useClientGameStore = create<ClientGameStore>((set) => ({
       activePlayer: twoPlayerState.activePlayer,
       myPlayerNumber: twoPlayerState.myPlayerNumber,
       winner: twoPlayerState.winner,
+      debugOpponentMissions: twoPlayerState.debugOpponentMissions ?? null,
     }));
   },
 

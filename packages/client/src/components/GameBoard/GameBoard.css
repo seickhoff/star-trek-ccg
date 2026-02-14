@@ -81,6 +81,48 @@
   }
 }
 
+/* AI perspective footer (replaces hand when viewing as AI) */
+.game-board__ai-perspective-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: 12px;
+  background: rgba(180, 100, 50, 0.15);
+  border-top: 1px solid rgba(255, 150, 50, 0.3);
+  color: #ff9933;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Section labels for AI debug perspective */
+.game-board__section-label {
+  padding: 4px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.game-board__section-label--opponent {
+  background: rgba(80, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(255, 60, 60, 0.3);
+  color: #ff6666;
+}
+
+.game-board__section-label--ai {
+  background: rgba(0, 40, 80, 0.4);
+  border-top: 1px solid rgba(60, 120, 255, 0.3);
+  border-bottom: 1px solid rgba(60, 120, 255, 0.3);
+  color: #6699ff;
+}
+
+.game-board__missions--debug {
+  border-bottom: 2px solid rgba(255, 60, 60, 0.2);
+}
+
 /* Mission columns */
 .game-board__missions {
   flex: 1;

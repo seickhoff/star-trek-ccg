@@ -14,6 +14,8 @@ interface TopBarProps {
   gameOverMessage?: string;
   opponentScore?: number;
   isMyTurn?: boolean;
+  viewAsAI?: boolean;
+  onToggleView?: () => void;
   onDraw: () => void;
   onAdvancePhase: () => void;
   onNewGame: () => void;
@@ -47,6 +49,8 @@ export function TopBar({
   gameOverMessage,
   opponentScore,
   isMyTurn = true,
+  viewAsAI = false,
+  onToggleView,
   onDraw,
   onAdvancePhase,
   onNewGame,
@@ -112,6 +116,19 @@ export function TopBar({
             >
               {gameOverMessage || (victory ? "VICTORY!" : "DEFEAT")}
             </div>
+            {onToggleView && (
+              <button
+                className={`top-bar__btn top-bar__btn--view ${viewAsAI ? "top-bar__btn--view-active" : ""}`}
+                onClick={onToggleView}
+                title={
+                  viewAsAI
+                    ? "Switch to your perspective"
+                    : "View board as AI sees it"
+                }
+              >
+                {viewAsAI ? "My View" : "AI View"}
+              </button>
+            )}
             <button
               className="top-bar__btn top-bar__btn--new"
               onClick={onNewGame}
@@ -155,6 +172,19 @@ export function TopBar({
               {phase === "DiscardExcess" ? "End Turn" : "Next Phase"}
             </button>
 
+            {onToggleView && (
+              <button
+                className={`top-bar__btn top-bar__btn--view ${viewAsAI ? "top-bar__btn--view-active" : ""}`}
+                onClick={onToggleView}
+                title={
+                  viewAsAI
+                    ? "Switch to your perspective"
+                    : "View board as AI sees it"
+                }
+              >
+                {viewAsAI ? "My View" : "AI View"}
+              </button>
+            )}
             <button
               className="top-bar__btn top-bar__btn--new"
               onClick={onNewGame}

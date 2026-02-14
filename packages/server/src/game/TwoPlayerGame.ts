@@ -215,6 +215,8 @@ export class TwoPlayerGame {
       activePlayer: this.activePlayerNumber,
       myPlayerNumber: (playerIndex + 1) as 1 | 2,
       winner: this._winner,
+      // AI debug: include unmasked opponent missions so client can display full card data
+      debugOpponentMissions: this.engines[opponentIndex].getState().missions,
     };
   }
 

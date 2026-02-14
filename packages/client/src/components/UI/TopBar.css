@@ -160,6 +160,28 @@
   background: #3a80c9;
 }
 
+.top-bar__btn--view {
+  background: rgba(40, 20, 80, 0.9);
+  color: #bbbbff;
+  border: 1px solid rgba(153, 153, 255, 0.5);
+}
+
+.top-bar__btn--view:hover {
+  background: rgba(60, 30, 120, 0.95);
+  color: #ddddff;
+}
+
+.top-bar__btn--view-active {
+  background: rgba(120, 60, 0, 0.9);
+  border-color: rgba(255, 150, 50, 0.7);
+  color: #ffbb55;
+}
+
+.top-bar__btn--view-active:hover {
+  background: rgba(150, 75, 0, 0.95);
+  color: #ffcc77;
+}
+
 .top-bar__btn--new {
   background: #666;
   color: #fff;
