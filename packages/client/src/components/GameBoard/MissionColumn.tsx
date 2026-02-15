@@ -7,7 +7,12 @@ import type {
 } from "@stccg/shared";
 import { isPersonnel, isShip } from "@stccg/shared";
 import { CardSlot } from "./CardSlot";
-import { checkMission, calculateGroupStats } from "@stccg/shared";
+import {
+  checkMission,
+  calculateGroupStats,
+  getMissionGap,
+  formatMissionGap,
+} from "@stccg/shared";
 import "./MissionColumn.css";
 
 interface MissionColumnProps {
@@ -20,6 +25,7 @@ interface MissionColumnProps {
   onDilemmasClick?: (missionIndex: number) => void;
   canAttempt?: boolean;
   grantedSkills?: GrantedSkill[];
+  compact?: boolean;
 }
 
 /**
@@ -36,6 +42,7 @@ export function MissionColumn({
   onDilemmasClick,
   canAttempt = false,
   grantedSkills = [],
+  compact = false,
 }: MissionColumnProps) {
   const { mission, groups, dilemmas } = deployment;
 
@@ -57,21 +64,25 @@ export function MissionColumn({
     >
       {/* Mission card area */}
       <div className="mission-column__mission">
-        <CardSlot
-          card={mission}
-          size="small"
-          orientation="landscape"
-          onClick={() => onCardClick?.(mission)}
-        />
+        {!compact && (
+          <CardSlot
+            card={mission}
+            size="small"
+            orientation="landscape"
+            onClick={() => onCardClick?.(mission)}
+          />
+        )}
 
-        {/* Mission info overlay */}
+        {/* Mission info */}
         <div className="mission-column__mission-info">
           <span className="mission-column__mission-name">{mission.name}</span>
-          {mission.score && (
+          {mission.score ? (
             <span className="mission-column__mission-score">
               {mission.score} pts
             </span>
-          )}
+          ) : isHeadquarters ? (
+            <span className="mission-column__mission-score">HQ</span>
+          ) : null}
           {mission.completed && (
             <span className="mission-column__completed-badge">✓</span>
           )}
@@ -219,22 +230,39 @@ export function MissionColumn({
                     mission,
                     grantedSkills
                   );
+                  const gap = !meetsRequirements
+                    ? getMissionGap(
+                        group.cards,
+                        mission,
+                        grantedSkills,
+                        group.cards.filter(
+                          (c): c is PersonnelCard =>
+                            isPersonnel(c) && c.status === "Unstopped"
+                        )
+                      )
+                    : null;
+                  const hint = gap ? formatMissionGap(gap) : "";
                   return (
-                    <button
-                      className={`mission-column__attempt-btn ${!meetsRequirements ? "mission-column__attempt-btn--disabled" : ""}`}
-                      disabled={!meetsRequirements}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (meetsRequirements) {
-                          onAttemptMission?.(missionIndex, groupIndex);
-                        }
-                      }}
-                      title={
-                        !meetsRequirements ? "Requirements not met" : undefined
-                      }
-                    >
-                      Attempt Mission
-                    </button>
+                    <>
+                      <button
+                        className={`mission-column__attempt-btn ${!meetsRequirements ? "mission-column__attempt-btn--disabled" : ""}`}
+                        disabled={!meetsRequirements}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (meetsRequirements) {
+                            onAttemptMission?.(missionIndex, groupIndex);
+                          }
+                        }}
+                        title={hint || undefined}
+                      >
+                        Attempt Mission
+                      </button>
+                      {hint && (
+                        <span className="mission-column__attempt-hint">
+                          {hint}
+                        </span>
+                      )}
+                    </>
                   );
                 })()}
             </div>

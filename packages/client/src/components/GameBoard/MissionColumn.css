@@ -287,3 +287,11 @@
 .mission-column__attempt-btn:disabled:hover {
   background: #666;
 }
+
+.mission-column__attempt-hint {
+  display: block;
+  font-size: 10px;
+  color: #ffaa44;
+  margin-top: 2px;
+  text-align: center;
+}

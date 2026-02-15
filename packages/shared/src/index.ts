@@ -18,9 +18,12 @@ export * from "./logic/shipMovement.js";
 // missionChecker: selective exports to avoid GroupStats collision with types/gameState
 export {
   type SkillCounts,
+  type MissionGap,
   calculateGroupStats,
   formatGroupStats,
   checkMission,
+  getMissionGap,
+  formatMissionGap,
   countUnstoppedPersonnel,
   getUnstoppedPersonnel,
   areAllPersonnelStopped,

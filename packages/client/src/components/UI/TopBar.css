@@ -63,6 +63,11 @@
   color: #b0b0b0;
 }
 
+/* Log badge — hidden on desktop, shown on mobile */
+.top-bar__log-badge {
+  display: none;
+}
+
 /* Stats section */
 .top-bar__stats {
   display: flex;
@@ -226,20 +231,87 @@
   }
 }
 
-/* Responsive adjustments */
-@media (max-width: 800px) {
+/* Responsive — professional 3-row mobile layout */
+@media (max-width: 768px) {
   .top-bar {
+    position: relative;
     height: auto;
-    flex-wrap: wrap;
-    padding: 8px;
-    gap: 8px;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 6px 10px;
+    gap: 4px;
   }
 
-  .top-bar__info,
-  .top-bar__stats,
-  .top-bar__actions {
+  /* Row 1: Turn (left) | Phase (centered) | Log (right) */
+  .top-bar__info {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+  }
+
+  .top-bar__turn {
+    flex: 0 0 auto;
+    min-width: 52px;
+  }
+
+  .top-bar__phase {
     flex: 1;
-    min-width: 200px;
+    text-align: center;
+    align-items: center;
+  }
+
+  .top-bar__log-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #4a90d9;
+    padding: 4px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    flex: 0 0 auto;
+    min-width: 52px;
+  }
+
+  .top-bar__log-badge:active {
+    background: #3a80c9;
+  }
+
+  /* Row 2: Stats — equal width, centered, ~55% screen width */
+  .top-bar__stats {
+    display: flex;
     justify-content: center;
+    gap: 0;
+    width: 60%;
+    margin: 0 auto;
+  }
+
+  .top-bar__stat {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Row 3: Action buttons — equal width */
+  .top-bar__actions {
+    display: flex;
+    width: 100%;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .top-bar__actions .top-bar__btn {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 4px;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 11px;
+  }
+
+  .top-bar__game-over {
+    font-size: 14px;
+    padding: 4px 8px;
+    margin-right: 0;
   }
 }

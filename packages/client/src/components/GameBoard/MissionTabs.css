@@ -1,0 +1,78 @@
+/* MissionTabs - Tabbed single-mission view for mobile */
+
+.mission-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Mission card strip — equal-width card images */
+.mission-tabs__strip {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  border-bottom: 2px solid #333;
+  flex-shrink: 0;
+}
+
+/* Individual card wrapper in the strip */
+.mission-tabs__card {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+}
+
+/* Override CardSlot fixed sizing — fill the tab cell, keep natural aspect ratio */
+.mission-tabs__card .card-slot.card-slot--thumb {
+  width: 100%;
+  height: auto;
+}
+
+.mission-tabs__card .card-slot .card-slot__image {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Active card — full brightness with highlight border */
+.mission-tabs__card--active {
+  border-color: #ff9900;
+  box-shadow: 0 0 8px rgba(255, 153, 0, 0.4);
+  transform: scale(1.03);
+}
+
+/* Completed badge under card */
+.mission-tabs__card-label {
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  color: #4caf50;
+  margin-top: 2px;
+}
+
+/* Remove CardSlot hover effects inside strip */
+.mission-tabs__card .card-slot:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Detail area */
+.mission-tabs__detail {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+/* Override MissionColumn sizing inside tabs — fill width */
+.mission-tabs__detail .mission-column {
+  min-width: unset;
+  flex: unset;
+  width: 100%;
+}

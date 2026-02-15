@@ -172,6 +172,30 @@
   color: #ff6666;
 }
 
+/* Compact mobile layout: ship card + stats side by side */
+.orders-modal__compact-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.orders-modal__compact-stats {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.orders-modal__compact-stat-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 /* Sections */
 .orders-modal__section {
   background: rgba(0, 0, 0, 0.3);
@@ -237,6 +261,55 @@
   color: #888;
   background: rgba(136, 136, 136, 0.15);
   border: 1px solid rgba(136, 136, 136, 0.3);
+}
+
+.orders-modal__dest-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.orders-modal__gap-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: normal;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.orders-modal__gap-tag--skill {
+  background: rgba(153, 153, 255, 0.15);
+  border: 1px solid rgba(153, 153, 255, 0.5);
+  color: #ccccff;
+}
+
+.orders-modal__gap-tag--integrity {
+  background: rgba(102, 204, 255, 0.15);
+  border: 1px solid rgba(102, 204, 255, 0.5);
+  color: #66ccff;
+}
+
+.orders-modal__gap-tag--cunning {
+  background: rgba(255, 204, 102, 0.15);
+  border: 1px solid rgba(255, 204, 102, 0.5);
+  color: #ffcc66;
+}
+
+.orders-modal__gap-tag--strength {
+  background: rgba(255, 102, 102, 0.15);
+  border: 1px solid rgba(255, 102, 102, 0.5);
+  color: #ff6666;
+}
+
+.orders-modal__gap-tag--affiliation {
+  background: rgba(255, 170, 68, 0.15);
+  border: 1px solid rgba(255, 170, 68, 0.5);
+  color: #ffaa44;
+}
+
+.orders-modal__gap-count {
+  opacity: 0.7;
 }
 
 /* Beam personnel - grid layout for 2-3 per row */

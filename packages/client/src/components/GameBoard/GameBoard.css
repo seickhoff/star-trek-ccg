@@ -140,11 +140,13 @@
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .game-board {
-    padding-top: 80px; /* More space for wrapped top bar */
+    padding-top: 0; /* TopBar is relative on mobile, no offset needed */
   }
+}
 
+@media (max-width: 600px) {
   .game-board__start-screen {
     padding: 32px;
   }

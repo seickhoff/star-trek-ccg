@@ -36,7 +36,8 @@ import {
 } from "../Modals";
 import { useConnectionStore } from "../../store/connectionStore";
 import { defaultDeck } from "@stccg/shared";
-import { useAudio, GAME_SOUNDS } from "../../hooks";
+import { useAudio, GAME_SOUNDS, useIsMobile } from "../../hooks";
+import { MissionTabs } from "./MissionTabs";
 import "./GameBoard.css";
 
 /** Debug flag: when true, AI perspective shows all cards and attributes for both players (view-only) */
@@ -184,6 +185,23 @@ export function GameBoard({ sendAction }: GameBoardProps) {
 
   // Perspective toggle: view the board as the AI sees it
   const [viewAsAI, setViewAsAI] = useState(false);
+
+  // Mobile tabbed mission view
+  const isMobile = useIsMobile(768);
+  const [selectedMissionTab, setSelectedMissionTab] = useState(0);
+  const [logOpen, setLogOpen] = useState(false);
+
+  // Reset tab when switching perspective
+  useEffect(() => {
+    setSelectedMissionTab(0);
+  }, [viewAsAI]);
+
+  // Auto-switch to the mission tab where a dilemma encounter starts
+  useEffect(() => {
+    if (isMobile && dilemmaEncounter) {
+      setSelectedMissionTab(dilemmaEncounter.missionIndex);
+    }
+  }, [isMobile, dilemmaEncounter]);
 
   // Modal state
   const [viewingCard, setViewingCard] = useState<Card | null>(null);
@@ -586,6 +604,7 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         isMyTurn={isMyTurn}
         viewAsAI={viewAsAI}
         onToggleView={opponentState ? () => setViewAsAI((v) => !v) : undefined}
+        onToggleLog={() => setLogOpen((v) => !v)}
         onDraw={handleDraw}
         onAdvancePhase={() => sendAction({ type: "NEXT_PHASE" })}
         onNewGame={handleNewGame}
@@ -593,70 +612,92 @@ export function GameBoard({ sendAction }: GameBoardProps) {
 
       {viewAsAI && opponentState ? (
         <>
-          {/* Player's board from AI's perspective */}
-          {AI_DEBUG ? (
+          {/* AI view: show AI's missions (tabbed on mobile, columns on desktop) */}
+          {!isMobile && (
             <>
-              <div className="game-board__section-label game-board__section-label--opponent">
-                Your Board (as seen by AI)
+              {/* Desktop: show player board from AI perspective */}
+              {AI_DEBUG ? (
+                <>
+                  <div className="game-board__section-label game-board__section-label--opponent">
+                    Your Board (as seen by AI)
+                  </div>
+                  <div className="game-board__missions game-board__missions--debug">
+                    {missions.map((deployment, index) => (
+                      <MissionColumn
+                        key={deployment.mission.uniqueId || `player-${index}`}
+                        deployment={deployment}
+                        missionIndex={index}
+                        isHeadquarters={index === headquartersIndex}
+                        onCardClick={handleViewCard}
+                        canAttempt={false}
+                        grantedSkills={grantedSkills}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <OpponentBoard
+                  opponentState={
+                    {
+                      missions,
+                      score,
+                      deckCount: deck.length,
+                      handCount: hand.length,
+                      discardCount: discard.length,
+                      dilemmaPoolCount: 0,
+                      turn,
+                      phase,
+                      completedPlanetMissions: 0,
+                      completedSpaceMissions: 0,
+                      gameOver,
+                      victory,
+                      headquartersIndex,
+                      actionLog: [],
+                    } satisfies OpponentPublicState
+                  }
+                  isOpponentTurn={isMyTurn}
+                />
+              )}
+
+              {/* Desktop: AI's board in columns */}
+              <div className="game-board__section-label game-board__section-label--ai">
+                AI's Board{AI_DEBUG && debugOpponentMissions ? " (DEBUG)" : ""}
               </div>
-              <div className="game-board__missions game-board__missions--debug">
-                {missions.map((deployment, index) => (
+              <div className="game-board__missions">
+                {(AI_DEBUG && debugOpponentMissions
+                  ? debugOpponentMissions
+                  : opponentState.missions
+                ).map((deployment, index) => (
                   <MissionColumn
-                    key={deployment.mission.uniqueId || `player-${index}`}
+                    key={deployment.mission.uniqueId || index}
                     deployment={deployment}
                     missionIndex={index}
-                    isHeadquarters={index === headquartersIndex}
+                    isHeadquarters={index === opponentState.headquartersIndex}
                     onCardClick={handleViewCard}
                     canAttempt={false}
-                    grantedSkills={grantedSkills}
+                    grantedSkills={[]}
                   />
                 ))}
               </div>
             </>
-          ) : (
-            <OpponentBoard
-              opponentState={
-                {
-                  missions,
-                  score,
-                  deckCount: deck.length,
-                  handCount: hand.length,
-                  discardCount: discard.length,
-                  dilemmaPoolCount: 0,
-                  turn,
-                  phase,
-                  completedPlanetMissions: 0,
-                  completedSpaceMissions: 0,
-                  gameOver,
-                  victory,
-                  headquartersIndex,
-                  actionLog: [],
-                } satisfies OpponentPublicState
-              }
-              isOpponentTurn={isMyTurn}
-            />
           )}
 
-          {/* AI's board shown in detail (read-only) */}
-          <div className="game-board__section-label game-board__section-label--ai">
-            AI's Board{AI_DEBUG && debugOpponentMissions ? " (DEBUG)" : ""}
-          </div>
-          <div className="game-board__missions">
-            {(AI_DEBUG && debugOpponentMissions
-              ? debugOpponentMissions
-              : opponentState.missions
-            ).map((deployment, index) => (
-              <MissionColumn
-                key={deployment.mission.uniqueId || index}
-                deployment={deployment}
-                missionIndex={index}
-                isHeadquarters={index === opponentState.headquartersIndex}
-                onCardClick={handleViewCard}
-                canAttempt={false}
-                grantedSkills={[]}
-              />
-            ))}
-          </div>
+          {/* Mobile: AI's missions in tabs */}
+          {isMobile && (
+            <MissionTabs
+              missions={
+                AI_DEBUG && debugOpponentMissions
+                  ? debugOpponentMissions
+                  : opponentState.missions
+              }
+              headquartersIndex={opponentState.headquartersIndex}
+              selectedIndex={selectedMissionTab}
+              onSelectMission={setSelectedMissionTab}
+              onCardClick={handleViewCard}
+              canAttempt={false}
+              grantedSkills={[]}
+            />
+          )}
 
           {/* No hand when viewing as AI */}
           <div className="game-board__ai-perspective-footer">
@@ -665,36 +706,51 @@ export function GameBoard({ sendAction }: GameBoardProps) {
         </>
       ) : (
         <>
-          {/* Normal view: opponent board (top) */}
-          {opponentState && (
+          {/* Normal view: opponent board (desktop only) */}
+          {!isMobile && opponentState && (
             <OpponentBoard
               opponentState={opponentState}
               isOpponentTurn={!isMyTurn}
             />
           )}
 
-          {/* AI turn overlay (hidden when human needs to select dilemmas) */}
-          {!isMyTurn && !gameOver && !dilemmaSelectionRequest && (
+          {/* AI turn overlay (desktop only, hidden when human needs to select dilemmas) */}
+          {!isMobile && !isMyTurn && !gameOver && !dilemmaSelectionRequest && (
             <div className="game-board__ai-overlay">AI is playing...</div>
           )}
 
-          {/* Player's mission columns */}
-          <div className="game-board__missions">
-            {missions.map((deployment, index) => (
-              <MissionColumn
-                key={deployment.mission.uniqueId || index}
-                deployment={deployment}
-                missionIndex={index}
-                isHeadquarters={index === headquartersIndex}
-                onCardClick={handleViewCard}
-                onGroupClick={handleGroupClick}
-                onAttemptMission={handleAttemptMission}
-                onDilemmasClick={handleDilemmasClick}
-                canAttempt={phase === "ExecuteOrders" && !dilemmaEncounter}
-                grantedSkills={grantedSkills}
-              />
-            ))}
-          </div>
+          {/* Player's mission columns — tabbed on mobile, side-by-side on desktop */}
+          {isMobile ? (
+            <MissionTabs
+              missions={missions}
+              headquartersIndex={headquartersIndex}
+              selectedIndex={selectedMissionTab}
+              onSelectMission={setSelectedMissionTab}
+              onCardClick={handleViewCard}
+              onGroupClick={handleGroupClick}
+              onAttemptMission={handleAttemptMission}
+              onDilemmasClick={handleDilemmasClick}
+              canAttempt={phase === "ExecuteOrders" && !dilemmaEncounter}
+              grantedSkills={grantedSkills}
+            />
+          ) : (
+            <div className="game-board__missions">
+              {missions.map((deployment, index) => (
+                <MissionColumn
+                  key={deployment.mission.uniqueId || index}
+                  deployment={deployment}
+                  missionIndex={index}
+                  isHeadquarters={index === headquartersIndex}
+                  onCardClick={handleViewCard}
+                  onGroupClick={handleGroupClick}
+                  onAttemptMission={handleAttemptMission}
+                  onDilemmasClick={handleDilemmasClick}
+                  canAttempt={phase === "ExecuteOrders" && !dilemmaEncounter}
+                  grantedSkills={grantedSkills}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Hand */}
           <HandContainer
@@ -773,7 +829,12 @@ export function GameBoard({ sendAction }: GameBoardProps) {
       />
 
       {/* Captain's Log */}
-      <ActionLog entries={actionLog} onCardClick={handleLogCardClick} />
+      <ActionLog
+        entries={actionLog}
+        onCardClick={handleLogCardClick}
+        mobileOpen={logOpen}
+        onMobileClose={() => setLogOpen(false)}
+      />
     </div>
   );
 }

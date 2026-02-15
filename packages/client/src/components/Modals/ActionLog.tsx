@@ -6,13 +6,21 @@ import "./ActionLog.css";
 interface ActionLogProps {
   entries: ActionLogEntry[];
   onCardClick?: (cardRef: CardRef) => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 /**
  * Draggable Captain's Log panel
  * Click anywhere to drag; click without drag to minimize
+ * On mobile, controlled externally via mobileOpen/onMobileClose props
  */
-export function ActionLog({ entries, onCardClick }: ActionLogProps) {
+export function ActionLog({
+  entries,
+  onCardClick,
+  mobileOpen = false,
+  onMobileClose,
+}: ActionLogProps) {
   const {
     position,
     zIndex,
@@ -80,7 +88,7 @@ export function ActionLog({ entries, onCardClick }: ActionLogProps) {
   return (
     <div
       ref={containerRef}
-      className={`action-log${minimized ? " action-log--minimized" : ""}`}
+      className={`action-log${minimized ? " action-log--minimized" : ""}${mobileOpen ? " action-log--mobile-open" : ""}`}
       style={{
         left: position.x,
         top: position.y,
@@ -91,8 +99,13 @@ export function ActionLog({ entries, onCardClick }: ActionLogProps) {
     >
       <div className="action-log__header">
         <span className="action-log__title">Captain's Log</span>
+        {onMobileClose && (
+          <button className="action-log__close" onClick={onMobileClose}>
+            ✕
+          </button>
+        )}
       </div>
-      {!minimized && (
+      {(!minimized || mobileOpen) && (
         <div className="action-log__content" ref={logContentRef}>
           {entries.length === 0 ? (
             <div className="action-log__empty">No actions yet</div>

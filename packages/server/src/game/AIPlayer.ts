@@ -2,8 +2,10 @@ import type {
   AbilityCondition,
   Card,
   DilemmaCard,
+  EventCard,
   InterruptCard,
   PersonnelCard,
+  RecoverFromDiscardEffect,
   ShipCard,
   MissionDeployment,
   SerializableGameState,
@@ -82,6 +84,9 @@ export class AIPlayer {
     engine: GameEngine,
     executeAction: ActionCallback
   ): Promise<void> {
+    // Play events (e.g. Salvaging the Wreckage) when strategically beneficial
+    await this.tryPlayEvents(engine, executeAction);
+
     let state = engine.getSerializableState();
     let counters = state.counters;
 
@@ -280,7 +285,7 @@ export class AIPlayer {
     }
 
     if (isEvent(card)) {
-      return 1; // Events have moderate priority
+      return 0; // Events handled separately via tryPlayEvents
     }
 
     return 0;
@@ -371,6 +376,150 @@ export class AIPlayer {
       return (card as { deploy?: number }).deploy ?? 0;
     }
     return 0;
+  }
+
+  // ===========================================================================
+  // Event Playing: Strategic event card usage
+  // ===========================================================================
+
+  /**
+   * Evaluate and play event cards from hand when strategically beneficial.
+   * Currently handles recoverFromDiscard events (e.g. Salvaging the Wreckage).
+   */
+  private async tryPlayEvents(
+    engine: GameEngine,
+    executeAction: ActionCallback
+  ): Promise<void> {
+    const state = engine.getSerializableState();
+    if (state.phase !== "PlayAndDraw") return;
+
+    for (const card of state.hand) {
+      if (!isEvent(card)) continue;
+      const eventCard = card as EventCard;
+      if (eventCard.deploy > state.counters) continue;
+
+      const ability = eventCard.abilities?.find((a) => a.trigger === "event");
+      if (!ability) continue;
+
+      const recoverEffect = ability.effects.find(
+        (e) => e.type === "recoverFromDiscard"
+      );
+      if (!recoverEffect || recoverEffect.type !== "recoverFromDiscard") {
+        continue;
+      }
+
+      if (!this.shouldPlayRecoverEvent(state, recoverEffect)) continue;
+
+      const missionScores = this.scoreMissions(state);
+      const selectedCardIds = this.selectCardsToRecover(
+        state,
+        recoverEffect.maxCount,
+        recoverEffect.cardTypes,
+        missionScores
+      );
+
+      if (selectedCardIds.length === 0) continue;
+
+      const result = await executeAction({
+        type: "PLAY_EVENT",
+        cardUniqueId: eventCard.uniqueId!,
+        params: { selectedCardIds },
+        requestId: aiRequestId(),
+      });
+
+      if (result.success) return; // One event per evaluation
+    }
+  }
+
+  /**
+   * Decide whether playing a recoverFromDiscard event is worth the counters.
+   * Play when deck is running low or key personnel/ships are in the discard.
+   */
+  private shouldPlayRecoverEvent(
+    state: SerializableGameState,
+    effect: RecoverFromDiscardEffect
+  ): boolean {
+    const recoverable = state.discard.filter((c) =>
+      effect.cardTypes.includes(
+        c.type as RecoverFromDiscardEffect["cardTypes"][number]
+      )
+    );
+    if (recoverable.length === 0) return false;
+
+    // Always play if deck is critically low
+    if (state.deck.length <= AI_CONFIG.lowDeckThreshold) return true;
+
+    // Play if a needed ship is in the discard
+    if (this.countShipsInPlay(state) === 0) {
+      if (recoverable.some((c) => isShip(c))) return true;
+    }
+
+    // Play if discard has personnel that fill 2+ skill gaps at any mission
+    const missionScores = this.scoreMissions(state);
+    for (const card of recoverable) {
+      if (!isPersonnel(card)) continue;
+      for (let i = 0; i < state.missions.length; i++) {
+        if ((missionScores.get(i) ?? -1) < 0) continue;
+        const contribution = this.personnelContribution(
+          card as PersonnelCard,
+          state.missions[i]!
+        );
+        if (contribution >= 2) return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Select the best cards to recover from the discard pile.
+   * Prioritizes personnel that fill mission skill gaps and ships when needed.
+   */
+  private selectCardsToRecover(
+    state: SerializableGameState,
+    maxCount: number,
+    allowedTypes: RecoverFromDiscardEffect["cardTypes"],
+    missionScores: Map<number, number>
+  ): string[] {
+    const recoverable = state.discard.filter((c) =>
+      allowedTypes.includes(
+        c.type as RecoverFromDiscardEffect["cardTypes"][number]
+      )
+    );
+    if (recoverable.length === 0) return [];
+
+    const scored = recoverable.map((card) => {
+      let score = 0;
+
+      if (isPersonnel(card)) {
+        const p = card as PersonnelCard;
+        // Score by best mission contribution
+        for (let i = 0; i < state.missions.length; i++) {
+          if ((missionScores.get(i) ?? -1) < 0) continue;
+          const contribution = this.personnelContribution(
+            p,
+            state.missions[i]!
+          );
+          const missionReadiness = missionScores.get(i) ?? 0;
+          score = Math.max(score, contribution * (1 + missionReadiness));
+        }
+        // Base value from skill count and attributes
+        const skillCount = p.skills.flat().length;
+        score += skillCount * 0.1;
+      }
+
+      if (isShip(card)) {
+        score = this.countShipsInPlay(state) === 0 ? 5 : 1;
+      }
+
+      return { uniqueId: card.uniqueId!, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored
+      .slice(0, maxCount)
+      .filter((s) => s.score > 0)
+      .map((s) => s.uniqueId);
   }
 
   // ===========================================================================

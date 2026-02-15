@@ -70,6 +70,20 @@ export function HandContainer({
   const cardsRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const prevCardCountRef = useRef(cards.length);
+
+  // Auto-scroll to the right when a new card is drawn (mobile)
+  useEffect(() => {
+    if (cards.length > prevCardCountRef.current) {
+      const el = cardsRef.current;
+      if (el) {
+        requestAnimationFrame(() => {
+          el.scrollTo({ left: el.scrollWidth, behavior: "smooth" });
+        });
+      }
+    }
+    prevCardCountRef.current = cards.length;
+  }, [cards.length]);
 
   const updateScrollIndicators = useCallback(() => {
     const el = cardsRef.current;

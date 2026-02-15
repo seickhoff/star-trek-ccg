@@ -2100,6 +2100,7 @@ export class GameEngine {
 
     // Process effects
     const effectDescriptions: string[] = [];
+    const recoveredCardRefs: CardRef[] = [];
 
     for (const effect of ability.effects) {
       if (effect.type === "recoverFromDiscard") {
@@ -2150,9 +2151,9 @@ export class GameEngine {
             this.state.hand.push(...cardsToRecover);
           }
 
-          effectDescriptions.push(
-            `Recovered ${cardsToRecover.length} card${cardsToRecover.length > 1 ? "s" : ""} from discard`
-          );
+          const recoveredNames = cardsToRecover.map((c) => c.name).join(", ");
+          effectDescriptions.push(`Recovered ${recoveredNames} from discard`);
+          recoveredCardRefs.push(...cardsToRecover.map((c) => cardRef(c)));
         }
       }
     }
@@ -2161,6 +2162,7 @@ export class GameEngine {
     this.state.counters -= eventCard.deploy;
 
     // Determine where the event goes after playing
+    const allCardRefs = [cardRef(eventCard), ...recoveredCardRefs];
     if (ability.removeFromGame) {
       // Remove from game
       this.state.removedFromGame.push(eventCard);
@@ -2170,7 +2172,7 @@ export class GameEngine {
           `Played ${eventCard.name}`,
           effectDescriptions.join(", ") ||
             `Cost ${eventCard.deploy}, removed from game`,
-          [cardRef(eventCard)]
+          allCardRefs
         )
       );
     } else {
@@ -2181,7 +2183,7 @@ export class GameEngine {
           "event",
           `Played ${eventCard.name}`,
           effectDescriptions.join(", ") || `Cost ${eventCard.deploy}`,
-          [cardRef(eventCard)]
+          allCardRefs
         )
       );
     }

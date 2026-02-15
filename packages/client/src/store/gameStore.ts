@@ -1908,6 +1908,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     // Process effects
+    const recoveredCardNames: string[] = [];
     for (const effect of ability.effects) {
       if (effect.type === "recoverFromDiscard") {
         const { selectedCardIds } = params ?? {};
@@ -1940,6 +1941,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
             cardsToRecover.push(cardInDiscard);
           }
+
+          recoveredCardNames.push(...cardsToRecover.map((c) => c.name));
 
           // Remove selected cards from discard
           const updatedDiscard = currentDiscard.filter(
@@ -1977,15 +1980,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // Build effect description for log
     const effectDescriptions: string[] = [];
-    for (const effect of ability.effects) {
-      if (effect.type === "recoverFromDiscard") {
-        const count = params?.selectedCardIds?.length ?? 0;
-        if (count > 0) {
-          effectDescriptions.push(
-            `Recovered ${count} card${count > 1 ? "s" : ""} from discard`
-          );
-        }
-      }
+    if (recoveredCardNames.length > 0) {
+      effectDescriptions.push(
+        `Recovered ${recoveredCardNames.join(", ")} from discard`
+      );
     }
 
     // Determine where the event goes after playing

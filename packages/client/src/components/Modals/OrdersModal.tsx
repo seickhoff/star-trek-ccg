@@ -7,12 +7,18 @@ import type {
   MissionDeployment,
   GrantedSkill,
   Ability,
+  MissionGap,
 } from "@stccg/shared";
 import { isShip, isPersonnel } from "@stccg/shared";
 import { CardSlot } from "../GameBoard/CardSlot";
 import { checkStaffed, calculateRangeCost } from "@stccg/shared";
-import { calculateGroupStats, checkMission } from "@stccg/shared";
+import {
+  calculateGroupStats,
+  checkMission,
+  getMissionGap,
+} from "@stccg/shared";
 import { useDraggablePanel } from "../../hooks/useDraggablePanel";
+import { useIsMobile } from "../../hooks";
 import { SkillPicker } from "./SkillPicker";
 import "./OrdersModal.css";
 
@@ -67,6 +73,7 @@ interface DestinationInfo {
   attemptable: boolean;
   completed: boolean;
   isHeadquarters: boolean;
+  missionGap?: MissionGap;
 }
 
 /**
@@ -89,6 +96,7 @@ export function OrdersModal({
   deckSize = 0,
   onExecuteOrderAbility,
 }: OrdersModalProps) {
+  const isMobile = useIsMobile(600);
   const {
     position,
     zIndex,
@@ -204,6 +212,7 @@ export function OrdersModal({
 
         // Check if current crew can attempt the destination mission
         let attemptable = false;
+        let missionGap: MissionGap | undefined;
         if (!isHQ && !completed) {
           // Check affiliation match: at least one unstopped personnel must match
           const hasAffiliationMatch =
@@ -219,6 +228,19 @@ export function OrdersModal({
             grantedSkills
           );
           attemptable = hasAffiliationMatch && meetsRequirements;
+
+          // Compute what's missing for non-attemptable missions
+          if (!attemptable) {
+            const gap = getMissionGap(
+              cards,
+              destMission,
+              grantedSkills,
+              unstoppedPersonnel
+            );
+            if (gap) {
+              missionGap = gap;
+            }
+          }
         }
 
         validDestinations.push({
@@ -228,6 +250,7 @@ export function OrdersModal({
           attemptable,
           completed,
           isHeadquarters: isHQ,
+          missionGap,
         });
       }
     });
@@ -464,65 +487,126 @@ export function OrdersModal({
               {ship ? `${ship.name}` : "Away Team"} at {mission.mission.name}
             </h3>
 
-            <div className="orders-modal__cards">
-              {cards.map((card) => (
-                <CardSlot
-                  key={card.uniqueId}
-                  card={card}
-                  size="thumb"
-                  onClick={() => onCardClick?.(card)}
-                />
-              ))}
-            </div>
-
-            {/* Stats summary */}
-            <div className="orders-modal__stats">
-              <div className="orders-modal__stats-row">
-                <span className="orders-modal__stat-label">Personnel:</span>
-                <span className="orders-modal__stat-value">
-                  {unstoppedPersonnel.length} ready
-                  {stoppedPersonnel.length > 0 &&
-                    `, ${stoppedPersonnel.length} stopped`}
-                </span>
-              </div>
-              <div className="orders-modal__stats-row">
-                <span className="orders-modal__stat orders-modal__stat--integrity">
-                  I: {stats.integrity}
-                </span>
-                <span className="orders-modal__stat orders-modal__stat--cunning">
-                  C: {stats.cunning}
-                </span>
-                <span className="orders-modal__stat orders-modal__stat--strength">
-                  S: {stats.strength}
-                </span>
-              </div>
-            </div>
-
-            {/* Skills */}
-            {skillEntries.length > 0 && (
-              <div className="orders-modal__skills">
-                {skillEntries.map(([skill, count]) => (
-                  <span key={skill} className="orders-modal__skill">
-                    {skill}
-                    {count > 1 && (
-                      <span className="orders-modal__skill-count">
-                        ×{count}
+            {isMobile && ship ? (
+              <>
+                {/* Mobile compact: ship card + stats side by side */}
+                <div className="orders-modal__compact-row">
+                  <CardSlot
+                    card={ship}
+                    size="small"
+                    onClick={() => onCardClick?.(ship)}
+                  />
+                  <div className="orders-modal__compact-stats">
+                    <div className="orders-modal__compact-stat-row">
+                      <span className="orders-modal__stat-label">
+                        Personnel:
                       </span>
-                    )}
-                  </span>
-                ))}
-              </div>
-            )}
+                      <span className="orders-modal__stat-value">
+                        {unstoppedPersonnel.length} ready
+                        {stoppedPersonnel.length > 0 &&
+                          `, ${stoppedPersonnel.length} stopped`}
+                      </span>
+                    </div>
+                    <div className="orders-modal__compact-stat-row">
+                      <span className="orders-modal__stat orders-modal__stat--integrity">
+                        Integrity: {stats.integrity}
+                      </span>
+                      <span className="orders-modal__stat orders-modal__stat--cunning">
+                        Cunning: {stats.cunning}
+                      </span>
+                      <span className="orders-modal__stat orders-modal__stat--strength">
+                        Strength: {stats.strength}
+                      </span>
+                    </div>
+                    <div className="orders-modal__compact-stat-row">
+                      <span>
+                        Range: {ship.rangeRemaining}/{ship.range}
+                      </span>
+                      <span className={isStaffed ? "staffed" : "not-staffed"}>
+                        {isStaffed ? "✓ Staffed" : "✗ Not staffed"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-            {ship && (
-              <div className="orders-modal__ship-status">
-                <span>
-                  Range: {ship.rangeRemaining}/{ship.range}
-                </span>
-                <span className={isStaffed ? "staffed" : "not-staffed"}>
-                  {isStaffed ? "✓ Staffed" : "✗ Not staffed"}
-                </span>
-              </div>
+                {/* Skills below */}
+                {skillEntries.length > 0 && (
+                  <div className="orders-modal__skills">
+                    {skillEntries.map(([skill, count]) => (
+                      <span key={skill} className="orders-modal__skill">
+                        {skill}
+                        {count > 1 && (
+                          <span className="orders-modal__skill-count">
+                            ×{count}
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Desktop: all cards, then stats */}
+                <div className="orders-modal__cards">
+                  {cards.map((card) => (
+                    <CardSlot
+                      key={card.uniqueId}
+                      card={card}
+                      size="thumb"
+                      onClick={() => onCardClick?.(card)}
+                    />
+                  ))}
+                </div>
+
+                <div className="orders-modal__stats">
+                  <div className="orders-modal__stats-row">
+                    <span className="orders-modal__stat-label">Personnel:</span>
+                    <span className="orders-modal__stat-value">
+                      {unstoppedPersonnel.length} ready
+                      {stoppedPersonnel.length > 0 &&
+                        `, ${stoppedPersonnel.length} stopped`}
+                    </span>
+                  </div>
+                  <div className="orders-modal__stats-row">
+                    <span className="orders-modal__stat orders-modal__stat--integrity">
+                      Integrity: {stats.integrity}
+                    </span>
+                    <span className="orders-modal__stat orders-modal__stat--cunning">
+                      Cunning: {stats.cunning}
+                    </span>
+                    <span className="orders-modal__stat orders-modal__stat--strength">
+                      Strength: {stats.strength}
+                    </span>
+                  </div>
+                </div>
+
+                {skillEntries.length > 0 && (
+                  <div className="orders-modal__skills">
+                    {skillEntries.map(([skill, count]) => (
+                      <span key={skill} className="orders-modal__skill">
+                        {skill}
+                        {count > 1 && (
+                          <span className="orders-modal__skill-count">
+                            ×{count}
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {ship && (
+                  <div className="orders-modal__ship-status">
+                    <span>
+                      Range: {ship.rangeRemaining}/{ship.range}
+                    </span>
+                    <span className={isStaffed ? "staffed" : "not-staffed"}>
+                      {isStaffed ? "✓ Staffed" : "✗ Not staffed"}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -552,11 +636,56 @@ export function OrdersModal({
                         </span>
                       )}
                       {!dest.completed && !dest.isHeadquarters && (
-                        <span
-                          className={`orders-modal__dest-status ${dest.attemptable ? "orders-modal__dest-status--ready" : "orders-modal__dest-status--not-ready"}`}
-                        >
-                          {dest.attemptable ? "Can attempt" : "Cannot attempt"}
-                        </span>
+                        <>
+                          <span
+                            className={`orders-modal__dest-status ${dest.attemptable ? "orders-modal__dest-status--ready" : "orders-modal__dest-status--not-ready"}`}
+                          >
+                            {dest.attemptable
+                              ? "Can attempt"
+                              : "Cannot attempt"}
+                          </span>
+                          {dest.missionGap && (
+                            <span className="orders-modal__dest-tags">
+                              {dest.missionGap.missingAffiliation && (
+                                <span className="orders-modal__gap-tag orders-modal__gap-tag--affiliation">
+                                  Wrong affiliation
+                                </span>
+                              )}
+                              {(() => {
+                                const skillCounts: Record<string, number> = {};
+                                for (const s of dest.missionGap!
+                                  .missingSkills) {
+                                  skillCounts[s] = (skillCounts[s] || 0) + 1;
+                                }
+                                return Object.entries(skillCounts).map(
+                                  ([skill, count]) => (
+                                    <span
+                                      key={skill}
+                                      className="orders-modal__gap-tag orders-modal__gap-tag--skill"
+                                    >
+                                      {skill}
+                                      {count > 1 && (
+                                        <span className="orders-modal__gap-count">
+                                          {" "}
+                                          x{count}
+                                        </span>
+                                      )}
+                                    </span>
+                                  )
+                                );
+                              })()}
+                              {dest.missionGap.attributeGap && (
+                                <span
+                                  className={`orders-modal__gap-tag orders-modal__gap-tag--${dest.missionGap.attributeGap.attribute.toLowerCase()}`}
+                                >
+                                  {dest.missionGap.attributeGap.attribute} +
+                                  {dest.missionGap.attributeGap.need -
+                                    dest.missionGap.attributeGap.have}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </>
                       )}
                     </span>
                     <span className="orders-modal__dest-cost">

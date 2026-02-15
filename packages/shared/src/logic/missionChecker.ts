@@ -183,6 +183,111 @@ export function checkMission(
 }
 
 /**
+ * Determine what's missing for a mission attempt (closest requirement group).
+ * Returns null if the mission has no requirements (HQ) or is already completed.
+ */
+export interface MissionGap {
+  missingSkills: Skill[];
+  attributeGap?: { attribute: AttributeName; need: number; have: number };
+  missingAffiliation: boolean;
+}
+
+export function getMissionGap(
+  cards: Card[],
+  mission: MissionCard,
+  grantedSkills: GrantedSkill[] = [],
+  unstoppedPersonnel?: PersonnelCard[]
+): MissionGap | null {
+  if (!mission.skills || mission.skills.length === 0) return null;
+  if (mission.completed) return null;
+
+  const stats = calculateGroupStats(cards, grantedSkills);
+  const playerStats: SkillCounts = { ...stats.skills };
+  playerStats.Strength = stats.strength;
+  playerStats.Integrity = stats.integrity;
+  playerStats.Cunning = stats.cunning;
+
+  // Check affiliation
+  let missingAffiliation = false;
+  if (
+    mission.affiliation &&
+    mission.affiliation.length > 0 &&
+    unstoppedPersonnel
+  ) {
+    missingAffiliation = !unstoppedPersonnel.some((p) =>
+      p.affiliation.some((a) => mission.affiliation!.includes(a))
+    );
+  }
+
+  // Find the closest requirement group (fewest missing items)
+  let bestGap: MissionGap | null = null;
+  let bestMissingCount = Infinity;
+
+  for (const skillRequirement of mission.skills) {
+    const missing: Skill[] = [];
+    const availableStats = { ...playerStats };
+
+    for (const skill of skillRequirement) {
+      const count = availableStats[skill] ?? 0;
+      if (count <= 0) {
+        missing.push(skill);
+      } else {
+        availableStats[skill] = count - 1;
+      }
+    }
+
+    let attributeGap: MissionGap["attributeGap"];
+    if (mission.attribute && mission.value !== undefined) {
+      const have = availableStats[mission.attribute] ?? 0;
+      if (have <= mission.value) {
+        attributeGap = {
+          attribute: mission.attribute,
+          need: mission.value + 1,
+          have,
+        };
+      }
+    }
+
+    const totalMissing = missing.length + (attributeGap ? 1 : 0);
+    if (totalMissing < bestMissingCount) {
+      bestMissingCount = totalMissing;
+      bestGap = { missingSkills: missing, attributeGap, missingAffiliation };
+    }
+  }
+
+  return bestGap;
+}
+
+/**
+ * Format a MissionGap into a short human-readable hint string.
+ */
+export function formatMissionGap(gap: MissionGap): string {
+  const parts: string[] = [];
+
+  if (gap.missingAffiliation) {
+    parts.push("Wrong affiliation");
+  }
+
+  if (gap.missingSkills.length > 0) {
+    const skillCounts: Record<string, number> = {};
+    for (const s of gap.missingSkills) {
+      skillCounts[s] = (skillCounts[s] || 0) + 1;
+    }
+    for (const [skill, count] of Object.entries(skillCounts)) {
+      parts.push(count > 1 ? `${skill} x${count}` : skill);
+    }
+  }
+
+  if (gap.attributeGap) {
+    parts.push(
+      `${gap.attributeGap.attribute} ${gap.attributeGap.have}/${gap.attributeGap.need}`
+    );
+  }
+
+  return parts.length > 0 ? `Need: ${parts.join(", ")}` : "";
+}
+
+/**
  * Count unstopped personnel in a group
  */
 export function countUnstoppedPersonnel(cards: Card[]): number {

@@ -150,10 +150,25 @@ export class GameRoom {
   }
 
   /**
+   * Get the human player's display name (for log prefixing).
+   */
+  private getHumanPlayerName(): string {
+    for (const player of this.players.values()) {
+      return player.playerName;
+    }
+    return "Player";
+  }
+
+  /**
    * Send full two-player state sync to a player
    */
   private sendTwoPlayerStateSync(playerId: string): void {
     const state = this.game.getStateForPlayer(0);
+    const name = this.getHumanPlayerName();
+    state.myState.actionLog = state.myState.actionLog.map((e) => ({
+      ...e,
+      message: `[${name}] ${e.message}`,
+    }));
 
     this.sendToPlayer(playerId, {
       type: "TWO_PLAYER_STATE_SYNC",
@@ -168,6 +183,11 @@ export class GameRoom {
   private broadcastTwoPlayerState(isAIAction: boolean): void {
     // Get state from human's perspective
     const state = this.game.getStateForPlayer(0);
+    const name = this.getHumanPlayerName();
+    state.myState.actionLog = state.myState.actionLog.map((e) => ({
+      ...e,
+      message: `[${name}] ${e.message}`,
+    }));
 
     // Human log entries are already in state.myState.actionLog,
     // so only send AI entries as newLogEntries to avoid duplicates.

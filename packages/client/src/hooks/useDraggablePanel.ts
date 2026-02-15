@@ -160,7 +160,7 @@ export function useDraggablePanel({
       const handleTouchMove = (moveEvent: TouchEvent) => {
         const t = moveEvent.touches[0];
         if (!t) return;
-        if (getDidDrag()) {
+        if (getDidDrag() && moveEvent.cancelable) {
           moveEvent.preventDefault();
         }
         onMove(t.clientX, t.clientY);

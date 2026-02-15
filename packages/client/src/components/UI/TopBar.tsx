@@ -16,6 +16,7 @@ interface TopBarProps {
   isMyTurn?: boolean;
   viewAsAI?: boolean;
   onToggleView?: () => void;
+  onToggleLog?: () => void;
   onDraw: () => void;
   onAdvancePhase: () => void;
   onNewGame: () => void;
@@ -51,6 +52,7 @@ export function TopBar({
   isMyTurn = true,
   viewAsAI = false,
   onToggleView,
+  onToggleLog,
   onDraw,
   onAdvancePhase,
   onNewGame,
@@ -74,6 +76,13 @@ export function TopBar({
               : "Waiting for AI opponent..."}
           </span>
         </div>
+
+        {onToggleLog && (
+          <button className="top-bar__log-badge" onClick={onToggleLog}>
+            <span className="top-bar__label">Log</span>
+            <span className="top-bar__value">&#9776;</span>
+          </button>
+        )}
       </div>
 
       {/* Counters and stats */}
@@ -138,22 +147,22 @@ export function TopBar({
           </>
         ) : (
           <>
-            {phase === "PlayAndDraw" && (
-              <button
-                className="top-bar__btn top-bar__btn--draw"
-                onClick={onDraw}
-                disabled={!canDraw}
-                title={
-                  !isMyTurn
+            <button
+              className="top-bar__btn top-bar__btn--draw"
+              onClick={onDraw}
+              disabled={!canDraw || phase !== "PlayAndDraw"}
+              title={
+                phase !== "PlayAndDraw"
+                  ? "Draw is only available during Play & Draw phase"
+                  : !isMyTurn
                     ? "Wait for AI's turn to finish"
                     : canDraw
                       ? "Draw a card (costs 1 counter)"
                       : "Cannot draw - need counters and cards in deck"
-                }
-              >
-                Draw Card
-              </button>
-            )}
+              }
+            >
+              Draw Card
+            </button>
 
             <button
               className="top-bar__btn top-bar__btn--advance"
